@@ -105,12 +105,14 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, string>>(
     Object.fromEntries(platforms.map(p => [p.id, p.parse_status || 'pending']))
   )
-  const [reparsingPlatform, setReparsingPlatform] = useState<string | null>(null)
   const [uploadingPlatform, setUploadingPlatform] = useState<string | null>(null)
   const [aiSummary, setAiSummary] = useState<string>(influencer.ai_summary || '')
   const [aiParsedAt, setAiParsedAt] = useState<string | null>(influencer.ai_parsed_at || null)
-  const [generatingSummary, setGeneratingSummary] = useState(false)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  // Notification banner state
+  const [banner, setBanner] = useState<'processing' | 'complete' | null>(null)
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Handle editing state per platform
   const [handleEdits, setHandleEdits] = useState<Record<string, string>>(
@@ -127,6 +129,9 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   const [newHandle, setNewHandle] = useState('')
   const [addingPlatform, setAddingPlatform] = useState(false)
 
+  const isAnyProcessing = Object.values(platformStatuses).some(s => s === 'processing')
+
+  // Realtime subscription
   useEffect(() => {
     if (section !== 'platforms') return
 
@@ -138,14 +143,26 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
         (payload) => {
           const updated = payload.new as any
           setPlatformStatuses(prev => ({ ...prev, [updated.id]: updated.parse_status }))
+
+          if (updated.parse_status === 'processing') {
+            setBanner('processing')
+            if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current)
+          }
+
           if (updated.parse_status === 'complete') {
+            setBanner('complete')
+            if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current)
+            bannerTimerRef.current = setTimeout(() => setBanner(null), 4000)
             setTimeout(() => router.refresh(), 1000)
           }
         }
       )
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => {
+      supabase.removeChannel(channel)
+      if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current)
+    }
   }, [section, influencer.id])
 
   async function updateHandle(platformId: string) {
@@ -186,6 +203,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   function uploadAndParseScreenshots(platformId: string, platform: string, files: File[]) {
     setUploadingPlatform(platformId)
     setPlatformStatuses(prev => ({ ...prev, [platformId]: 'processing' }))
+    setBanner('processing')
     const formData = new FormData()
     files.forEach(f => formData.append('files', f))
     formData.append('platform', platform)
@@ -193,31 +211,6 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
     formData.append('influencerId', influencer.id)
     fetch('/api/parse-screenshots', { method: 'POST', body: formData })
       .finally(() => setUploadingPlatform(null))
-  }
-
-  function reparseScreenshots(platformId: string, platform: string) {
-    setReparsingPlatform(platformId)
-    setPlatformStatuses(prev => ({ ...prev, [platformId]: 'processing' }))
-    fetch('/api/reparse-screenshots', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ platformId, influencerId: influencer.id, platform }),
-    }).finally(() => setReparsingPlatform(null))
-  }
-
-  async function regenerateSummary() {
-    setGeneratingSummary(true)
-    const res = await fetch('/api/generate-summary', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ influencerId: influencer.id }),
-    })
-    if (res.ok) {
-      const data = await res.json()
-      setAiSummary(data.summary)
-      setAiParsedAt(new Date().toISOString())
-    }
-    setGeneratingSummary(false)
   }
 
   async function saveSection() {
@@ -296,23 +289,19 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
 
       {/* AI Summary — always visible */}
       <div style={{ background:'var(--white)', border:'1px solid var(--gold-border)', borderRadius:12, padding:'14px 18px', marginBottom:20 }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom: aiSummary ? 10 : 0 }}>
-          <div>
-            <p style={{ fontSize:11, fontWeight:700, color:'var(--gold)', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:2 }}>AI Summary</p>
-            {aiParsedAt && <p style={{ fontSize:11, color:'var(--text-2)' }}>Updated {timeAgo(aiParsedAt)}</p>}
+        <p style={{ fontSize:11, fontWeight:700, color:'var(--gold)', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:aiSummary ? 8 : 4 }}>AI Summary</p>
+        {isAnyProcessing ? (
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <div style={{ width:14, height:14, border:'2px solid var(--gold)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite', flexShrink:0 }} />
+            <p style={{ fontSize:13, color:'var(--text-2)' }}>Updating your profile summary…</p>
           </div>
-          <button onClick={regenerateSummary} disabled={generatingSummary} style={{
-            background:'var(--gold-bg)', border:'1px solid var(--gold-border)', borderRadius:8,
-            padding:'6px 12px', fontSize:11, fontWeight:700, cursor: generatingSummary ? 'not-allowed' : 'pointer',
-            fontFamily:'inherit', color:'var(--gold)', flexShrink:0, opacity: generatingSummary ? 0.7 : 1,
-          }}>
-            {generatingSummary ? 'Generating…' : 'Regenerate summary'}
-          </button>
-        </div>
-        {aiSummary ? (
-          <p style={{ fontSize:13, lineHeight:1.6, color:'var(--text-2)' }}>{aiSummary}</p>
+        ) : aiSummary ? (
+          <>
+            {aiParsedAt && <p style={{ fontSize:11, color:'var(--text-3)', marginBottom:6 }}>Updated {timeAgo(aiParsedAt)}</p>}
+            <p style={{ fontSize:13, lineHeight:1.6, color:'var(--text-2)' }}>{aiSummary}</p>
+          </>
         ) : (
-          <p style={{ fontSize:12, color:'var(--text-2)', fontStyle:'italic' }}>No summary yet — go to the Platforms tab to upload screenshots and generate one.</p>
+          <p style={{ fontSize:12, color:'var(--text-2)', fontStyle:'italic' }}>Upload screenshots below to generate your AI summary automatically.</p>
         )}
       </div>
 
@@ -533,9 +522,38 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
       {/* Platforms */}
       {section === 'platforms' && (
         <div>
-          <p style={{ fontSize:13, color:'var(--text-2)', marginBottom:16 }}>
-            To update your social stats, upload new screenshots. Parse results only affect future matching — active gigs are not changed.
-          </p>
+          {/* How it works info box */}
+          <div style={{ background:'var(--gold-bg)', borderLeft:'3px solid var(--gold)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
+            <p style={{ fontSize:13, fontWeight:600, color:'var(--text)', marginBottom:8 }}>How this works</p>
+            <p style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.6, marginBottom:8 }}>
+              Upload screenshots of your analytics from each platform. Our AI reads them and builds your profile automatically — the more screenshots you upload, the more accurate your matches will be.
+            </p>
+            <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:4 }}>
+              {[
+                'Upload from multiple screens for best results',
+                'Upload new screenshots anytime to refresh stats',
+                'Changes only affect future matches, not active gigs',
+              ].map((t, i) => (
+                <li key={i} style={{ fontSize:12, color:'var(--text-2)', display:'flex', gap:6 }}>
+                  <span style={{ color:'var(--gold)', flexShrink:0 }}>·</span>{t}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Notification banner */}
+          {banner === 'processing' && (
+            <div style={{ background:'var(--blue-bg)', border:'1px solid var(--blue-border)', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:10 }}>
+              <div style={{ width:16, height:16, border:'2px solid var(--blue)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite', flexShrink:0 }} />
+              <p style={{ fontSize:13, color:'var(--blue)', fontWeight:500 }}>Reading your screenshots and updating your profile… this takes about 10–15 seconds.</p>
+            </div>
+          )}
+          {banner === 'complete' && (
+            <div style={{ background:'var(--green-bg)', border:'1px solid var(--green-border)', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:10 }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="var(--green)" strokeWidth="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <p style={{ fontSize:13, color:'var(--green)', fontWeight:500 }}>Profile updated! Your AI summary has been refreshed with your latest stats.</p>
+            </div>
+          )}
 
           {platforms.length === 0 && (
             <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'32px 24px', textAlign:'center' }}>
@@ -546,47 +564,25 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
 
           {platforms.map(p => {
             const platformScreenshots = screenshotsByPlatform[p.id] || []
-            const isReparsing = reparsingPlatform === p.id
             const isUploading = uploadingPlatform === p.id
             const liveStatus = platformStatuses[p.id] || 'pending'
 
             const statusBadge = liveStatus === 'complete'
-              ? { label: 'Parsed ✓', bg: 'var(--green-bg)', color: 'var(--green)', border: 'var(--green-border)' }
+              ? { label: `Parsed ✓ · Last updated ${p.last_parsed_at ? new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' }) : ''}`, bg: 'var(--green-bg)', color: 'var(--green)', border: 'var(--green-border)', spinner: false }
               : liveStatus === 'processing'
-              ? { label: 'Parsing…', bg: 'var(--gold-bg)', color: 'var(--gold)', border: 'var(--gold-border)' }
+              ? { label: 'Reading your screenshots…', bg: 'var(--gold-bg)', color: 'var(--gold)', border: 'var(--gold-border)', spinner: true }
               : liveStatus === 'failed'
-              ? { label: 'Failed — try again', bg: 'var(--red-bg)', color: 'var(--red)', border: 'var(--red-border)' }
-              : { label: 'Not uploaded', bg: 'var(--surface)', color: 'var(--text-2)', border: 'var(--border)' }
+              ? { label: 'Something went wrong — try uploading again', bg: 'var(--red-bg)', color: 'var(--red)', border: 'var(--red-border)', spinner: false }
+              : { label: 'No screenshots uploaded yet', bg: 'var(--surface)', color: 'var(--text-2)', border: 'var(--border)', spinner: false }
 
             return (
               <div key={p.id} style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'14px 18px', marginBottom:10 }}>
-                <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
-                  <div style={{ flex:1 }}>
-                    <p style={{ fontSize:14, fontWeight:700, textTransform:'capitalize', marginBottom:5 }}>{p.platform}</p>
-                    <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:20, background:statusBadge.bg, color:statusBadge.color, border:`1px solid ${statusBadge.border}` }}>
-                      {liveStatus === 'processing' && <span style={{ width:6, height:6, borderRadius:'50%', background:'currentColor', animation:'blink 1.4s infinite', display:'inline-block' }} />}
-                      {statusBadge.label}
-                    </span>
-                    {p.last_parsed_at && liveStatus === 'complete' && (
-                      <span style={{ fontSize:11, color:'var(--text-3)', marginLeft:8 }}>
-                        {new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' })}
-                      </span>
-                    )}
-                  </div>
-                  {platformScreenshots.length > 0 && (
-                    <button
-                      onClick={() => reparseScreenshots(p.id, p.platform)}
-                      disabled={isReparsing || isUploading}
-                      style={{
-                        background:'var(--gold)', color:'#fff', border:'none', borderRadius:8,
-                        padding:'7px 13px', fontSize:12, fontWeight:700,
-                        cursor: (isReparsing || isUploading) ? 'not-allowed' : 'pointer',
-                        fontFamily:'inherit', opacity: (isReparsing || isUploading) ? 0.6 : 1, flexShrink:0,
-                      }}
-                    >
-                      {isReparsing ? 'Re-parsing…' : 'Re-parse with AI'}
-                    </button>
-                  )}
+                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
+                  <p style={{ fontSize:14, fontWeight:700, textTransform:'capitalize', flex:1 }}>{p.platform}</p>
+                  <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:statusBadge.bg, color:statusBadge.color, border:`1px solid ${statusBadge.border}` }}>
+                    {statusBadge.spinner && <span style={{ width:8, height:8, border:'1.5px solid currentColor', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite', display:'inline-block' }} />}
+                    {statusBadge.label}
+                  </span>
                 </div>
 
                 {/* Handle edit row */}
@@ -649,7 +645,10 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                   }}
                 >
                   {isUploading ? (
-                    <p style={{ fontSize:12, color:'var(--gold)', fontWeight:600 }}>Uploading & parsing…</p>
+                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+                      <div style={{ width:12, height:12, border:'2px solid var(--gold)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+                      <p style={{ fontSize:12, color:'var(--gold)', fontWeight:600 }}>Uploading…</p>
+                    </div>
                   ) : (
                     <>
                       <p style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>
