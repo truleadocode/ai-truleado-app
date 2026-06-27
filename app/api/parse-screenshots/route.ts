@@ -17,7 +17,6 @@ Return this exact structure:
   "audience_top_countries": ["Country1", "Country2"],
   "audience_age_range": "18-34",
   "audience_gender_split": "72% female",
-  "posting_frequency": "3-4x per week",
   "confidence": "high"
 }
 
@@ -85,7 +84,6 @@ export async function POST(request: NextRequest) {
       audience_top_countries: parsed.audience_top_countries,
       audience_age_range: parsed.audience_age_range,
       audience_gender_split: parsed.audience_gender_split,
-      posting_frequency: parsed.posting_frequency,
       ai_raw_parse: parsed,
       parse_status: 'complete',
       last_parsed_at: new Date().toISOString(),
