@@ -109,6 +109,43 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   const [generatingSummary, setGeneratingSummary] = useState(false)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
 
+  // Handle editing state per platform
+  const [handleEdits, setHandleEdits] = useState<Record<string, string>>(
+    Object.fromEntries(platforms.map(p => [p.id, p.handle || '']))
+  )
+  const [savingHandle, setSavingHandle] = useState<string | null>(null)
+  const [savedHandle, setSavedHandle] = useState<string | null>(null)
+
+  // Add new platform state
+  const ALL_PLATFORMS = ['instagram', 'tiktok', 'youtube', 'pinterest']
+  const connectedPlatforms = platforms.map(p => p.platform.toLowerCase())
+  const availablePlatforms = ALL_PLATFORMS.filter(p => !connectedPlatforms.includes(p))
+  const [newPlatform, setNewPlatform] = useState(availablePlatforms[0] || '')
+  const [newHandle, setNewHandle] = useState('')
+  const [addingPlatform, setAddingPlatform] = useState(false)
+
+  async function updateHandle(platformId: string) {
+    setSavingHandle(platformId)
+    await supabase.from('influencer_platforms').update({ handle: handleEdits[platformId] }).eq('id', platformId)
+    setSavingHandle(null)
+    setSavedHandle(platformId)
+    setTimeout(() => setSavedHandle(null), 2000)
+  }
+
+  async function addPlatform() {
+    if (!newPlatform) return
+    setAddingPlatform(true)
+    await supabase.from('influencer_platforms').insert({
+      influencer_id: influencer.id,
+      platform: newPlatform,
+      handle: newHandle.trim() || null,
+      parse_status: 'pending',
+    })
+    setNewHandle('')
+    setAddingPlatform(false)
+    router.refresh()
+  }
+
   async function uploadAvatar(file: File) {
     setAvatarUploading(true)
     const ext = file.name.split('.').pop() || 'jpg'
@@ -491,9 +528,9 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
 
             return (
               <div key={p.id} style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'14px 18px', marginBottom:10 }}>
-                <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:12 }}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
                   <div style={{ flex:1 }}>
-                    <p style={{ fontSize:14, fontWeight:700 }}>{p.platform} <span style={{ fontWeight:400, color:'var(--text-2)' }}>@{p.handle}</span></p>
+                    <p style={{ fontSize:14, fontWeight:700, textTransform:'capitalize' }}>{p.platform}</p>
                     <p style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>
                       Status: <span style={{ color: p.parse_status === 'complete' ? 'var(--green)' : p.parse_status === 'processing' ? 'var(--gold)' : 'var(--text-2)', fontWeight:600 }}>{p.parse_status}</span>
                       {p.last_parsed_at && ` · Last parsed ${new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' })}`}
@@ -513,6 +550,24 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                       {isReparsing ? 'Re-parsing…' : 'Re-parse with AI'}
                     </button>
                   )}
+                </div>
+
+                {/* Handle edit row */}
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, paddingBottom:12, borderBottom:'1px solid var(--border)' }}>
+                  <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', flexShrink:0 }}>Handle</label>
+                  <input
+                    value={handleEdits[p.id] ?? ''}
+                    onChange={e => setHandleEdits(prev => ({ ...prev, [p.id]: e.target.value }))}
+                    placeholder="@yourhandle"
+                    style={{ flex:1, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, padding:'6px 10px', fontSize:13, color:'var(--text)', fontFamily:'inherit', outline:'none' }}
+                  />
+                  <button
+                    onClick={() => updateHandle(p.id)}
+                    disabled={savingHandle === p.id}
+                    style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, padding:'6px 12px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--text)', flexShrink:0, whiteSpace:'nowrap' }}
+                  >
+                    {savingHandle === p.id ? 'Saving…' : savedHandle === p.id ? 'Saved ✓' : 'Update'}
+                  </button>
                 </div>
 
                 {/* Screenshot thumbnails */}
@@ -584,6 +639,37 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
               </div>
             )
           })}
+
+          {/* Add another platform */}
+          {availablePlatforms.length > 0 && (
+            <div style={{ border:'2px dashed var(--border)', borderRadius:12, padding:'16px 18px' }}>
+              <p style={{ fontSize:13, fontWeight:600, marginBottom:12, color:'var(--text)' }}>Add another platform</p>
+              <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                <select
+                  value={newPlatform}
+                  onChange={e => setNewPlatform(e.target.value)}
+                  style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, padding:'7px 10px', fontSize:13, color:'var(--text)', fontFamily:'inherit', outline:'none', cursor:'pointer' }}
+                >
+                  {availablePlatforms.map(p => (
+                    <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                  ))}
+                </select>
+                <input
+                  value={newHandle}
+                  onChange={e => setNewHandle(e.target.value)}
+                  placeholder="@yourhandle"
+                  style={{ flex:1, minWidth:140, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, padding:'7px 10px', fontSize:13, color:'var(--text)', fontFamily:'inherit', outline:'none' }}
+                />
+                <button
+                  onClick={addPlatform}
+                  disabled={addingPlatform || !newPlatform}
+                  style={{ background:'var(--gold)', color:'#fff', border:'none', borderRadius:6, padding:'7px 14px', fontSize:12, fontWeight:600, cursor: addingPlatform ? 'not-allowed' : 'pointer', fontFamily:'inherit', opacity: addingPlatform ? 0.7 : 1, flexShrink:0 }}
+                >
+                  {addingPlatform ? 'Adding…' : 'Add platform'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
