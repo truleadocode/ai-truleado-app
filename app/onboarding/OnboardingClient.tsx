@@ -47,6 +47,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const initCalledRef = useRef(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -54,11 +55,13 @@ export default function OnboardingClient({ user, influencer }: Props) {
   }, [messages, isThinking])
 
   useEffect(() => {
+    if (initCalledRef.current) return
+    initCalledRef.current = true
     initSession()
   }, [])
 
-  async function initSession() {
-    const storedKey = typeof window !== 'undefined' ? localStorage.getItem(SESSION_KEY_LS) : null
+  async function initSession(forceNew = false) {
+    const storedKey = (!forceNew && typeof window !== 'undefined') ? localStorage.getItem(SESSION_KEY_LS) : null
 
     const res = await fetch('/api/sarah-chat', {
       method: 'POST',
@@ -158,21 +161,70 @@ export default function OnboardingClient({ user, influencer }: Props) {
   }, [platformStatuses, phase, platforms])
 
   function addSarahMessage(text: string, chips: string[] = []) {
-    setMessages(prev => [...prev, { role: 'sarah', text, chips }])
+    setMessages(prev => [
+      ...prev.map(m => ({ ...m, chips: [] })),
+      { role: 'sarah' as const, text, chips },
+    ])
   }
 
   function addUserMessage(text: string) {
-    setMessages(prev => [...prev, { role: 'user', text }])
+    setMessages(prev => [...prev, { role: 'user' as const, text }])
+  }
+
+  async function continueFromStep(currentStep: string) {
+    addUserMessage("Yes, let's continue")
+    setIsThinking(true)
+    try {
+      const res = await fetch('/api/sarah-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'resume_continue', session_key: sessionKey, step: currentStep }),
+      })
+      const data = await res.json()
+      if (data.step) setStep(data.step)
+      addSarahMessage(data.sarah_reply, data.chips || [])
+    } catch {
+      addSarahMessage("Let's pick up where we left off! What was your answer?")
+    } finally {
+      setIsThinking(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }
+
+  async function startFresh() {
+    addUserMessage('Start fresh')
+    localStorage.removeItem(SESSION_KEY_LS)
+    setMessages([])
+    setSessionKey(null)
+    setSessionData({})
+    setStep('greeting')
+    setPhase('loading')
+    initCalledRef.current = false
+    // Small delay so state settles before re-init
+    await new Promise(r => setTimeout(r, 50))
+    initCalledRef.current = true
+    await initSession(true)
   }
 
   async function sendMessage(text: string) {
     if (!text.trim() || isThinking) return
+
+    // Handle resume chip choices without going through the message action
+    if (text === 'Yes, continue') {
+      setMessages(prev => prev.map(m => ({ ...m, chips: [] })))
+      await continueFromStep(step)
+      return
+    }
+    if (text === 'Start fresh') {
+      setMessages(prev => prev.map(m => ({ ...m, chips: [] })))
+      await startFresh()
+      return
+    }
+
     addUserMessage(text)
     setInput('')
     setIsThinking(true)
-    setMessages(prev => prev.map((m, i) =>
-      i === prev.length - 1 && m.role === 'sarah' ? { ...m, chips: [] } : m
-    ))
+    setMessages(prev => prev.map(m => ({ ...m, chips: [] })))
 
     try {
       const res = await fetch('/api/sarah-chat', {

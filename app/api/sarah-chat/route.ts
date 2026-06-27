@@ -183,6 +183,25 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // ── RESUME CONTINUE ───────────────────────────────────────────────
+  if (action === 'resume_continue') {
+    const { step: currentStep } = body
+    const stepInfo = STEPS[currentStep]
+    if (!stepInfo) {
+      return NextResponse.json({
+        sarah_reply: "Let's pick up where we left off! What's your name?",
+        chips: [],
+        step: 'greeting',
+      })
+    }
+    const question = stepInfo.nextQuestion || 'Can you tell me more?'
+    return NextResponse.json({
+      sarah_reply: `Got it, let's keep going! ${question}`,
+      chips: stepInfo.chips || [],
+      step: currentStep,
+    })
+  }
+
   // ── MESSAGE ────────────────────────────────────────────────────────
   if (action === 'message') {
     const { step, data } = body
