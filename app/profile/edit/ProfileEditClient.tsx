@@ -101,9 +101,12 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   const [revShare, setRevShare] = useState(influencer.open_to_rev_share || false)
   const [exclusivity, setExclusivity] = useState(influencer.open_to_exclusivity || false)
 
-  // Platform tab state
+  // Platform tab state — treat any stuck 'processing' on mount as 'failed'
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, string>>(
-    Object.fromEntries(platforms.map(p => [p.id, p.parse_status || 'pending']))
+    Object.fromEntries(platforms.map(p => [
+      p.id,
+      p.parse_status === 'processing' ? 'failed' : (p.parse_status || 'pending'),
+    ]))
   )
   const [uploadingPlatform, setUploadingPlatform] = useState<string | null>(null)
   const [aiSummary, setAiSummary] = useState<string>(influencer.ai_summary || '')
@@ -113,6 +116,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   // Notification banner state
   const [banner, setBanner] = useState<'processing' | 'complete' | null>(null)
   const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const processingTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   // Handle editing state per platform
   const [handleEdits, setHandleEdits] = useState<Record<string, string>>(
@@ -142,18 +146,31 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
         { event: 'UPDATE', schema: 'public', table: 'influencer_platforms', filter: `influencer_id=eq.${influencer.id}` },
         (payload) => {
           const updated = payload.new as any
-          setPlatformStatuses(prev => ({ ...prev, [updated.id]: updated.parse_status }))
+          const id = updated.id
+          const status = updated.parse_status
 
-          if (updated.parse_status === 'processing') {
+          // Clear the 30s safety timeout — we got a real update
+          if (processingTimeouts.current[id]) {
+            clearTimeout(processingTimeouts.current[id])
+            delete processingTimeouts.current[id]
+          }
+
+          setPlatformStatuses(prev => ({ ...prev, [id]: status }))
+
+          if (status === 'processing') {
             setBanner('processing')
             if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current)
           }
 
-          if (updated.parse_status === 'complete') {
-            setBanner('complete')
-            if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current)
-            bannerTimerRef.current = setTimeout(() => setBanner(null), 4000)
-            setTimeout(() => router.refresh(), 1000)
+          if (status === 'complete' || status === 'failed') {
+            if (status === 'complete') {
+              setBanner('complete')
+              if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current)
+              bannerTimerRef.current = setTimeout(() => setBanner(null), 4000)
+              setTimeout(() => router.refresh(), 1000)
+            } else {
+              setBanner(null)
+            }
           }
         }
       )
@@ -162,6 +179,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
     return () => {
       supabase.removeChannel(channel)
       if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current)
+      Object.values(processingTimeouts.current).forEach(clearTimeout)
     }
   }, [section, influencer.id])
 
@@ -200,10 +218,23 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
     setAvatarUploading(false)
   }
 
+  function startProcessingTimeout(platformId: string) {
+    if (processingTimeouts.current[platformId]) clearTimeout(processingTimeouts.current[platformId])
+    processingTimeouts.current[platformId] = setTimeout(() => {
+      setPlatformStatuses(prev => {
+        if (prev[platformId] === 'processing') return { ...prev, [platformId]: 'failed' }
+        return prev
+      })
+      setBanner(null)
+      delete processingTimeouts.current[platformId]
+    }, 30000)
+  }
+
   function uploadAndParseScreenshots(platformId: string, platform: string, files: File[]) {
     setUploadingPlatform(platformId)
     setPlatformStatuses(prev => ({ ...prev, [platformId]: 'processing' }))
     setBanner('processing')
+    startProcessingTimeout(platformId)
     const formData = new FormData()
     files.forEach(f => formData.append('files', f))
     formData.append('platform', platform)

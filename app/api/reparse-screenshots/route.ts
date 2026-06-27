@@ -190,7 +190,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'No screenshots found for this platform' }, { status: 400 })
   }
 
-  await service.from('influencer_platforms').update({ parse_status: 'processing' }).eq('id', platformId)
+  await service.from('influencer_platforms')
+    .update({ parse_status: 'processing', parse_error: null })
+    .eq('id', platformId)
 
   try {
     const imageParts = await Promise.all(
@@ -265,10 +267,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, parsed })
   } catch (err) {
     console.error('Reparse error:', err)
-    await service.from('influencer_platforms').update({
-      parse_status: 'failed',
-      parse_error: String(err),
-    }).eq('id', platformId)
+    await service.from('influencer_platforms')
+      .update({ parse_status: 'failed', parse_error: String(err) })
+      .eq('id', platformId)
     return NextResponse.json({ error: 'Parsing failed' }, { status: 500 })
   }
 }
