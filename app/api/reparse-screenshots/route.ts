@@ -30,71 +30,48 @@ This summary will be used to match influencers to brand campaigns.
 Return only the summary text, no formatting or labels.`
 
 export async function POST(request: NextRequest) {
-  const formData = await request.formData()
-  const files = formData.getAll('files') as File[]
-  const platform = formData.get('platform') as string
-  const platformId = formData.get('platformId') as string
-  const influencerId = formData.get('influencerId') as string
-
-  if (!files.length || !platformId || !influencerId) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
-  }
+  const { platformId, influencerId, platform } = await request.json()
+  if (!platformId || !influencerId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const service = createServiceClient()
+
+  const { data: screenshots } = await service
+    .from('influencer_screenshots')
+    .select('storage_path, mime_type')
+    .eq('platform_id', platformId)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
+  if (!screenshots?.length) {
+    return NextResponse.json({ error: 'No screenshots found for this platform' }, { status: 400 })
+  }
 
   await service.from('influencer_platforms').update({ parse_status: 'processing' }).eq('id', platformId)
 
   try {
+    const imageParts = await Promise.all(
+      screenshots.map(async (s) => {
+        const { data, error } = await service.storage.from('influencer-screenshots').download(s.storage_path)
+        if (error || !data) return null
+        const buffer = await data.arrayBuffer()
+        const base64 = Buffer.from(buffer).toString('base64')
+        return { inlineData: { data: base64, mimeType: s.mime_type || 'image/jpeg' } }
+      })
+    )
+
+    const validParts = imageParts.filter(Boolean) as any[]
+    if (!validParts.length) throw new Error('Could not download any screenshots')
+
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
-
-    // Convert files to inline data parts
-    // Save screenshots to storage and record in influencer_screenshots table
-    const savedScreenshots: string[] = []
-    await Promise.all(
-      files.map(async (file, idx) => {
-        const ext = file.name.split('.').pop() || 'jpg'
-        const path = `${influencerId}/${platformId}/${Date.now()}_${idx}.${ext}`
-        const buffer = await file.arrayBuffer()
-        const { error: uploadErr } = await service.storage
-          .from('influencer-screenshots')
-          .upload(path, buffer, { contentType: file.type || 'image/jpeg', upsert: false })
-        if (!uploadErr) {
-          savedScreenshots.push(path)
-          await service.from('influencer_screenshots').insert({
-            influencer_id: influencerId,
-            platform_id: platformId,
-            storage_path: path,
-            file_name: file.name,
-            file_size_bytes: file.size,
-            mime_type: file.type || 'image/jpeg',
-            processed: false,
-          })
-        }
-      })
-    )
-
-    const imageParts = await Promise.all(
-      files.map(async file => {
-        const buffer = await file.arrayBuffer()
-        const base64 = Buffer.from(buffer).toString('base64')
-        return {
-          inlineData: {
-            data: base64,
-            mimeType: (file.type || 'image/jpeg') as string,
-          },
-        }
-      })
-    )
 
     const parseResult = await model.generateContent([
       SCREENSHOT_PARSE_PROMPT,
       `These are ${platform} screenshots. Extract the structured data.`,
-      ...imageParts,
+      ...validParts,
     ])
 
     const raw = parseResult.response.text().trim()
-    // Strip markdown fences if Gemini wraps the JSON
     const clean = raw.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim()
     const parsed = JSON.parse(clean)
 
@@ -114,7 +91,6 @@ export async function POST(request: NextRequest) {
       last_parsed_at: new Date().toISOString(),
     }).eq('id', platformId)
 
-    // Generate ai_summary
     const { data: influencer } = await service
       .from('influencers')
       .select('primary_niche, bio, first_name')
@@ -127,9 +103,10 @@ export async function POST(request: NextRequest) {
       .eq('influencer_id', influencerId)
       .eq('parse_status', 'complete')
 
-    const summaryPayload = JSON.stringify({ influencer, platforms: allPlatforms, latestParse: parsed })
-
-    const summaryResult = await model.generateContent([SUMMARY_PROMPT, summaryPayload])
+    const summaryResult = await model.generateContent([
+      SUMMARY_PROMPT,
+      JSON.stringify({ influencer, platforms: allPlatforms, latestParse: parsed }),
+    ])
     const aiSummary = summaryResult.response.text().trim()
 
     await service.from('influencers').update({
@@ -137,22 +114,9 @@ export async function POST(request: NextRequest) {
       ai_parsed_at: new Date().toISOString(),
     }).eq('id', influencerId)
 
-    // Mark saved screenshots as processed
-    if (savedScreenshots.length) {
-      await service.from('influencer_screenshots').update({ processed: true, processed_at: new Date().toISOString() })
-        .eq('platform_id', platformId).in('storage_path', savedScreenshots)
-    }
-
-    await service.from('notifications').insert({
-      influencer_id: influencerId,
-      type: 'profile_parsed',
-      title: 'Profile updated',
-      body: `Your ${platform} stats have been parsed and your profile has been updated.`,
-    })
-
     return NextResponse.json({ success: true, parsed })
   } catch (err) {
-    console.error('Screenshot parsing error:', err)
+    console.error('Reparse error:', err)
     await service.from('influencer_platforms').update({
       parse_status: 'failed',
       parse_error: String(err),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -38,19 +38,21 @@ const STYLES = ['Educational','Entertaining','Inspirational','Authentic/Raw','Ae
 const FORMATS = ['Short video/Reels','Long video','Photos','Stories/Ephemeral','Live streams','Carousels','Blogs']
 const CATEGORIES = ['Fashion','Beauty','Skincare','Haircare','Fitness','Nutrition','Travel','Tech','Gaming','Finance','Food & Beverage','Home & Garden','Pets','Kids','Cars','Sustainability','Art','Music']
 
-function euros(cents: number | null | undefined) {
-  if (!cents) return ''
-  return String(Math.round(cents / 100))
-}
-function toCents(s: string) {
-  const n = parseFloat(s)
-  return isNaN(n) ? null : Math.round(n * 100)
+function timeAgo(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const days = Math.floor(diff / 86400000)
+  if (days === 0) return 'today'
+  if (days === 1) return 'yesterday'
+  if (days < 30) return `${days} days ago`
+  const months = Math.floor(days / 30)
+  return months === 1 ? '1 month ago' : `${months} months ago`
 }
 
-export default function ProfileEditClient({ influencer, platforms, rates }: {
+export default function ProfileEditClient({ influencer, platforms, rates, screenshotsByPlatform }: {
   influencer: any
   platforms: any[]
   rates: any[]
+  screenshotsByPlatform: Record<string, any[]>
 }) {
   const supabase = createClient()
   const router = useRouter()
@@ -67,6 +69,11 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
   const [languages, setLanguages] = useState<string[]>(influencer.languages || [])
   const [langInput, setLangInput] = useState('')
 
+  // Avatar state
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(influencer.avatar_url || null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
+
   // Content profile state
   const [primaryNiche, setPrimaryNiche] = useState(influencer.primary_niche || '')
   const [secondaryNiches, setSecondaryNiches] = useState<string[]>(influencer.secondary_niches || [])
@@ -81,13 +88,72 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
   const [brandLovesCustom, setBrandLovesCustom] = useState(influencer.brand_loves_custom || '')
   const [brandNeverCustom, setBrandNeverCustom] = useState(influencer.brand_never_custom || '')
 
-  // Rate state: keyed by "platform__content_type" → rate_eur in EUR string
+  // Rate state
   const [rateState, setRateState] = useState<Record<string, string>>(
     Object.fromEntries((rates || []).map((r: any) => [`${r.platform}__${r.content_type}`, String(Math.round((r.rate_eur || 0) / 100))]))
   )
   const [gifting, setGifting] = useState(influencer.open_to_gifting || false)
   const [revShare, setRevShare] = useState(influencer.open_to_rev_share || false)
   const [exclusivity, setExclusivity] = useState(influencer.open_to_exclusivity || false)
+
+  // Platform tab state
+  const [reparsingPlatform, setReparsingPlatform] = useState<string | null>(null)
+  const [uploadingPlatform, setUploadingPlatform] = useState<string | null>(null)
+  const [aiSummary, setAiSummary] = useState<string>(influencer.ai_summary || '')
+  const [aiParsedAt, setAiParsedAt] = useState<string | null>(influencer.ai_parsed_at || null)
+  const [generatingSummary, setGeneratingSummary] = useState(false)
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
+  async function uploadAvatar(file: File) {
+    setAvatarUploading(true)
+    const ext = file.name.split('.').pop() || 'jpg'
+    const path = `${influencer.id}/avatar.${ext}`
+    const { error } = await supabase.storage.from('influencer-avatars').upload(path, file, { upsert: true, contentType: file.type })
+    if (!error) {
+      const { data: { publicUrl } } = supabase.storage.from('influencer-avatars').getPublicUrl(path)
+      await supabase.from('influencers').update({ avatar_url: publicUrl }).eq('id', influencer.id)
+      setAvatarUrl(publicUrl)
+    }
+    setAvatarUploading(false)
+  }
+
+  async function uploadAndParseScreenshots(platformId: string, platform: string, files: File[]) {
+    setUploadingPlatform(platformId)
+    const formData = new FormData()
+    files.forEach(f => formData.append('files', f))
+    formData.append('platform', platform)
+    formData.append('platformId', platformId)
+    formData.append('influencerId', influencer.id)
+    await fetch('/api/parse-screenshots', { method: 'POST', body: formData })
+    setUploadingPlatform(null)
+    router.refresh()
+  }
+
+  async function reparseScreenshots(platformId: string, platform: string) {
+    setReparsingPlatform(platformId)
+    const res = await fetch('/api/reparse-screenshots', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platformId, influencerId: influencer.id, platform }),
+    })
+    if (res.ok) router.refresh()
+    setReparsingPlatform(null)
+  }
+
+  async function regenerateSummary() {
+    setGeneratingSummary(true)
+    const res = await fetch('/api/generate-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ influencerId: influencer.id }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setAiSummary(data.summary)
+      setAiParsedAt(new Date().toISOString())
+    }
+    setGeneratingSummary(false)
+  }
 
   async function saveSection() {
     setSaving(true)
@@ -155,7 +221,6 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
 
   return (
     <div style={{ padding:'24px 28px 40px', maxWidth:660 }}>
-      {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:20 }}>
         <Link href="/dashboard/profile" style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:'var(--muted)', textDecoration:'none' }}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 2L4 7l5 5"/></svg>
@@ -164,7 +229,6 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
         <h2 style={{ fontSize:16, fontWeight:700 }}>Edit profile</h2>
       </div>
 
-      {/* Section tabs */}
       <div style={{ display:'flex', gap:1, borderBottom:'1px solid var(--line)', marginBottom:20, overflowX:'auto' }}>
         {sectionTabs.map(t => (
           <button key={t.key} onClick={() => setSection(t.key as any)} style={{
@@ -179,6 +243,35 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
       {/* Basic info */}
       {section === 'info' && (
         <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+          {/* Avatar upload */}
+          <div style={{ display:'flex', alignItems:'center', gap:16, paddingBottom:14, borderBottom:'1px solid var(--line)', marginBottom:4 }}>
+            <div style={{ position:'relative', flexShrink:0 }}>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" style={{ width:72, height:72, borderRadius:'50%', objectFit:'cover', border:'2px solid var(--line)' }} />
+              ) : (
+                <div style={{ width:72, height:72, borderRadius:'50%', background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:800, color:'#090E1A' }}>
+                  {firstName?.[0]}{lastName?.[0]}
+                </div>
+              )}
+              {avatarUploading && (
+                <div style={{ position:'absolute', inset:0, borderRadius:'50%', background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <div style={{ width:20, height:20, border:'2px solid #fff', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+                </div>
+              )}
+            </div>
+            <div>
+              <input ref={avatarInputRef} type="file" accept="image/*" style={{ display:'none' }}
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f) }} />
+              <button onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading} style={{
+                background:'var(--bg3)', border:'1px solid var(--line)', borderRadius:8,
+                padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', color:'var(--fg)',
+              }}>
+                {avatarUploading ? 'Uploading…' : 'Upload photo'}
+              </button>
+              <p style={{ fontSize:11, color:'var(--muted)', marginTop:5 }}>JPG, PNG or WebP · max 5MB</p>
+            </div>
+          </div>
+
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
             <div>
               <label style={{ fontSize:11, fontWeight:600, color:'var(--muted)', display:'block', marginBottom:5 }}>First name</label>
@@ -213,11 +306,9 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
                 </span>
               ))}
             </div>
-            <div style={{ display:'flex', gap:8 }}>
-              <input style={{ ...inputStyle, flex:1 }} value={langInput} onChange={e => setLangInput(e.target.value)}
-                onKeyDown={e => { if ((e.key === 'Enter' || e.key === ',') && langInput.trim()) { e.preventDefault(); setLanguages([...languages, langInput.trim()]); setLangInput('') } }}
-                placeholder="Type a language and press Enter" />
-            </div>
+            <input style={{ ...inputStyle }} value={langInput} onChange={e => setLangInput(e.target.value)}
+              onKeyDown={e => { if ((e.key === 'Enter' || e.key === ',') && langInput.trim()) { e.preventDefault(); setLanguages([...languages, langInput.trim()]); setLangInput('') } }}
+              placeholder="Type a language and press Enter" />
           </div>
         </div>
       )}
@@ -299,7 +390,6 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
       {/* Rate card */}
       {section === 'rates' && (
         <div>
-          {/* Per-platform rate inputs based on which platforms are connected */}
           {Array.from(new Set([...rates.map((r: any) => r.platform), ...(platforms.map((p: any) => p.platform))])).map(platform => {
             const FIELDS: [string, string][] = platform === 'instagram'
               ? [['Reel','reel'],['Story','story'],['Feed post','post']]
@@ -333,16 +423,15 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
             )
           })}
 
-          {/* Gifting / Rev-share / Exclusivity */}
           <div style={{ background:'var(--bg2)', border:'1px solid var(--line)', borderRadius:12, padding:'16px 18px', marginTop:4 }}>
-            {[
+            {([
               ['Gifting OK', gifting, setGifting],
               ['Rev-share OK', revShare, setRevShare],
               ['Exclusivity OK', exclusivity, setExclusivity],
-            ].map(([label, val, set]) => (
-              <div key={label as string} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid var(--line)' }}>
-                <p style={{ fontSize:13, fontWeight:500 }}>{label as string}</p>
-                <button onClick={() => (set as any)(!val)} style={{
+            ] as [string, boolean, (v: boolean) => void][]).map(([label, val, set]) => (
+              <div key={label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid var(--line)' }}>
+                <p style={{ fontSize:13, fontWeight:500 }}>{label}</p>
+                <button onClick={() => set(!val)} style={{
                   width:38, height:21, borderRadius:11, border:'none', cursor:'pointer',
                   background: val ? 'var(--green)' : 'var(--line)', position:'relative', transition:'background 0.25s',
                 }}>
@@ -354,48 +443,145 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
         </div>
       )}
 
-      {/* Platforms (read-only view + link to re-upload) */}
+      {/* Platforms */}
       {section === 'platforms' && (
         <div>
+          {/* AI Summary card */}
+          <div style={{ background:'var(--bg2)', border:'1px solid var(--acc3)', borderRadius:12, padding:'14px 18px', marginBottom:16 }}>
+            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12, marginBottom: aiSummary ? 10 : 0 }}>
+              <div>
+                <p style={{ fontSize:11, fontWeight:700, color:'var(--acc)', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:2 }}>AI Summary</p>
+                {aiParsedAt && <p style={{ fontSize:11, color:'var(--muted)' }}>Updated {timeAgo(aiParsedAt)}</p>}
+              </div>
+              <button onClick={regenerateSummary} disabled={generatingSummary} style={{
+                background:'var(--acc2)', border:'1px solid var(--acc3)', borderRadius:8,
+                padding:'6px 12px', fontSize:11, fontWeight:700, cursor: generatingSummary ? 'not-allowed' : 'pointer',
+                fontFamily:'inherit', color:'var(--acc)', flexShrink:0, opacity: generatingSummary ? 0.7 : 1,
+              }}>
+                {generatingSummary ? 'Generating…' : 'Regenerate summary'}
+              </button>
+            </div>
+            {aiSummary ? (
+              <p style={{ fontSize:13, lineHeight:1.6, color:'var(--muted)' }}>{aiSummary}</p>
+            ) : (
+              <p style={{ fontSize:12, color:'var(--muted)', fontStyle:'italic' }}>No summary yet — upload and parse screenshots to generate one.</p>
+            )}
+          </div>
+
           <p style={{ fontSize:13, color:'var(--muted)', marginBottom:16 }}>
             To update your social stats, upload new screenshots. Parse results only affect future matching — active gigs are not changed.
           </p>
+
           {platforms.length === 0 && (
             <div style={{ background:'var(--bg2)', border:'1px solid var(--line)', borderRadius:12, padding:'32px 24px', textAlign:'center' }}>
               <p style={{ fontSize:14, fontWeight:600, marginBottom:6 }}>No platforms yet</p>
               <p style={{ fontSize:13, color:'var(--muted)' }}>Add platforms during onboarding or contact Sarah to update.</p>
             </div>
           )}
-          {platforms.map(p => (
-            <div key={p.id} style={{ background:'var(--bg2)', border:'1px solid var(--line)', borderRadius:12, padding:'14px 18px', marginBottom:10 }}>
-              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom: 10 }}>
-                <div>
-                  <p style={{ fontSize:14, fontWeight:700 }}>{p.platform} <span style={{ fontWeight:400, color:'var(--muted)' }}>@{p.handle}</span></p>
-                  <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
-                    Status: <span style={{ color: p.parse_status === 'complete' ? 'var(--green)' : p.parse_status === 'processing' ? 'var(--acc)' : 'var(--muted)', fontWeight:600 }}>{p.parse_status}</span>
-                    {p.last_parsed_at && ` · Last parsed ${new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' })}`}
-                  </p>
+
+          {platforms.map(p => {
+            const platformScreenshots = screenshotsByPlatform[p.id] || []
+            const isReparsing = reparsingPlatform === p.id
+            const isUploading = uploadingPlatform === p.id
+
+            return (
+              <div key={p.id} style={{ background:'var(--bg2)', border:'1px solid var(--line)', borderRadius:12, padding:'14px 18px', marginBottom:10 }}>
+                <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:12 }}>
+                  <div style={{ flex:1 }}>
+                    <p style={{ fontSize:14, fontWeight:700 }}>{p.platform} <span style={{ fontWeight:400, color:'var(--muted)' }}>@{p.handle}</span></p>
+                    <p style={{ fontSize:12, color:'var(--muted)', marginTop:2 }}>
+                      Status: <span style={{ color: p.parse_status === 'complete' ? 'var(--green)' : p.parse_status === 'processing' ? 'var(--acc)' : 'var(--muted)', fontWeight:600 }}>{p.parse_status}</span>
+                      {p.last_parsed_at && ` · Last parsed ${new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' })}`}
+                    </p>
+                  </div>
+                  {platformScreenshots.length > 0 && (
+                    <button
+                      onClick={() => reparseScreenshots(p.id, p.platform)}
+                      disabled={isReparsing || isUploading}
+                      style={{
+                        background:'var(--acc)', color:'#090E1A', border:'none', borderRadius:8,
+                        padding:'7px 13px', fontSize:12, fontWeight:700,
+                        cursor: (isReparsing || isUploading) ? 'not-allowed' : 'pointer',
+                        fontFamily:'inherit', opacity: (isReparsing || isUploading) ? 0.6 : 1, flexShrink:0,
+                      }}
+                    >
+                      {isReparsing ? 'Re-parsing…' : 'Re-parse with AI'}
+                    </button>
+                  )}
                 </div>
+
+                {/* Screenshot thumbnails */}
+                {platformScreenshots.length > 0 && (
+                  <div style={{ marginBottom:12 }}>
+                    <p style={{ fontSize:11, fontWeight:600, color:'var(--muted)', marginBottom:7 }}>
+                      Uploaded screenshots ({platformScreenshots.length})
+                    </p>
+                    <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                      {platformScreenshots.map((s: any) => (
+                        <div key={s.id} style={{ width:70, height:70, borderRadius:8, overflow:'hidden', border:'1px solid var(--line)', flexShrink:0, background:'var(--bg3)' }}>
+                          {s.signedUrl ? (
+                            <img src={s.signedUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                          ) : (
+                            <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="var(--muted)" strokeWidth="1.2"/><circle cx="6.5" cy="7.5" r="1.5" fill="var(--muted)"/><path d="M2 12l4-4 3 3 2-2 5 5" stroke="var(--muted)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload zone */}
+                <input
+                  ref={el => { fileInputRefs.current[p.id] = el }}
+                  type="file" multiple accept="image/*" style={{ display:'none' }}
+                  onChange={e => {
+                    const files = Array.from(e.target.files || [])
+                    if (files.length) uploadAndParseScreenshots(p.id, p.platform, files)
+                  }}
+                />
+                <div
+                  onClick={() => !isUploading && fileInputRefs.current[p.id]?.click()}
+                  style={{
+                    border:`2px dashed ${isUploading ? 'var(--acc3)' : 'var(--line)'}`,
+                    borderRadius:10, padding:'14px', textAlign:'center',
+                    cursor: isUploading ? 'default' : 'pointer',
+                    background: isUploading ? 'rgba(196,154,60,0.05)' : 'transparent',
+                    transition:'border-color 0.15s', marginBottom:10,
+                  }}
+                >
+                  {isUploading ? (
+                    <p style={{ fontSize:12, color:'var(--acc)', fontWeight:600 }}>Uploading & parsing…</p>
+                  ) : (
+                    <>
+                      <p style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>
+                        {platformScreenshots.length > 0 ? 'Upload new screenshots' : 'Upload screenshots'}
+                      </p>
+                      <p style={{ fontSize:11, color:'var(--muted)' }}>Click to select · multiple files OK · JPG or PNG</p>
+                    </>
+                  )}
+                </div>
+
+                {UPLOAD_HINTS[p.platform.toLowerCase()] && (
+                  <div style={{ marginBottom:10 }}>
+                    <p style={{ fontSize:12, color:'var(--muted)', marginBottom:5 }}>For the best match, upload screenshots of:</p>
+                    <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:3 }}>
+                      {UPLOAD_HINTS[p.platform.toLowerCase()].map((hint: string, i: number) => (
+                        <li key={i} style={{ fontSize:12, color:'var(--muted)', display:'flex', gap:6 }}>
+                          <span style={{ color:'var(--acc)', flexShrink:0 }}>·</span>{hint}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <ScreenshotGuide platform={p.platform} />
               </div>
-              {UPLOAD_HINTS[p.platform.toLowerCase()] && (
-                <div style={{ marginBottom:10 }}>
-                  <p style={{ fontSize:12, color:'var(--muted)', marginBottom:5 }}>For the best match, upload screenshots of:</p>
-                  <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:3 }}>
-                    {UPLOAD_HINTS[p.platform.toLowerCase()].map((hint: string, i: number) => (
-                      <li key={i} style={{ fontSize:12, color:'var(--muted)', display:'flex', gap:6 }}>
-                        <span style={{ color:'var(--acc)', flexShrink:0 }}>·</span>{hint}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              <ScreenshotGuide platform={p.platform} />
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
-      {/* Save button */}
       {section !== 'platforms' && (
         <div style={{ marginTop:24 }}>
           <button onClick={saveSection} disabled={saving} style={{
@@ -408,6 +594,8 @@ export default function ProfileEditClient({ influencer, platforms, rates }: {
           </button>
         </div>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

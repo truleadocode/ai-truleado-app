@@ -45,9 +45,13 @@ export default async function ProfilePage() {
       {/* Header */}
       <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24 }}>
         <div style={{ display:'flex', gap:14, alignItems:'center' }}>
-          <div style={{ width:60, height:60, borderRadius:'50%', background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:800, color:'#090E1A', flexShrink:0 }}>
-            {inf.first_name?.[0]}{inf.last_name?.[0]}
-          </div>
+          {inf.avatar_url ? (
+            <img src={inf.avatar_url} alt="Avatar" style={{ width:60, height:60, borderRadius:'50%', objectFit:'cover', border:'2px solid var(--line)', flexShrink:0 }} />
+          ) : (
+            <div style={{ width:60, height:60, borderRadius:'50%', background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, fontWeight:800, color:'#090E1A', flexShrink:0 }}>
+              {inf.first_name?.[0]}{inf.last_name?.[0]}
+            </div>
+          )}
           <div>
             <h2 style={{ fontSize:20, fontWeight:800, letterSpacing:-0.5, marginBottom:3 }}>{inf.first_name} {inf.last_name}</h2>
             <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
@@ -62,7 +66,10 @@ export default async function ProfilePage() {
             </div>
           </div>
         </div>
-        <Link href="/profile/edit" style={{ fontSize:12, fontWeight:700, color:'#090E1A', background:'var(--acc)', padding:'8px 14px', borderRadius:8, textDecoration:'none', flexShrink:0 }}>Edit profile</Link>
+        <div style={{ display:'flex', gap:8 }}>
+          <Link href="/profile/view" style={{ fontSize:12, fontWeight:700, color:'var(--fg)', background:'var(--bg3)', border:'1px solid var(--line)', padding:'8px 14px', borderRadius:8, textDecoration:'none', flexShrink:0 }}>View profile</Link>
+          <Link href="/profile/edit" style={{ fontSize:12, fontWeight:700, color:'#090E1A', background:'var(--acc)', padding:'8px 14px', borderRadius:8, textDecoration:'none', flexShrink:0 }}>Edit profile</Link>
+        </div>
       </div>
 
       {/* AI Summary */}
