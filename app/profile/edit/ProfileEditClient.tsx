@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -102,6 +102,9 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   const [exclusivity, setExclusivity] = useState(influencer.open_to_exclusivity || false)
 
   // Platform tab state
+  const [platformStatuses, setPlatformStatuses] = useState<Record<string, string>>(
+    Object.fromEntries(platforms.map(p => [p.id, p.parse_status || 'pending']))
+  )
   const [reparsingPlatform, setReparsingPlatform] = useState<string | null>(null)
   const [uploadingPlatform, setUploadingPlatform] = useState<string | null>(null)
   const [aiSummary, setAiSummary] = useState<string>(influencer.ai_summary || '')
@@ -123,6 +126,27 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   const [newPlatform, setNewPlatform] = useState(availablePlatforms[0] || '')
   const [newHandle, setNewHandle] = useState('')
   const [addingPlatform, setAddingPlatform] = useState(false)
+
+  useEffect(() => {
+    if (section !== 'platforms') return
+
+    const channel = supabase
+      .channel('platform-status')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'influencer_platforms', filter: `influencer_id=eq.${influencer.id}` },
+        (payload) => {
+          const updated = payload.new as any
+          setPlatformStatuses(prev => ({ ...prev, [updated.id]: updated.parse_status }))
+          if (updated.parse_status === 'complete') {
+            setTimeout(() => router.refresh(), 1000)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [section, influencer.id])
 
   async function updateHandle(platformId: string) {
     setSavingHandle(platformId)
@@ -159,27 +183,26 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
     setAvatarUploading(false)
   }
 
-  async function uploadAndParseScreenshots(platformId: string, platform: string, files: File[]) {
+  function uploadAndParseScreenshots(platformId: string, platform: string, files: File[]) {
     setUploadingPlatform(platformId)
+    setPlatformStatuses(prev => ({ ...prev, [platformId]: 'processing' }))
     const formData = new FormData()
     files.forEach(f => formData.append('files', f))
     formData.append('platform', platform)
     formData.append('platformId', platformId)
     formData.append('influencerId', influencer.id)
-    await fetch('/api/parse-screenshots', { method: 'POST', body: formData })
-    setUploadingPlatform(null)
-    router.refresh()
+    fetch('/api/parse-screenshots', { method: 'POST', body: formData })
+      .finally(() => setUploadingPlatform(null))
   }
 
-  async function reparseScreenshots(platformId: string, platform: string) {
+  function reparseScreenshots(platformId: string, platform: string) {
     setReparsingPlatform(platformId)
-    const res = await fetch('/api/reparse-screenshots', {
+    setPlatformStatuses(prev => ({ ...prev, [platformId]: 'processing' }))
+    fetch('/api/reparse-screenshots', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ platformId, influencerId: influencer.id, platform }),
-    })
-    if (res.ok) router.refresh()
-    setReparsingPlatform(null)
+    }).finally(() => setReparsingPlatform(null))
   }
 
   async function regenerateSummary() {
@@ -525,16 +548,30 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             const platformScreenshots = screenshotsByPlatform[p.id] || []
             const isReparsing = reparsingPlatform === p.id
             const isUploading = uploadingPlatform === p.id
+            const liveStatus = platformStatuses[p.id] || 'pending'
+
+            const statusBadge = liveStatus === 'complete'
+              ? { label: 'Parsed ✓', bg: 'var(--green-bg)', color: 'var(--green)', border: 'var(--green-border)' }
+              : liveStatus === 'processing'
+              ? { label: 'Parsing…', bg: 'var(--gold-bg)', color: 'var(--gold)', border: 'var(--gold-border)' }
+              : liveStatus === 'failed'
+              ? { label: 'Failed — try again', bg: 'var(--red-bg)', color: 'var(--red)', border: 'var(--red-border)' }
+              : { label: 'Not uploaded', bg: 'var(--surface)', color: 'var(--text-2)', border: 'var(--border)' }
 
             return (
               <div key={p.id} style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'14px 18px', marginBottom:10 }}>
                 <div style={{ display:'flex', alignItems:'flex-start', gap:10, marginBottom:8 }}>
                   <div style={{ flex:1 }}>
-                    <p style={{ fontSize:14, fontWeight:700, textTransform:'capitalize' }}>{p.platform}</p>
-                    <p style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>
-                      Status: <span style={{ color: p.parse_status === 'complete' ? 'var(--green)' : p.parse_status === 'processing' ? 'var(--gold)' : 'var(--text-2)', fontWeight:600 }}>{p.parse_status}</span>
-                      {p.last_parsed_at && ` · Last parsed ${new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' })}`}
-                    </p>
+                    <p style={{ fontSize:14, fontWeight:700, textTransform:'capitalize', marginBottom:5 }}>{p.platform}</p>
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11, fontWeight:600, padding:'3px 9px', borderRadius:20, background:statusBadge.bg, color:statusBadge.color, border:`1px solid ${statusBadge.border}` }}>
+                      {liveStatus === 'processing' && <span style={{ width:6, height:6, borderRadius:'50%', background:'currentColor', animation:'blink 1.4s infinite', display:'inline-block' }} />}
+                      {statusBadge.label}
+                    </span>
+                    {p.last_parsed_at && liveStatus === 'complete' && (
+                      <span style={{ fontSize:11, color:'var(--text-3)', marginLeft:8 }}>
+                        {new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' })}
+                      </span>
+                    )}
                   </div>
                   {platformScreenshots.length > 0 && (
                     <button
