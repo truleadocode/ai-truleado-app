@@ -1,5 +1,6 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import ProfileEditClient from './ProfileEditClient'
 
 export default async function ProfileEditPage() {
@@ -35,11 +36,13 @@ export default async function ProfileEditPage() {
   }
 
   return (
-    <ProfileEditClient
-      influencer={inf}
-      platforms={platforms || []}
-      rates={rates || []}
-      screenshotsByPlatform={screenshotsByPlatform}
-    />
+    <Suspense>
+      <ProfileEditClient
+        influencer={inf}
+        platforms={platforms || []}
+        rates={rates || []}
+        screenshotsByPlatform={screenshotsByPlatform}
+      />
+    </Suspense>
   )
 }

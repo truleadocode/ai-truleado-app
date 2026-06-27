@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     if (!validParts.length) throw new Error('Could not download any screenshots')
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const parseResult = await model.generateContent([
       SCREENSHOT_PARSE_PROMPT,
@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
       audience_gender_split: parsed.audience_gender_split,
       ai_raw_parse: parsed,
       parse_status: 'complete',
+      parse_error: null,
       last_parsed_at: new Date().toISOString(),
     }).eq('id', platformId)
 

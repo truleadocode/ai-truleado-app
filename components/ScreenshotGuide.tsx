@@ -51,14 +51,14 @@ export default function ScreenshotGuide({ platform }: { platform: string }) {
         style={{
           background: 'none', border: 'none', padding: 0, cursor: 'pointer',
           display: 'inline-flex', alignItems: 'center', gap: 5,
-          fontSize: 12, fontWeight: 700, color: 'var(--acc)', fontFamily: 'inherit',
+          fontSize: 12, fontWeight: 700, color: 'var(--gold)', fontFamily: 'inherit',
         }}
       >
         <svg
           width="10" height="10" viewBox="0 0 10 10" fill="none"
           style={{ transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'none', flexShrink: 0 }}
         >
-          <path d="M3 2l4 3-4 3" stroke="var(--acc)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3 2l4 3-4 3" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
         {open ? 'Hide guide' : 'What to screenshot →'}
       </button>
@@ -66,22 +66,22 @@ export default function ScreenshotGuide({ platform }: { platform: string }) {
       {open && (
         <div style={{
           marginTop: 8,
-          background: 'var(--bg3)',
-          border: '1px solid var(--line)',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
           borderRadius: 10,
           padding: '14px 16px',
         }}>
           {guide.note && (
             <div style={{
               display: 'flex', gap: 8, alignItems: 'flex-start',
-              background: 'var(--acc2)', border: '1px solid var(--acc3)',
+              background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
               borderRadius: 7, padding: '9px 11px', marginBottom: 12,
             }}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
-                <circle cx="7" cy="7" r="6" stroke="var(--acc)" strokeWidth="1.3"/>
-                <path d="M7 6v3.5M7 4.5v.5" stroke="var(--acc)" strokeWidth="1.3" strokeLinecap="round"/>
+                <circle cx="7" cy="7" r="6" stroke="var(--gold)" strokeWidth="1.3"/>
+                <path d="M7 6v3.5M7 4.5v.5" stroke="var(--gold)" strokeWidth="1.3" strokeLinecap="round"/>
               </svg>
-              <p style={{ fontSize: 12, color: 'var(--acc)', lineHeight: 1.5 }}>{guide.note}</p>
+              <p style={{ fontSize: 12, color: 'var(--gold)', lineHeight: 1.5 }}>{guide.note}</p>
             </div>
           )}
           <ol style={{ paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -89,11 +89,11 @@ export default function ScreenshotGuide({ platform }: { platform: string }) {
               <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <span style={{
                   width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                  background: 'var(--acc2)', border: '1px solid var(--acc3)',
+                  background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 800, color: 'var(--acc)', marginTop: 1,
+                  fontSize: 10, fontWeight: 800, color: 'var(--gold)', marginTop: 1,
                 }}>{i + 1}</span>
-                <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.5 }}>{step}</p>
+                <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{step}</p>
               </li>
             ))}
           </ol>

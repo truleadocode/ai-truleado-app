@@ -57,7 +57,7 @@ const UPLOAD_HINTS: Record<string, string[]> = {
 
 function LogoMark() {
   return (
-    <span style={{width:22,height:22,borderRadius:6,background:'var(--acc)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+    <span style={{width:22,height:22,borderRadius:6,background:'var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
         <path d="M2 10L6 2L10 10" stroke="#090E1A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
         <path d="M3.5 7h5" stroke="#090E1A" strokeWidth="1.8" strokeLinecap="round"/>
@@ -78,18 +78,18 @@ function TagPill({ label, selected, onToggle, danger }: { label: string, selecte
     return (
       <div onClick={onToggle} style={{
         ...baseStyle,
-        background: selected ? 'var(--red2)' : 'var(--bg2)',
-        borderColor: selected ? 'var(--red3)' : 'rgba(248,113,113,0.2)',
-        color: selected ? 'var(--red)' : 'var(--muted)',
+        background: selected ? 'var(--red-bg)' : 'var(--white)',
+        borderColor: selected ? 'var(--red-border)' : 'rgba(248,113,113,0.2)',
+        color: selected ? 'var(--red)' : 'var(--text-2)',
       }}>🚫 {label}</div>
     )
   }
   return (
     <div onClick={onToggle} style={{
       ...baseStyle,
-      background: selected ? 'var(--acc2)' : 'var(--bg2)',
-      borderColor: selected ? 'var(--acc3)' : 'var(--line)',
-      color: selected ? 'var(--fg)' : 'var(--muted)',
+      background: selected ? 'var(--gold-bg)' : 'var(--white)',
+      borderColor: selected ? 'var(--gold-border)' : 'var(--border)',
+      color: selected ? 'var(--text)' : 'var(--text-2)',
     }}>{label}</div>
   )
 }
@@ -273,36 +273,36 @@ export default function OnboardingClient({
   const progress = step > 6 ? 6 : step
 
   return (
-    <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+    <div style={{ background: 'var(--surface)', minHeight: '100vh' }}>
       {/* NAV */}
       <nav style={{
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'0 24px', height:56,
-        borderBottom:'1px solid var(--line)',
-        background:'var(--bg)',
+        borderBottom:'1px solid var(--border)',
+        background:'var(--surface)',
         position:'sticky', top:0, zIndex:100,
       }}>
-        <a href="#" style={{ display:'flex', alignItems:'center', gap:7, fontSize:16, fontWeight:800, color:'var(--fg)', textDecoration:'none' }}>
+        <a href="#" style={{ display:'flex', alignItems:'center', gap:7, fontSize:16, fontWeight:800, color:'var(--text)', textDecoration:'none' }}>
           <LogoMark /> Truleado
         </a>
-        <p style={{ fontSize:12, fontWeight:500, color:'var(--muted)' }}>
-          Step <span style={{ color:'var(--fg)', fontWeight:700 }}>{Math.min(step, 6)}</span> of 6
+        <p style={{ fontSize:12, fontWeight:500, color:'var(--text-2)' }}>
+          Step <span style={{ color:'var(--text)', fontWeight:700 }}>{Math.min(step, 6)}</span> of 6
         </p>
       </nav>
 
       {/* PROGRESS */}
-      <div style={{ background:'var(--bg)', padding:'16px 24px 0', position:'sticky', top:56, zIndex:99 }}>
+      <div style={{ background:'var(--surface)', padding:'16px 24px 0', position:'sticky', top:56, zIndex:99 }}>
         <div style={{ display:'flex', gap:6, marginBottom:10 }}>
           {[1,2,3,4,5,6].map(i => (
             <div key={i} style={{
               flex:1, height:3, borderRadius:2,
-              background: i < progress ? 'var(--acc)' : i === progress ? 'rgba(196,154,60,0.5)' : 'var(--line)',
+              background: i < progress ? 'var(--gold)' : i === progress ? 'rgba(196,154,60,0.5)' : 'var(--border)',
               transition:'background 0.4s',
             }} />
           ))}
         </div>
-        <p style={{ fontSize:11, fontWeight:600, color:'var(--muted)', letterSpacing:'0.05em', paddingBottom:12, borderBottom:'1px solid var(--line)' }}>
-          Step {Math.min(step, 6)} — <span style={{ color:'var(--acc)' }}>{LABELS[Math.min(step,6)-1]}</span>
+        <p style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', letterSpacing:'0.05em', paddingBottom:12, borderBottom:'1px solid var(--border)' }}>
+          Step {Math.min(step, 6)} — <span style={{ color:'var(--gold)' }}>{LABELS[Math.min(step,6)-1]}</span>
         </p>
       </div>
 
@@ -313,7 +313,7 @@ export default function OnboardingClient({
         {step === 1 && (
           <div>
             <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>You&apos;re signed in!</h2>
-            <p style={{ fontSize:14, color:'var(--muted)', marginBottom:28, lineHeight:1.6 }}>
+            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:28, lineHeight:1.6 }}>
               Your Google account is connected. Let&apos;s set up your creator profile — takes about 5 minutes.
             </p>
             <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
@@ -322,11 +322,11 @@ export default function OnboardingClient({
                 { n:2, title:'Upload social screenshots', sub:'Our AI builds your profile automatically' },
                 { n:3, title:'Get matched to brand campaigns', sub:'You only hear from us when it\'s relevant' },
               ].map(item => (
-                <div key={item.n} style={{ display:'flex', alignItems:'flex-start', gap:12, background:'var(--bg2)', border:'1px solid var(--line)', borderRadius:10, padding:'14px 16px' }}>
-                  <div style={{ width:24, height:24, borderRadius:'50%', background:'var(--acc2)', border:'1px solid var(--acc3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'var(--acc)', flexShrink:0, marginTop:1 }}>{item.n}</div>
+                <div key={item.n} style={{ display:'flex', alignItems:'flex-start', gap:12, background:'var(--white)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+                  <div style={{ width:24, height:24, borderRadius:'50%', background:'var(--gold-bg)', border:'1px solid var(--gold-border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'var(--gold)', flexShrink:0, marginTop:1 }}>{item.n}</div>
                   <div>
                     <p style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>{item.title}</p>
-                    <span style={{ fontSize:12, color:'var(--muted)' }}>{item.sub}</span>
+                    <span style={{ fontSize:12, color:'var(--text-2)' }}>{item.sub}</span>
                   </div>
                 </div>
               ))}
@@ -338,7 +338,7 @@ export default function OnboardingClient({
         {step === 2 && (
           <div>
             <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Tell us about yourself.</h2>
-            <p style={{ fontSize:14, color:'var(--muted)', marginBottom:28, lineHeight:1.6 }}>Basic info so brands know who they&apos;re working with.</p>
+            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:28, lineHeight:1.6 }}>Basic info so brands know who they&apos;re working with.</p>
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
               <Field label="First name"><input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" style={inputStyle} /></Field>
@@ -370,7 +370,7 @@ export default function OnboardingClient({
         {step === 3 && (
           <div>
             <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Your social accounts.</h2>
-            <p style={{ fontSize:14, color:'var(--muted)', marginBottom:20, lineHeight:1.6 }}>Select the platforms you&apos;re active on, then upload screenshots. Our AI reads them automatically.</p>
+            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:20, lineHeight:1.6 }}>Select the platforms you&apos;re active on, then upload screenshots. Our AI reads them automatically.</p>
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
               {PLATFORMS_LIST.map(p => {
@@ -378,21 +378,21 @@ export default function OnboardingClient({
                 return (
                   <div key={p.key} onClick={() => toggleArr(platforms, p.key, setPlatforms)} style={{
                     display:'flex', alignItems:'center', gap:10,
-                    background: sel ? 'var(--acc2)' : 'var(--bg2)',
-                    border: `1px solid ${sel ? 'var(--acc3)' : 'var(--line)'}`,
+                    background: sel ? 'var(--gold-bg)' : 'var(--white)',
+                    border: `1px solid ${sel ? 'var(--gold-border)' : 'var(--border)'}`,
                     borderRadius:10, padding:'13px 14px', cursor:'pointer',
                     transition:'all 0.2s', userSelect:'none',
                   }}>
                     <span style={{ fontSize:20 }}>{p.icon}</span>
                     <div style={{ flex:1 }}>
                       <p style={{ fontSize:14, fontWeight:600 }}>{p.label}</p>
-                      <span style={{ fontSize:11, color:'var(--muted)' }}>{p.sub}</span>
+                      <span style={{ fontSize:11, color:'var(--text-2)' }}>{p.sub}</span>
                     </div>
                     <div style={{
                       width:18, height:18, borderRadius:'50%', marginLeft:'auto', flexShrink:0,
                       display:'flex', alignItems:'center', justifyContent:'center',
-                      background: sel ? 'var(--acc)' : 'transparent',
-                      border: `1.5px solid ${sel ? 'var(--acc)' : 'var(--line)'}`,
+                      background: sel ? 'var(--gold)' : 'transparent',
+                      border: `1.5px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
                       transition:'all 0.2s',
                     }}>
                       {sel && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#090E1A" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -402,7 +402,7 @@ export default function OnboardingClient({
               })}
             </div>
 
-            <div style={{ background:'var(--acc2)', border:'1px solid var(--acc3)', borderRadius:10, padding:'12px 14px', fontSize:13, color:'var(--fg)', lineHeight:1.6, marginBottom:20, display:'flex', gap:10, alignItems:'flex-start' }}>
+            <div style={{ background:'var(--gold-bg)', border:'1px solid var(--gold-border)', borderRadius:10, padding:'12px 14px', fontSize:13, color:'var(--text)', lineHeight:1.6, marginBottom:20, display:'flex', gap:10, alignItems:'flex-start' }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0, marginTop:2 }}><circle cx="8" cy="8" r="7" stroke="#C49A3C" strokeWidth="1.4"/><path d="M8 7v4M8 5v.5" stroke="#C49A3C" strokeWidth="1.4" strokeLinecap="round"/></svg>
               Upload screenshots of your profile stats, recent posts, and audience insights page. We&apos;ll extract the numbers automatically.
             </div>
@@ -414,7 +414,7 @@ export default function OnboardingClient({
                 <div key={platform} style={{ marginBottom:20 }}>
                   <h4 style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>
                     {platInfo.label} screenshots{' '}
-                    <span style={{ fontSize:11, fontWeight:600, color:'var(--acc)', background:'var(--acc2)', border:'1px solid var(--acc3)', padding:'2px 8px', borderRadius:20 }}>{platInfo.label}</span>
+                    <span style={{ fontSize:11, fontWeight:600, color:'var(--gold)', background:'var(--gold-bg)', border:'1px solid var(--gold-border)', padding:'2px 8px', borderRadius:20 }}>{platInfo.label}</span>
                   </h4>
                   <div style={{ marginBottom:10 }}>
                     <Field label="Handle (optional)">
@@ -423,8 +423,8 @@ export default function OnboardingClient({
                   </div>
                   <ScreenshotGuide platform={platform} />
                   <div style={{
-                    border: `1.5px dashed ${files.length ? 'var(--acc3)' : 'var(--line)'}`,
-                    background: files.length ? 'var(--acc2)' : 'transparent',
+                    border: `1.5px dashed ${files.length ? 'var(--gold-border)' : 'var(--border)'}`,
+                    background: files.length ? 'var(--gold-bg)' : 'transparent',
                     borderRadius:12, overflow:'hidden', transition:'all 0.2s',
                   }}>
                     <input
@@ -433,12 +433,12 @@ export default function OnboardingClient({
                       onChange={e => { if (e.target.files) handleFileUpload(platform, Array.from(e.target.files)) }}
                     />
                     {UPLOAD_HINTS[platform] && (
-                      <div style={{ padding:'12px 14px 10px', borderBottom:`1px dashed ${files.length ? 'var(--acc3)' : 'var(--line)'}` }}>
-                        <p style={{ fontSize:12, color:'var(--muted)', marginBottom:6 }}>For the best match, upload screenshots of:</p>
+                      <div style={{ padding:'12px 14px 10px', borderBottom:`1px dashed ${files.length ? 'var(--gold-border)' : 'var(--border)'}` }}>
+                        <p style={{ fontSize:12, color:'var(--text-2)', marginBottom:6 }}>For the best match, upload screenshots of:</p>
                         <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:3 }}>
                           {UPLOAD_HINTS[platform].map((hint, i) => (
-                            <li key={i} style={{ fontSize:12, color:'var(--muted)', display:'flex', gap:6 }}>
-                              <span style={{ color:'var(--acc)', flexShrink:0 }}>·</span>{hint}
+                            <li key={i} style={{ fontSize:12, color:'var(--text-2)', display:'flex', gap:6 }}>
+                              <span style={{ color:'var(--gold)', flexShrink:0 }}>·</span>{hint}
                             </li>
                           ))}
                         </ul>
@@ -446,21 +446,21 @@ export default function OnboardingClient({
                     )}
                     <div onClick={() => fileRefs.current[platform]?.click()} style={{ padding:'18px 16px', textAlign:'center', cursor:'pointer' }}>
                       <div style={{ fontSize:22, marginBottom:6 }}>📂</div>
-                      <p style={{ fontSize:13, fontWeight:600, color:'var(--fg)', marginBottom:2 }}>Tap to upload screenshots</p>
-                      <span style={{ fontSize:12, color:'var(--muted)' }}>PNG, JPG — multiple files OK</span>
+                      <p style={{ fontSize:13, fontWeight:600, color:'var(--text)', marginBottom:2 }}>Tap to upload screenshots</p>
+                      <span style={{ fontSize:12, color:'var(--text-2)' }}>PNG, JPG — multiple files OK</span>
                     </div>
                   </div>
                   {files.length > 0 && (
                     <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:6 }}>
                       {files.map((f, i) => (
-                        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:'var(--bg3)', border:'1px solid var(--line)', borderRadius:8, padding:'8px 12px' }}>
+                        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px' }}>
                           <span style={{ fontSize:12, fontWeight:500, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.name}</span>
-                          <span style={{ fontSize:11, color:'var(--muted)', flexShrink:0 }}>{(f.size / 1024 / 1024).toFixed(1)} MB</span>
+                          <span style={{ fontSize:11, color:'var(--text-2)', flexShrink:0 }}>{(f.size / 1024 / 1024).toFixed(1)} MB</span>
                         </div>
                       ))}
                       {parsing[platform] && (
-                        <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, fontWeight:500, color:'var(--acc)', marginTop:4 }}>
-                          <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--acc)', animation:'pulse 1.4s infinite' }} />
+                        <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, fontWeight:500, color:'var(--gold)', marginTop:4 }}>
+                          <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--gold)', animation:'pulse 1.4s infinite' }} />
                           AI is reading your screenshots…
                         </div>
                       )}
@@ -476,7 +476,7 @@ export default function OnboardingClient({
         {step === 4 && (
           <div>
             <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Your content style.</h2>
-            <p style={{ fontSize:14, color:'var(--muted)', marginBottom:28, lineHeight:1.6 }}>Help us understand what you create so we match you to the right campaigns.</p>
+            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:28, lineHeight:1.6 }}>Help us understand what you create so we match you to the right campaigns.</p>
 
             <Field label="Primary niche">
               <select value={primaryNiche} onChange={e => setPrimaryNiche(e.target.value)} style={selectStyle}>
@@ -512,7 +512,7 @@ export default function OnboardingClient({
             </Field>
             <Field label="Short bio (shown to brands)" hint="Max 220 characters. Keep it natural — this is the first thing brands read about you.">
               <textarea rows={3} value={bio} onChange={e => setBio(e.target.value)} maxLength={220} placeholder="Briefly describe yourself and your audience in your own words…" style={{ ...inputStyle, resize:'none', lineHeight:1.6 }} />
-              <p style={{ fontSize:12, color:'var(--muted)', marginTop:5, textAlign:'right' }}>{bio.length} / 220</p>
+              <p style={{ fontSize:12, color:'var(--text-2)', marginTop:5, textAlign:'right' }}>{bio.length} / 220</p>
             </Field>
           </div>
         )}
@@ -521,7 +521,7 @@ export default function OnboardingClient({
         {step === 5 && (
           <div>
             <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Brand preferences.</h2>
-            <p style={{ fontSize:14, color:'var(--muted)', marginBottom:28, lineHeight:1.6 }}>Tell us what you love and what you&apos;ll never promote. We take this seriously.</p>
+            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:28, lineHeight:1.6 }}>Tell us what you love and what you&apos;ll never promote. We take this seriously.</p>
 
             <Field label="Brands & categories you love working with">
               <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:10 }}>
@@ -530,7 +530,7 @@ export default function OnboardingClient({
               <input type="text" value={loveCustom} onChange={e => setLoveCustom(e.target.value)} placeholder="Add your own (e.g. Scandinavian design brands)" style={inputStyle} />
             </Field>
 
-            <div style={{ height:1, background:'var(--line)', margin:'16px 0' }} />
+            <div style={{ height:1, background:'var(--border)', margin:'16px 0' }} />
 
             <Field label="Brands & categories you will never promote">
               <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:10 }}>
@@ -539,7 +539,7 @@ export default function OnboardingClient({
               <input type="text" value={neverCustom} onChange={e => setNeverCustom(e.target.value)} placeholder="Add your own exclusions…" style={inputStyle} />
             </Field>
 
-            <div style={{ height:1, background:'var(--line)', margin:'16px 0' }} />
+            <div style={{ height:1, background:'var(--border)', margin:'16px 0' }} />
 
             <Field label="Notable brand partnerships (optional)" hint="Helps brands understand your experience level.">
               <input type="text" value={pastPartners} onChange={e => setPastPartners(e.target.value)} placeholder="e.g. Nike, Glossier, Oatly…" style={inputStyle} />
@@ -551,9 +551,9 @@ export default function OnboardingClient({
         {step === 6 && (
           <div>
             <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Your rates.</h2>
-            <p style={{ fontSize:14, color:'var(--muted)', marginBottom:20, lineHeight:1.6 }}>We only match you to campaigns that fit your rate card. Set your minimum — you can always negotiate up.</p>
+            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:20, lineHeight:1.6 }}>We only match you to campaigns that fit your rate card. Set your minimum — you can always negotiate up.</p>
 
-            <div style={{ background:'var(--acc2)', border:'1px solid var(--acc3)', borderRadius:10, padding:'12px 14px', fontSize:13, color:'var(--fg)', lineHeight:1.6, marginBottom:20, display:'flex', gap:10, alignItems:'flex-start' }}>
+            <div style={{ background:'var(--gold-bg)', border:'1px solid var(--gold-border)', borderRadius:10, padding:'12px 14px', fontSize:13, color:'var(--text)', lineHeight:1.6, marginBottom:20, display:'flex', gap:10, alignItems:'flex-start' }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0, marginTop:2 }}><circle cx="8" cy="8" r="7" stroke="#C49A3C" strokeWidth="1.4"/><path d="M8 7v4M8 5v.5" stroke="#C49A3C" strokeWidth="1.4" strokeLinecap="round"/></svg>
               These are your minimums. Brands see a range, not your exact number. You can negotiate on every deal.
             </div>
@@ -565,38 +565,38 @@ export default function OnboardingClient({
               { key:'tiktok_video',         label:'TikTok Video',        sub:'Per video',        placeholder:'600' },
               { key:'youtube_integration',  label:'YouTube Integration', sub:'Per video mention', placeholder:'1200' },
             ].map(r => (
-              <div key={r.key} style={{ display:'flex', alignItems:'center', gap:10, background:'var(--bg2)', border:'1px solid var(--line)', borderRadius:10, padding:'12px 16px', marginBottom:10 }}>
+              <div key={r.key} style={{ display:'flex', alignItems:'center', gap:10, background:'var(--white)', border:'1px solid var(--border)', borderRadius:10, padding:'12px 16px', marginBottom:10 }}>
                 <div style={{ flex:1 }}>
                   <p style={{ fontSize:13, fontWeight:500 }}>{r.label}</p>
-                  <span style={{ fontSize:11, color:'var(--muted)' }}>{r.sub}</span>
+                  <span style={{ fontSize:11, color:'var(--text-2)' }}>{r.sub}</span>
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:4, background:'var(--bg3)', borderRadius:7, padding:'6px 10px', minWidth:100 }}>
-                  <span style={{ fontSize:13, color:'var(--muted)' }}>€</span>
+                <div style={{ display:'flex', alignItems:'center', gap:4, background:'var(--surface)', borderRadius:7, padding:'6px 10px', minWidth:100 }}>
+                  <span style={{ fontSize:13, color:'var(--text-2)' }}>€</span>
                   <input
                     type="number" placeholder={r.placeholder} min="0"
                     value={(rates as any)[r.key]}
                     onChange={e => setRates(prev => ({ ...prev, [r.key]: e.target.value }))}
-                    style={{ background:'transparent', border:'none', outline:'none', fontFamily:'inherit', fontSize:14, fontWeight:600, color:'var(--fg)', width:70, textAlign:'right', padding:0 }}
+                    style={{ background:'transparent', border:'none', outline:'none', fontFamily:'inherit', fontSize:14, fontWeight:600, color:'var(--text)', width:70, textAlign:'right', padding:0 }}
                   />
                 </div>
               </div>
             ))}
 
-            <div style={{ height:1, background:'var(--line)', margin:'16px 0' }} />
+            <div style={{ height:1, background:'var(--border)', margin:'16px 0' }} />
 
             {[
               { key:'gifting', label:'Open to gifting-only deals', sub:'Receive products with no cash fee', val:openGifting, set:setOpenGifting },
               { key:'revshare', label:'Open to revenue share deals', sub:'Earn a % of sales you drive', val:openRevShare, set:setOpenRevShare },
               { key:'exclusivity', label:'Open to exclusivity clauses', sub:'Agree not to work with competitors', val:openExclusivity, set:setOpenExclusivity },
             ].map(t => (
-              <div key={t.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0', borderBottom:'1px solid var(--line)' }}>
+              <div key={t.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0', borderBottom:'1px solid var(--border)' }}>
                 <div>
                   <p style={{ fontSize:14, fontWeight:500 }}>{t.label}</p>
-                  <span style={{ fontSize:12, color:'var(--muted)' }}>{t.sub}</span>
+                  <span style={{ fontSize:12, color:'var(--text-2)' }}>{t.sub}</span>
                 </div>
                 <button onClick={() => t.set(!t.val)} style={{
                   width:40, height:22, borderRadius:11, flexShrink:0,
-                  background: t.val ? 'var(--acc)' : 'var(--line)',
+                  background: t.val ? 'var(--gold)' : 'var(--border)',
                   border:'none', cursor:'pointer', position:'relative', transition:'background 0.25s',
                 }}>
                   <span style={{
@@ -614,13 +614,13 @@ export default function OnboardingClient({
         {/* STEP 7 — Success */}
         {step === 7 && (
           <div style={{ textAlign:'center', padding:'48px 0' }}>
-            <div style={{ width:72, height:72, borderRadius:'50%', background:'var(--green2)', border:'1px solid var(--green3)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 24px' }}>
+            <div style={{ width:72, height:72, borderRadius:'50%', background:'var(--green-bg)', border:'1px solid var(--green-border)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 24px' }}>
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
                 <path d="M6 16l7 7 13-13" stroke="#4ADE80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
             <h2 style={{ fontSize:24, fontWeight:800, letterSpacing:-0.8, marginBottom:10 }}>You&apos;re in. 🎉</h2>
-            <p style={{ fontSize:15, color:'var(--muted)', lineHeight:1.7, marginBottom:32 }}>
+            <p style={{ fontSize:15, color:'var(--text-2)', lineHeight:1.7, marginBottom:32 }}>
               Your profile is live and our AI is already building your match profile. Sarah will reach out when a campaign fits.
             </p>
             <div style={{ display:'flex', flexDirection:'column', gap:10, textAlign:'left' }}>
@@ -629,11 +629,11 @@ export default function OnboardingClient({
                 { n:2, title:'Your profile is now active', sub:'You\'re in the matching pool from today' },
                 { n:3, title:'Sarah will message you when there\'s a match', sub:'Check your Truleado inbox — no email needed' },
               ].map(item => (
-                <div key={item.n} style={{ display:'flex', alignItems:'flex-start', gap:12, background:'var(--bg2)', border:'1px solid var(--line)', borderRadius:10, padding:'14px 16px' }}>
-                  <div style={{ width:24, height:24, borderRadius:'50%', background:'var(--acc2)', border:'1px solid var(--acc3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'var(--acc)', flexShrink:0, marginTop:1 }}>{item.n}</div>
+                <div key={item.n} style={{ display:'flex', alignItems:'flex-start', gap:12, background:'var(--white)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
+                  <div style={{ width:24, height:24, borderRadius:'50%', background:'var(--gold-bg)', border:'1px solid var(--gold-border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'var(--gold)', flexShrink:0, marginTop:1 }}>{item.n}</div>
                   <div>
                     <p style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>{item.title}</p>
-                    <span style={{ fontSize:12, color:'var(--muted)' }}>{item.sub}</span>
+                    <span style={{ fontSize:12, color:'var(--text-2)' }}>{item.sub}</span>
                   </div>
                 </div>
               ))}
@@ -647,21 +647,21 @@ export default function OnboardingClient({
       {step <= 6 && (
         <div style={{
           position:'fixed', bottom:0, left:0, right:0,
-          background:'var(--bg)', borderTop:'1px solid var(--line)',
+          background:'var(--surface)', borderTop:'1px solid var(--border)',
           padding:'16px 24px', display:'flex', gap:12, zIndex:100,
         }}>
           {step > 1 && (
             <button onClick={() => setStep(s => s - 1)} style={{
-              flexShrink:0, background:'var(--faint)', border:'1px solid var(--line)',
+              flexShrink:0, background:'var(--surface)', border:'1px solid var(--border)',
               borderRadius:10, padding:'14px 20px',
-              fontFamily:'inherit', fontSize:14, fontWeight:600, color:'var(--muted)',
+              fontFamily:'inherit', fontSize:14, fontWeight:600, color:'var(--text-2)',
               cursor:'pointer',
             }}>← Back</button>
           )}
           <button onClick={() => saveStep(step + 1)} disabled={saving} style={{
-            flex:1, background:'var(--acc)', border:'none',
+            flex:1, background:'var(--gold)', border:'none',
             borderRadius:10, padding:14,
-            fontFamily:'inherit', fontSize:15, fontWeight:700, color:'#090E1A',
+            fontFamily:'inherit', fontSize:15, fontWeight:700, color:'#fff',
             cursor:'pointer', opacity: saving ? 0.7 : 1,
             display:'flex', alignItems:'center', justifyContent:'center', gap:8,
           }}>
@@ -677,17 +677,17 @@ export default function OnboardingClient({
 function Field({ label, children, hint }: { label: string, children: React.ReactNode, hint?: string }) {
   return (
     <div style={{ marginBottom:16 }}>
-      <label style={{ display:'block', fontSize:12, fontWeight:600, letterSpacing:'0.05em', color:'var(--muted)', textTransform:'uppercase', marginBottom:7 }}>{label}</label>
+      <label style={{ display:'block', fontSize:12, fontWeight:600, letterSpacing:'0.05em', color:'var(--text-2)', textTransform:'uppercase', marginBottom:7 }}>{label}</label>
       {children}
-      {hint && <p style={{ fontSize:12, color:'var(--muted)', marginTop:5 }}>{hint}</p>}
+      {hint && <p style={{ fontSize:12, color:'var(--text-2)', marginTop:5 }}>{hint}</p>}
     </div>
   )
 }
 
 const inputStyle: React.CSSProperties = {
-  width:'100%', background:'var(--bg2)', border:'1px solid var(--line)',
+  width:'100%', background:'var(--white)', border:'1px solid var(--border)',
   borderRadius:10, padding:'13px 16px',
-  fontFamily:'Plus Jakarta Sans, sans-serif', fontSize:15, fontWeight:400, color:'var(--fg)',
+  fontFamily:'Inter, sans-serif', fontSize:15, fontWeight:400, color:'var(--text)',
   outline:'none',
 }
 

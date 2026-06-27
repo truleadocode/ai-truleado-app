@@ -15,12 +15,12 @@ export default function LandingPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)' }}>
       <div style={{ maxWidth: 400, width: '100%', padding: '0 24px' }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40, justifyContent: 'center' }}>
           <span style={{
-            width: 28, height: 28, borderRadius: 7, background: 'var(--acc)',
+            width: 28, height: 28, borderRadius: 7, background: 'var(--gold)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
           }}>
             <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
@@ -28,24 +28,24 @@ export default function LandingPage() {
               <path d="M3.5 7h5" stroke="#090E1A" strokeWidth="1.8" strokeLinecap="round"/>
             </svg>
           </span>
-          <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--fg)' }}>Truleado</span>
+          <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>Truleado</span>
         </div>
 
         <div style={{
-          background: 'var(--bg2)', border: '1px solid var(--line)',
+          background: 'var(--white)', border: '1px solid var(--border)',
           borderRadius: 16, padding: 32
         }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.8, marginBottom: 8 }}>
             Creator sign in
           </h1>
-          <p style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 28, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 28, lineHeight: 1.6 }}>
             Sign in with Google to access your Truleado creator account.
           </p>
 
           <button onClick={signInWithGoogle} style={{
             width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
             background: '#fff', color: '#1a1a1a',
-            fontFamily: 'Plus Jakarta Sans, sans-serif',
+            fontFamily: 'Inter, sans-serif',
             fontSize: 15, fontWeight: 600,
             border: 'none', borderRadius: 10, padding: '14px',
             cursor: 'pointer',
@@ -59,7 +59,7 @@ export default function LandingPage() {
             Continue with Google
           </button>
 
-          <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 20, textAlign: 'center', lineHeight: 1.6 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 20, textAlign: 'center', lineHeight: 1.6 }}>
             Always free for creators. No commission. No catch.
           </p>
         </div>

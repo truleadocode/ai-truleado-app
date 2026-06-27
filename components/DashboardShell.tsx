@@ -5,12 +5,12 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-function LogoMark({ size = 24 }: { size?: number }) {
+function LogoMark({ size = 26 }: { size?: number }) {
   return (
-    <span style={{ width:size, height:size, borderRadius:6, background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-      <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 12 12" fill="none">
-        <path d="M2 10L6 2L10 10" stroke="#090E1A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M3.5 7h5" stroke="#090E1A" strokeWidth="1.8" strokeLinecap="round"/>
+    <span style={{ width: size, height: size, borderRadius: 7, background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 13 13" fill="none">
+        <path d="M2 11L6.5 2L11 11" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M3.8 8h5.4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/>
       </svg>
     </span>
   )
@@ -33,7 +33,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/dashboard/gigs',
-    label: 'My Gigs',
+    label: 'My gigs',
     icon: (
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <rect x="2" y="2" width="12" height="12" rx="2"/>
@@ -55,7 +55,7 @@ const NAV_ITEMS = [
   },
   {
     href: '/dashboard/profile',
-    label: 'My Profile',
+    label: 'My profile',
     icon: (
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="8" cy="5" r="3"/>
@@ -108,47 +108,54 @@ export default function DashboardShell({
 
   const pageTitle = () => {
     if (pathname === '/dashboard') return 'Home'
-    if (pathname.startsWith('/dashboard/gigs')) return 'My Gigs'
+    if (pathname.startsWith('/dashboard/gigs')) return 'My gigs'
     if (pathname.startsWith('/dashboard/messages')) return 'Messages'
-    if (pathname.startsWith('/dashboard/profile')) return 'My Profile'
+    if (pathname.startsWith('/dashboard/profile')) return 'My profile'
     return 'Dashboard'
   }
 
   return (
-    <div style={{ display:'flex', minHeight:'100vh' }}>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
 
       {/* SIDEBAR */}
       <aside style={{
-        width:220, flexShrink:0, background:'var(--bg2)', borderRight:'1px solid var(--line)',
-        display:'flex', flexDirection:'column',
-        position:'fixed', top:0, left:0, bottom:0, zIndex:100, padding:'0 0 24px',
+        width: 240, flexShrink: 0,
+        background: 'var(--white)',
+        borderRight: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column',
+        position: 'fixed', top: 0, left: 0, bottom: 0,
+        zIndex: 100, padding: '0 0 20px',
       }} className="sidebar-desktop">
-        <Link href="/dashboard" style={{ display:'flex', alignItems:'center', gap:8, padding:'20px 20px 18px', fontSize:17, fontWeight:800, color:'var(--fg)', textDecoration:'none', borderBottom:'1px solid var(--line)', marginBottom:8 }}>
-          <LogoMark size={24} /> Truleado
+
+        <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '20px 20px 18px', borderBottom: '1px solid var(--border)', marginBottom: 6, textDecoration: 'none' }}>
+          <LogoMark size={26} />
+          <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.4px', color: 'var(--text)' }}>Truleado</span>
         </Link>
 
-        <div style={{ padding:'8px 12px 4px' }}>
-          <p style={{ fontSize:10, fontWeight:700, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(232,227,218,0.2)', padding:'0 8px', marginBottom:4 }}>Menu</p>
+        <div style={{ padding: '6px 12px 0' }}>
           {NAV_ITEMS.map(item => {
             const active = isActive(item.href)
             const badge = item.badgeKey ? badges[item.badgeKey] : 0
             return (
               <Link key={item.href} href={item.href} style={{
-                display:'flex', alignItems:'center', gap:10,
-                padding:'9px 12px', borderRadius:8,
-                fontSize:13, fontWeight:600,
-                color: active ? 'var(--fg)' : 'var(--muted)',
-                background: active ? 'var(--acc2)' : 'transparent',
-                textDecoration:'none', position:'relative', marginBottom:1,
-                transition:'background 0.2s, color 0.2s',
+                display: 'flex', alignItems: 'center', gap: 9,
+                padding: '8px 10px', borderRadius: 'var(--radius-sm)',
+                fontSize: 13, fontWeight: 500,
+                color: active ? 'var(--gold)' : 'var(--text-2)',
+                background: active ? 'var(--gold-bg)' : 'transparent',
+                textDecoration: 'none', marginBottom: 1,
+                transition: 'background 0.15s, color 0.15s',
               }}>
-                <span style={{ width:16, height:16, flexShrink:0, opacity: active ? 1 : 0.7, color: active ? 'var(--acc)' : 'currentColor' }}>{item.icon}</span>
+                <span style={{ width: 16, height: 16, flexShrink: 0 }}>{item.icon}</span>
                 {item.label}
                 {badge > 0 && (
                   <span style={{
-                    marginLeft:'auto', background: item.badgeRed ? 'var(--red)' : 'var(--acc)',
-                    color:'#090E1A', fontSize:10, fontWeight:700,
-                    padding:'2px 6px', borderRadius:10, minWidth:18, textAlign:'center',
+                    marginLeft: 'auto',
+                    minWidth: 18, height: 18, borderRadius: 9,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 10, fontWeight: 700, padding: '0 5px',
+                    background: item.badgeRed ? 'var(--red)' : 'var(--gold)',
+                    color: '#fff',
                   }}>{badge}</span>
                 )}
               </Link>
@@ -156,66 +163,70 @@ export default function DashboardShell({
           })}
         </div>
 
-        <div style={{ marginTop:'auto', padding:12, borderTop:'1px solid var(--line)' }}>
-          <div onClick={toggleStatus} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 10px', borderRadius:8, cursor:'pointer' }}>
-            <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#090E1A', flexShrink:0 }}>{ini}</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <p style={{ fontSize:13, fontWeight:600, lineHeight:1.2 }}>{influencer.first_name} {influencer.last_name}</p>
-              <span style={{ fontSize:11, color:'var(--muted)' }}>{status === 'active' ? 'Active' : 'Paused'}</span>
-            </div>
+        <div style={{ marginTop: 'auto', padding: '14px 12px 0', borderTop: '1px solid var(--border)' }}>
+          <div onClick={toggleStatus} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 'var(--radius-sm)', cursor: 'pointer', transition: 'background 0.15s' }}>
             <div style={{
-              width:8, height:8, borderRadius:'50%',
-              background: status === 'active' ? 'var(--green)' : 'var(--muted)',
-              flexShrink:0,
-              boxShadow: status === 'active' ? '0 0 0 2px rgba(74,222,128,0.2)' : 'none',
-            }} />
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'var(--gold-bg)', border: '2px solid var(--gold-border)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 700, color: 'var(--gold)', flexShrink: 0,
+            }}>{ini}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.2, color: 'var(--text)' }}>{influencer.first_name} {influencer.last_name}</p>
+              <span style={{ fontSize: 11, color: 'var(--text-3)' }}>@{influencer.first_name?.toLowerCase()}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, color: 'var(--green)', marginLeft: 'auto' }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: status === 'active' ? 'var(--green)' : 'var(--text-3)' }} />
+              {status === 'active' ? 'Active' : 'Paused'}
+            </div>
           </div>
-          <button onClick={signOut} style={{ width:'100%', marginTop:4, background:'transparent', border:'none', color:'var(--muted)', fontSize:12, fontWeight:600, cursor:'pointer', padding:'8px 10px', borderRadius:8, textAlign:'left', fontFamily:'inherit' }}>
+          <button onClick={signOut} style={{ width: '100%', marginTop: 4, background: 'transparent', border: 'none', color: 'var(--text-3)', fontSize: 12, fontWeight: 500, cursor: 'pointer', padding: '6px 10px', borderRadius: 'var(--radius-sm)', textAlign: 'left', fontFamily: 'inherit', transition: 'color 0.15s' }}>
             Sign out
           </button>
         </div>
       </aside>
 
       {/* MAIN */}
-      <div style={{ marginLeft:220, flex:1, minHeight:'100vh', display:'flex', flexDirection:'column' }} className="main-desktop">
+      <div style={{ marginLeft: 240, flex: 1, display: 'flex', flexDirection: 'column' }} className="main-desktop">
 
         {/* MOBILE TOPBAR */}
-        <div style={{ display:'none', height:52, alignItems:'center', justifyContent:'space-between', padding:'0 16px', background:'var(--bg)', borderBottom:'1px solid var(--line)', position:'sticky', top:0, zIndex:100 }} className="mobile-topbar">
-          <Link href="/dashboard" style={{ display:'flex', alignItems:'center', gap:7, fontSize:16, fontWeight:800, color:'var(--fg)', textDecoration:'none' }}>
-            <LogoMark size={22} /> Truleado
+        <div style={{ display: 'none', height: 52, alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--white)', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, zIndex: 100 }} className="mobile-topbar">
+          <Link href="/dashboard" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+            <LogoMark size={22} />
+            <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: '-0.4px', color: 'var(--text)' }}>Truleado</span>
           </Link>
-          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-            <Link href="/dashboard/messages" style={{ width:34, height:34, borderRadius:8, background:'var(--faint)', border:'1px solid var(--line)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', textDecoration:'none', color:'var(--fg)' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Link href="/dashboard/messages" style={{ width: 34, height: 34, borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', textDecoration: 'none', color: 'var(--text-2)' }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 10a2 2 0 0 1-2 2H5l-3 3V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v6z"/></svg>
-              {unreadMessages > 0 && <span style={{ position:'absolute', top:6, right:6, width:6, height:6, borderRadius:'50%', background:'var(--red)' }} />}
+              {unreadMessages > 0 && <span style={{ position: 'absolute', top: 5, right: 5, width: 6, height: 6, borderRadius: '50%', background: 'var(--red)', border: '1.5px solid var(--white)' }} />}
             </Link>
-            <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#090E1A' }}>{ini}</div>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--gold-bg)', border: '2px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gold)' }}>{ini}</div>
           </div>
         </div>
 
         {/* DESKTOP TOPBAR */}
-        <div style={{ height:56, borderBottom:'1px solid var(--line)', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 28px', background:'var(--bg)', position:'sticky', top:0, zIndex:50 }} className="desktop-topbar">
-          <p style={{ fontSize:15, fontWeight:700, letterSpacing:-0.2 }}>{pageTitle()}</p>
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <button onClick={toggleStatus} style={{ display:'flex', alignItems:'center', gap:8, background:'var(--faint)', border:'1px solid var(--line)', borderRadius:8, padding:'6px 12px', cursor:'pointer', fontSize:12, fontWeight:600, color:'var(--fg)', fontFamily:'inherit', transition:'all 0.2s' }}>
-              <div style={{ width:7, height:7, borderRadius:'50%', background: status === 'active' ? 'var(--green)' : 'var(--muted)' }} />
+        <div style={{ height: 54, background: 'var(--white)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', position: 'sticky', top: 0, zIndex: 50 }} className="desktop-topbar">
+          <p style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.2px', color: 'var(--text)' }}>{pageTitle()}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button onClick={toggleStatus} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, border: '1px solid var(--green-border)', background: 'var(--green-bg)', fontSize: 12, fontWeight: 600, color: 'var(--green)', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: status === 'active' ? 'var(--green)' : 'var(--text-3)' }} />
               {status === 'active' ? 'Active' : 'Paused'}
             </button>
-            <Link href="/dashboard/notifications" style={{ width:34, height:34, borderRadius:8, background:'var(--faint)', border:'1px solid var(--line)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', textDecoration:'none', color:'var(--fg)' }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M13 10.5a1 1 0 0 1-1 1H5l-3 2.5V3a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v7.5z"/></svg>
-              {(unreadMessages + unreadNotifs) > 0 && <span style={{ position:'absolute', top:6, right:6, width:6, height:6, borderRadius:'50%', background:'var(--red)' }} />}
+            <Link href="/dashboard/messages" style={{ width: 34, height: 34, borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', textDecoration: 'none', color: 'var(--text-2)', transition: 'background 0.15s, border-color 0.15s' }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 10a2 2 0 0 1-2 2H5l-3 3V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v6z"/></svg>
+              {unreadMessages > 0 && <span style={{ position: 'absolute', top: 5, right: 5, width: 6, height: 6, borderRadius: '50%', background: 'var(--red)', border: '1.5px solid var(--white)' }} />}
             </Link>
-            <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#090E1A', cursor:'pointer' }}>{ini}</div>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--gold-bg)', border: '2px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: 'var(--gold)', cursor: 'pointer' }}>{ini}</div>
           </div>
         </div>
 
         {/* PAGE CONTENT */}
-        <div style={{ flex:1 }}>{children}</div>
+        <div style={{ flex: 1 }}>{children}</div>
       </div>
 
       {/* MOBILE BOTTOM NAV */}
-      <div style={{ display:'none', position:'fixed', bottom:0, left:0, right:0, background:'var(--bg2)', borderTop:'1px solid var(--line)', padding:'8px 0 12px', zIndex:200 }} className="mobile-nav">
-        <div style={{ display:'flex', justifyContent:'space-around' }}>
+      <div style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200, background: 'var(--white)', borderTop: '1px solid var(--border)', padding: '8px 0 12px' }} className="mobile-nav">
+        <div style={{ display: 'flex', justifyContent: 'space-around' }}>
           {NAV_ITEMS.map((item, idx) => {
             const active = isActive(item.href)
             const badge = item.badgeKey ? badges[item.badgeKey] : 0
@@ -227,16 +238,16 @@ export default function DashboardShell({
             ]
             return (
               <Link key={item.href} href={item.href} style={{
-                display:'flex', flexDirection:'column', alignItems:'center', gap:4,
-                cursor:'pointer', padding:'4px 16px',
-                fontSize:10, fontWeight:600,
-                color: active ? 'var(--acc)' : 'var(--muted)',
-                textDecoration:'none', transition:'color 0.2s', position:'relative',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                fontSize: 10, fontWeight: 600,
+                color: active ? 'var(--gold)' : 'var(--text-3)',
+                cursor: 'pointer', padding: '4px 16px',
+                textDecoration: 'none', transition: 'color 0.15s', position: 'relative',
               }}>
                 {badge > 0 && (
-                  <span style={{ position:'absolute', top:-2, right:10, width:7, height:7, borderRadius:'50%', background: item.badgeRed ? 'var(--red)' : 'var(--acc)' }} />
+                  <span style={{ position: 'absolute', top: -1, right: 10, width: 7, height: 7, borderRadius: '50%', background: item.badgeRed ? 'var(--red)' : 'var(--gold)', border: '1.5px solid var(--white)' }} />
                 )}
-                <span style={{ width:22, height:22 }}>{mobileIcons[idx]}</span>
+                <span style={{ width: 22, height: 22 }}>{mobileIcons[idx]}</span>
                 {item.label}
               </Link>
             )

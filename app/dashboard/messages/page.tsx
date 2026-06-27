@@ -42,7 +42,6 @@ export default function MessagesPage() {
       if (!inf) { router.push('/'); return }
       setInfluencerId(inf.id)
 
-      // Load gigs with last message
       const { data: gigsData } = await supabase
         .from('gigs')
         .select('id, brand_category, brand_name, brand_revealed, status')
@@ -51,7 +50,6 @@ export default function MessagesPage() {
 
       if (!gigsData) return
 
-      // For each gig, get last message + unread count
       const enriched = await Promise.all(gigsData.map(async gig => {
         const { data: msgs } = await supabase
           .from('gig_messages')
@@ -67,12 +65,7 @@ export default function MessagesPage() {
           .eq('read_by_influencer', false)
           .eq('sender_type', 'sarah')
 
-        return {
-          ...gig,
-          last_message: msgs?.[0]?.content,
-          last_message_at: msgs?.[0]?.created_at,
-          unread_count: unread || 0,
-        }
+        return { ...gig, last_message: msgs?.[0]?.content, last_message_at: msgs?.[0]?.created_at, unread_count: unread || 0 }
       }))
 
       const withMessages = enriched.filter(g => g.last_message)
@@ -84,7 +77,6 @@ export default function MessagesPage() {
 
   async function selectGig(gig: Gig, infId?: string) {
     setSelectedGig(gig)
-    const id = infId || influencerId
     const { data: msgs } = await supabase
       .from('gig_messages')
       .select('id, content, sender_type, created_at, read_by_influencer')
@@ -93,14 +85,12 @@ export default function MessagesPage() {
 
     setMessages(msgs || [])
 
-    // Mark sarah's messages as read
     await supabase.from('gig_messages')
       .update({ read_by_influencer: true })
       .eq('gig_id', gig.id)
       .eq('sender_type', 'sarah')
       .eq('read_by_influencer', false)
 
-    // Update gig list unread counts
     setGigs(prev => prev.map(g => g.id === gig.id ? { ...g, unread_count: 0 } : g))
   }
 
@@ -126,90 +116,91 @@ export default function MessagesPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const formatTime = (ts: string) => new Date(ts).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
+  const formatTime = (ts: string) => new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   const formatDay = (ts: string) => {
     const d = new Date(ts)
-    const today = new Date()
-    if (d.toDateString() === today.toDateString()) return 'Today'
-    return d.toLocaleDateString('en-GB', { weekday:'short', month:'short', day:'numeric' })
+    if (d.toDateString() === new Date().toDateString()) return 'Today'
+    return d.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })
   }
 
   return (
-    <div style={{ display:'flex', height:'calc(100vh - 56px)' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', height: 'calc(100vh - 54px)', margin: 0 }} className="messages-layout">
+
       {/* Conversation list */}
-      <div style={{ width:280, flexShrink:0, borderRight:'1px solid var(--line)', overflowY:'auto', background:'var(--bg)' }}>
-        <div style={{ padding:'14px 16px 10px', borderBottom:'1px solid var(--line)' }}>
-          <p style={{ fontSize:13, fontWeight:700, color:'var(--muted)', letterSpacing:'0.05em', textTransform:'uppercase' }}>Conversations</p>
-        </div>
+      <div style={{ borderRight: '1px solid var(--border)', background: 'var(--white)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }} className="msg-list">
+        <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid var(--border)', fontSize: 14, fontWeight: 600, color: 'var(--text)', flexShrink: 0 }}>Messages</div>
         {gigs.length === 0 && (
-          <p style={{ padding:'24px 16px', fontSize:13, color:'var(--muted)', textAlign:'center' }}>No messages yet</p>
+          <p style={{ padding: '24px 16px', fontSize: 13, color: 'var(--text-2)', textAlign: 'center' }}>No messages yet</p>
         )}
         {gigs.map(gig => (
           <div key={gig.id} onClick={() => selectGig(gig)} style={{
-            display:'flex', gap:10, padding:'12px 16px', cursor:'pointer', borderBottom:'1px solid var(--line)',
-            background: selectedGig?.id === gig.id ? 'var(--acc2)' : 'transparent',
-            transition:'background 0.15s',
+            display: 'flex', gap: 10, padding: '12px 16px', cursor: 'pointer',
+            borderBottom: '1px solid var(--border)',
+            background: selectedGig?.id === gig.id ? 'var(--gold-bg)' : 'transparent',
+            transition: 'background 0.1s',
           }}>
-            <div style={{ width:36, height:36, borderRadius:'50%', background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:12, fontWeight:700, color:'#090E1A', flexShrink:0 }}>SC</div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:2 }}>
-                <p style={{ fontSize:13, fontWeight:700, color:selectedGig?.id === gig.id ? 'var(--acc)' : 'var(--fg)' }}>Sarah Chen</p>
-                <p style={{ fontSize:11, color:'var(--muted)' }}>{gig.last_message_at ? formatDay(gig.last_message_at) : ''}</p>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--gold-bg)', border: '1.5px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gold)', flexShrink: 0 }}>SC</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Sarah Chen</p>
+                <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{gig.last_message_at ? formatDay(gig.last_message_at) : ''}</span>
               </div>
-              <p style={{ fontSize:12, color:'var(--muted)', marginBottom:2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{gig.brand_revealed ? gig.brand_name : gig.brand_category}</p>
+              <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{gig.brand_revealed ? gig.brand_name : gig.brand_category}</p>
               {gig.last_message && (
-                <p style={{ fontSize:12, color:'var(--muted)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', fontWeight: (gig.unread_count || 0) > 0 ? 600 : 400 }}>{gig.last_message}</p>
+                <p style={{ fontSize: 12, color: (gig.unread_count || 0) > 0 ? 'var(--text)' : 'var(--text-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: (gig.unread_count || 0) > 0 ? 500 : 400 }}>{gig.last_message}</p>
               )}
             </div>
             {(gig.unread_count || 0) > 0 && (
-              <div style={{ width:18, height:18, borderRadius:'50%', background:'var(--red)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#fff', flexShrink:0, marginTop:2 }}>{gig.unread_count}</div>
+              <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0, marginTop: 2 }}>{gig.unread_count}</div>
             )}
           </div>
         ))}
       </div>
 
       {/* Chat area */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', background:'var(--bg)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', background: 'var(--white' }} className="chat-panel">
         {!selectedGig ? (
-          <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <p style={{ fontSize:14, color:'var(--muted)' }}>Select a conversation</p>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ fontSize: 14, color: 'var(--text-2)' }}>Select a conversation</p>
           </div>
         ) : (
           <>
-            {/* Chat header */}
-            <div style={{ height:56, borderBottom:'1px solid var(--line)', display:'flex', alignItems:'center', padding:'0 20px', gap:12, flexShrink:0 }}>
-              <div style={{ width:34, height:34, borderRadius:'50%', background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'#090E1A' }}>SC</div>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--gold-bg)', border: '1.5px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: 'var(--gold)' }}>SC</div>
               <div>
-                <p style={{ fontSize:14, fontWeight:700, lineHeight:1.2 }}>Sarah Chen</p>
-                <p style={{ fontSize:12, color:'var(--muted)' }}>{selectedGig.brand_revealed ? selectedGig.brand_name : selectedGig.brand_category}</p>
+                <h4 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>Sarah Chen</h4>
+                <p style={{ fontSize: 12, color: 'var(--text-2)' }}>Creator Partnerships · Truleado</p>
+              </div>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, color: 'var(--green)' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)' }} />
+                Online
               </div>
             </div>
 
-            {/* Messages */}
-            <div style={{ flex:1, overflowY:'auto', padding:'20px', display:'flex', flexDirection:'column', gap:8 }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {messages.map((msg, i) => {
                 const isInfluencer = msg.sender_type === 'influencer'
                 const showDate = i === 0 || formatDay(messages[i-1].created_at) !== formatDay(msg.created_at)
                 return (
                   <div key={msg.id}>
                     {showDate && (
-                      <div style={{ textAlign:'center', margin:'8px 0' }}>
-                        <span style={{ fontSize:11, color:'var(--muted)', background:'var(--bg2)', padding:'3px 10px', borderRadius:20 }}>{formatDay(msg.created_at)}</span>
+                      <div style={{ textAlign: 'center', margin: '8px 0' }}>
+                        <span style={{ fontSize: 11, color: 'var(--text-3)', background: 'var(--surface)', padding: '3px 10px', borderRadius: 20, border: '1px solid var(--border)' }}>{formatDay(msg.created_at)}</span>
                       </div>
                     )}
-                    <div style={{ display:'flex', flexDirection: isInfluencer ? 'row-reverse' : 'row', gap:8, alignItems:'flex-end' }}>
+                    <div style={{ display: 'flex', flexDirection: isInfluencer ? 'row-reverse' : 'row', gap: 8, alignItems: 'flex-end', maxWidth: '100%' }}>
                       {!isInfluencer && (
-                        <div style={{ width:28, height:28, borderRadius:'50%', background:'var(--acc)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, fontWeight:700, color:'#090E1A', flexShrink:0 }}>SC</div>
+                        <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--gold-bg)', border: '1.5px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: 'var(--gold)', flexShrink: 0 }}>SC</div>
                       )}
-                      <div style={{ maxWidth:'68%' }}>
+                      <div style={{ maxWidth: '75%' }}>
                         <div style={{
-                          padding:'10px 14px', borderRadius: isInfluencer ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-                          background: isInfluencer ? 'var(--acc)' : 'var(--bg2)',
-                          color: isInfluencer ? '#090E1A' : 'var(--fg)',
-                          fontSize:13, lineHeight:1.5,
-                          border: isInfluencer ? 'none' : '1px solid var(--line)',
+                          padding: '10px 14px', fontSize: 13, lineHeight: 1.55,
+                          borderRadius: isInfluencer ? '14px 14px 3px 14px' : '14px 14px 14px 3px',
+                          background: isInfluencer ? 'var(--gold)' : 'var(--surface)',
+                          color: isInfluencer ? '#fff' : 'var(--text)',
+                          border: isInfluencer ? 'none' : '1px solid var(--border)',
                         }}>{msg.content}</div>
-                        <p style={{ fontSize:11, color:'var(--muted)', marginTop:3, textAlign: isInfluencer ? 'right' : 'left' }}>{formatTime(msg.created_at)}</p>
+                        <p style={{ fontSize: 10, marginTop: 3, textAlign: isInfluencer ? 'right' : 'left', color: 'var(--text-3)', opacity: 0.7 }}>{formatTime(msg.created_at)}</p>
                       </div>
                     </div>
                   </div>
@@ -218,26 +209,34 @@ export default function MessagesPage() {
               <div ref={bottomRef} />
             </div>
 
-            {/* Input */}
-            <div style={{ padding:'12px 16px', borderTop:'1px solid var(--line)', display:'flex', gap:8, flexShrink:0 }}>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', display: 'flex', gap: 10, alignItems: 'center', background: 'var(--white)', flexShrink: 0 }}>
               <input
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                placeholder="Type a message..."
-                style={{ flex:1, background:'var(--bg2)', border:'1px solid var(--line)', borderRadius:10, padding:'10px 14px', fontSize:13, color:'var(--fg)', fontFamily:'inherit', outline:'none', resize:'none' }}
+                placeholder="Reply to Sarah…"
+                style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 20, padding: '9px 16px', fontFamily: 'Inter, sans-serif', fontSize: 13, color: 'var(--text)', outline: 'none' }}
               />
               <button onClick={sendMessage} disabled={sending || !draft.trim()} style={{
-                background:'var(--acc)', border:'none', borderRadius:10, width:40, height:40, flexShrink:0,
-                display:'flex', alignItems:'center', justifyContent:'center', cursor: draft.trim() ? 'pointer' : 'not-allowed',
-                opacity: draft.trim() ? 1 : 0.4, transition:'opacity 0.2s',
+                width: 36, height: 36, borderRadius: '50%', background: 'var(--gold)', border: 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: draft.trim() ? 'pointer' : 'not-allowed', opacity: draft.trim() ? 1 : 0.4,
+                transition: 'opacity 0.15s', flexShrink: 0,
               }}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 8L2 2l2 6-2 6 12-6z" fill="#090E1A"/></svg>
+                <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M13 2L6.5 8.5M13 2L9 13l-2.5-4.5L2 6l11-4z" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </button>
             </div>
           </>
         )}
       </div>
+
+      <style>{`
+        @media (max-width: 768px) {
+          .messages-layout { grid-template-columns: 1fr !important; height: auto !important; }
+          .msg-list { display: none !important; }
+          .chat-panel { height: calc(100vh - 52px - 56px) !important; }
+        }
+      `}</style>
     </div>
   )
 }

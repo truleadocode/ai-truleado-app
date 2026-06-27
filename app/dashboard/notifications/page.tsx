@@ -40,32 +40,32 @@ export default async function NotificationsPage() {
       <h2 style={{ fontSize:16, fontWeight:700, marginBottom:20 }}>Notifications</h2>
 
       {(!notifs || notifs.length === 0) && (
-        <div style={{ background:'var(--bg2)', border:'1px solid var(--line)', borderRadius:12, padding:'48px 24px', textAlign:'center' }}>
+        <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'48px 24px', textAlign:'center' }}>
           <p style={{ fontSize:20, marginBottom:10 }}>🔔</p>
           <p style={{ fontSize:14, fontWeight:600, marginBottom:6 }}>No notifications yet</p>
-          <p style={{ fontSize:13, color:'var(--muted)' }}>You'll be notified when Sarah sends you an offer or update.</p>
+          <p style={{ fontSize:13, color:'var(--text-2)' }}>You'll be notified when Sarah sends you an offer or update.</p>
         </div>
       )}
 
       {(notifs || []).map((n, i) => (
         <div key={n.id} style={{
           display:'flex', gap:12, padding:'14px 18px',
-          background:'var(--bg2)', border:`1px solid ${n.read ? 'var(--line)' : 'var(--acc3)'}`,
+          background:'var(--white)', border:`1px solid ${n.read ? 'var(--border)' : 'var(--gold-border)'}`,
           borderRadius:12, marginBottom:8,
           opacity: n.read ? 0.75 : 1,
         }}>
-          <div style={{ width:38, height:38, borderRadius:10, background:'var(--bg3)', border:'1px solid var(--line)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
+          <div style={{ width:38, height:38, borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
             {notifIcon(n.type)}
           </div>
           <div style={{ flex:1 }}>
             <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:3 }}>
               <p style={{ fontSize:13, fontWeight:700 }}>{n.title}</p>
               <div style={{ display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
-                {!n.read && <div style={{ width:7, height:7, borderRadius:'50%', background:'var(--acc)' }} />}
-                <p style={{ fontSize:11, color:'var(--muted)' }}>{new Date(n.created_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
+                {!n.read && <div style={{ width:7, height:7, borderRadius:'50%', background:'var(--gold)' }} />}
+                <p style={{ fontSize:11, color:'var(--text-2)' }}>{new Date(n.created_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
               </div>
             </div>
-            <p style={{ fontSize:13, color:'var(--muted)', lineHeight:1.5 }}>{n.body}</p>
+            <p style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.5 }}>{n.body}</p>
           </div>
         </div>
       ))}
