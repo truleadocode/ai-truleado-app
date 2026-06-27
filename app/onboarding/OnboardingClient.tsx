@@ -4,6 +4,7 @@ import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import ScreenshotGuide from '@/components/ScreenshotGuide'
+import LanguageSelector from '@/components/LanguageSelector'
 
 const LABELS = [
   'Create your account',
@@ -18,7 +19,6 @@ const BTN_LABELS = ['Continue', 'Continue', 'Continue', 'Continue', 'Continue', 
 
 const NICHES = ['Fashion','Fitness','Food','Travel','Beauty','Lifestyle','Tech','Finance','Parenting','Gaming','Home','Sustainability']
 const FORMATS = ['Reels','Static posts','Stories','Long-form video','YouTube Shorts','Carousels','Podcasts','Blogs']
-const LANGS = ['English','German','French','Spanish','Italian','Dutch','Portuguese','Swedish','Other']
 const LOVE_CATS = ['Activewear','Skincare','Food & drink','Tech gadgets','Travel brands','Wellness apps','Home goods','Fashion','Supplements','Finance apps','Baby & kids','Sustainability']
 const NEVER_CATS = ['Alcohol','Tobacco','Gambling','Fast food','Crypto','Adult content','Weight loss','Political']
 const PLATFORMS_LIST = [
@@ -357,11 +357,7 @@ export default function OnboardingClient({
               </Field>
             </div>
             <Field label="Languages you create in">
-              <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-                {LANGS.map(l => (
-                  <TagPill key={l} label={l} selected={langs.includes(l)} onToggle={() => toggleArr(langs, l, setLangs)} />
-                ))}
-              </div>
+              <LanguageSelector value={langs} onChange={setLangs} />
             </Field>
           </div>
         )}

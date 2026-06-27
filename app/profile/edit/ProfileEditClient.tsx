@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ScreenshotGuide from '@/components/ScreenshotGuide'
+import LanguageSelector from '@/components/LanguageSelector'
 
 const UPLOAD_HINTS: Record<string, string[]> = {
   instagram: [
@@ -72,7 +73,6 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   const [city, setCity] = useState(influencer.city || '')
   const [country, setCountry] = useState(influencer.country || '')
   const [languages, setLanguages] = useState<string[]>(influencer.languages || [])
-  const [langInput, setLangInput] = useState('')
 
   // Avatar state
   const avatarInputRef = useRef<HTMLInputElement>(null)
@@ -405,17 +405,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
           </div>
           <div>
             <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Languages</label>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:8 }}>
-              {languages.map(l => (
-                <span key={l} style={{ fontSize:12, padding:'4px 10px', borderRadius:20, background:'var(--gold-bg)', color:'var(--gold)', border:'1px solid var(--gold-border)', display:'flex', alignItems:'center', gap:5 }}>
-                  {l}
-                  <button onClick={() => setLanguages(languages.filter(x => x !== l))} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--gold)', fontSize:14, lineHeight:1, padding:0 }}>×</button>
-                </span>
-              ))}
-            </div>
-            <input style={{ ...inputStyle }} value={langInput} onChange={e => setLangInput(e.target.value)}
-              onKeyDown={e => { if ((e.key === 'Enter' || e.key === ',') && langInput.trim()) { e.preventDefault(); setLanguages([...languages, langInput.trim()]); setLangInput('') } }}
-              placeholder="Type a language and press Enter" />
+            <LanguageSelector value={languages} onChange={setLanguages} />
           </div>
         </div>
       )}
