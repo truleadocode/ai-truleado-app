@@ -1,696 +1,582 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import ScreenshotGuide from '@/components/ScreenshotGuide'
-import LanguageSelector from '@/components/LanguageSelector'
 
-const LABELS = [
-  'Create your account',
-  'Basic information',
-  'Social accounts',
-  'Content profile',
-  'Brand preferences',
-  'Your rates',
-]
-
-const BTN_LABELS = ['Continue', 'Continue', 'Continue', 'Continue', 'Continue', 'Finish setup']
-
-const NICHES = ['Fashion','Fitness','Food','Travel','Beauty','Lifestyle','Tech','Finance','Parenting','Gaming','Home','Sustainability']
-const FORMATS = ['Reels','Static posts','Stories','Long-form video','YouTube Shorts','Carousels','Podcasts','Blogs']
-const LOVE_CATS = ['Activewear','Skincare','Food & drink','Tech gadgets','Travel brands','Wellness apps','Home goods','Fashion','Supplements','Finance apps','Baby & kids','Sustainability']
-const NEVER_CATS = ['Alcohol','Tobacco','Gambling','Fast food','Crypto','Adult content','Weight loss','Political']
-const PLATFORMS_LIST = [
-  { key: 'instagram', label: 'Instagram', sub: 'Posts, Reels', icon: '📸' },
-  { key: 'tiktok',    label: 'TikTok',    sub: 'Videos',       icon: '🎵' },
-  { key: 'youtube',   label: 'YouTube',   sub: 'Videos, Shorts', icon: '▶️' },
-  { key: 'pinterest', label: 'Pinterest', sub: 'Pins',          icon: '📌' },
-]
-
-const UPLOAD_HINTS: Record<string, string[]> = {
-  instagram: [
-    'Your profile page (follower count visible)',
-    'Audience demographics — age, gender, top countries',
-    'Accounts reached overview (last 30 days)',
-    'Your recent posts grid',
-    'Any post or Reel insights showing likes, comments, saves',
-  ],
-  tiktok: [
-    'Your profile page (follower count visible)',
-    'Followers tab — age, gender, top territories',
-    'Overview tab — total views, likes, follower growth',
-    'Your recent videos list with view counts visible',
-  ],
-  youtube: [
-    'Your channel page (subscriber count visible)',
-    'Audience tab — age, gender, top countries',
-    'Overview tab — views, watch time, subscribers',
-    'Your top videos list',
-  ],
-  pinterest: [
-    'Your profile page (followers visible)',
-    'Analytics overview — monthly views, impressions',
-    'Audience insights — age, gender, location',
-  ],
+const SESSION_KEY_LS = 'truleado_session_key'
+const PLATFORM_ICONS: Record<string, string> = {
+  instagram: '📸',
+  tiktok: '🎵',
+  youtube: '▶️',
+  pinterest: '📌',
 }
 
-function LogoMark() {
-  return (
-    <span style={{width:22,height:22,borderRadius:6,background:'var(--gold)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-        <path d="M2 10L6 2L10 10" stroke="#090E1A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M3.5 7h5" stroke="#090E1A" strokeWidth="1.8" strokeLinecap="round"/>
-      </svg>
-    </span>
-  )
+type Phase = 'loading' | 'chat' | 'auth' | 'screenshots' | 'done'
+
+interface ChatMessage {
+  role: 'sarah' | 'user'
+  text: string
+  chips?: string[]
 }
 
-function TagPill({ label, selected, onToggle, danger }: { label: string, selected: boolean, onToggle: () => void, danger?: boolean }) {
-  const baseStyle: React.CSSProperties = {
-    display:'flex', alignItems:'center', gap:5,
-    borderRadius:20, padding:'7px 14px',
-    fontSize:13, fontWeight:500, cursor:'pointer',
-    userSelect:'none', transition:'all 0.2s',
-    border: '1px solid',
-  }
-  if (danger) {
-    return (
-      <div onClick={onToggle} style={{
-        ...baseStyle,
-        background: selected ? 'var(--red-bg)' : 'var(--white)',
-        borderColor: selected ? 'var(--red-border)' : 'rgba(248,113,113,0.2)',
-        color: selected ? 'var(--red)' : 'var(--text-2)',
-      }}>🚫 {label}</div>
-    )
-  }
-  return (
-    <div onClick={onToggle} style={{
-      ...baseStyle,
-      background: selected ? 'var(--gold-bg)' : 'var(--white)',
-      borderColor: selected ? 'var(--gold-border)' : 'var(--border)',
-      color: selected ? 'var(--text)' : 'var(--text-2)',
-    }}>{label}</div>
-  )
+interface Platform {
+  id: string
+  platform: string
+  handle: string | null
 }
 
-export default function OnboardingClient({
-  influencer,
-  userId,
-}: {
-  influencer: { id: string, first_name: string, last_name: string, email: string, onboarding_step: number }
-  userId: string
-}) {
-  const router = useRouter()
+interface Props {
+  user: { id: string; email?: string } | null
+  influencer: { id: string; first_name?: string; onboarding_complete?: boolean } | null
+}
+
+export default function OnboardingClient({ user, influencer }: Props) {
+  const [phase, setPhase] = useState<Phase>('loading')
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [input, setInput] = useState('')
+  const [step, setStep] = useState('greeting')
+  const [sessionKey, setSessionKey] = useState<string | null>(null)
+  const [sessionData, setSessionData] = useState<Record<string, any>>({})
+  const [platforms, setPlatforms] = useState<Platform[]>([])
+  const [influencerId, setInfluencerId] = useState<string | null>(influencer?.id || null)
+  const [firstName, setFirstName] = useState<string>(influencer?.first_name || '')
+  const [isThinking, setIsThinking] = useState(false)
+  const [platformStatuses, setPlatformStatuses] = useState<Record<string, string>>({})
+  const [uploadingPlatform, setUploadingPlatform] = useState<string | null>(null)
+  const [allUploaded, setAllUploaded] = useState(false)
+
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
-  const [step, setStep] = useState(influencer.onboarding_step || 1)
-  const [saving, setSaving] = useState(false)
 
-  // Step 2 — basic info
-  const [firstName, setFirstName] = useState(influencer.first_name || '')
-  const [lastName, setLastName]   = useState(influencer.last_name || '')
-  const [phone, setPhone]         = useState('')
-  const [city, setCity]           = useState('')
-  const [country, setCountry]     = useState('')
-  const [langs, setLangs]         = useState<string[]>(['English'])
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isThinking])
 
-  // Step 3 — social accounts
-  const [platforms, setPlatforms]     = useState<string[]>(['instagram'])
-  const [handles, setHandles]         = useState<Record<string,string>>({})
-  const [uploadedFiles, setUploadedFiles] = useState<Record<string, File[]>>({})
-  const [parsing, setParsing]         = useState<Record<string,boolean>>({})
-  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  useEffect(() => {
+    initSession()
+  }, [])
 
-  // Step 4 — content profile
-  const [primaryNiche, setPrimaryNiche]   = useState('')
-  const [secondaryNiches, setSecondaryNiches] = useState<string[]>([])
-  const [contentStyle, setContentStyle]   = useState('')
-  const [contentFormats, setContentFormats] = useState<string[]>(['Reels'])
-  const [postingFrequency, setPostingFrequency] = useState('')
-  const [bio, setBio]                     = useState('')
+  async function initSession() {
+    const storedKey = typeof window !== 'undefined' ? localStorage.getItem(SESSION_KEY_LS) : null
 
-  // Step 5 — brand prefs
-  const [loveCats, setLoveCats]   = useState<string[]>([])
-  const [neverCats, setNeverCats] = useState<string[]>([])
-  const [loveCustom, setLoveCustom] = useState('')
-  const [neverCustom, setNeverCustom] = useState('')
-  const [pastPartners, setPastPartners] = useState('')
+    const res = await fetch('/api/sarah-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'init',
+        session_key: storedKey,
+        user_id: user?.id || null,
+        influencer_id: influencer?.id || null,
+      }),
+    })
+    const data = await res.json()
 
-  // Step 6 — rates (in EUR, stored in cents)
-  const [rates, setRates] = useState({
-    instagram_reel: '',
-    instagram_post: '',
-    instagram_story: '',
-    tiktok_video: '',
-    youtube_integration: '',
-  })
-  const [openGifting, setOpenGifting]     = useState(false)
-  const [openRevShare, setOpenRevShare]   = useState(false)
-  const [openExclusivity, setOpenExclusivity] = useState(true)
+    if (data.session_key) {
+      localStorage.setItem(SESSION_KEY_LS, data.session_key)
+      setSessionKey(data.session_key)
+    }
 
-  function toggleArr(arr: string[], val: string, set: (v: string[]) => void) {
-    set(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
-  }
-
-  async function handleFileUpload(platform: string, files: File[]) {
-    if (!files.length) return
-    const newFiles = { ...uploadedFiles, [platform]: [...(uploadedFiles[platform] || []), ...files] }
-    setUploadedFiles(newFiles)
-    setParsing(p => ({ ...p, [platform]: true }))
-
-    // Upload to storage
-    for (const file of files) {
-      const path = `${userId}/${platform}/${Date.now()}_${file.name}`
-      await supabase.storage.from('influencer-screenshots').upload(path, file)
+    if (data.phase === 'screenshots') {
+      setPlatforms(data.platforms || [])
+      setInfluencerId(data.influencer_id)
+      if (data.first_name) setFirstName(data.first_name)
+      setPhase('screenshots')
+      setupRealtimeForScreenshots(data.influencer_id, data.platforms || [])
+    } else if (data.phase === 'merge_needed') {
+      await mergeSession(data.session_key)
+    } else if (data.phase === 'resume') {
+      setStep(data.step)
+      setSessionData(data.data || {})
+      setPhase('chat')
+      addSarahMessage(data.sarah_reply, data.chips || [])
+    } else if (data.phase === 'chat') {
+      setStep(data.step)
+      setPhase('chat')
+      addSarahMessage(data.sarah_reply, [])
     }
   }
 
-  async function saveStep(targetStep: number) {
-    setSaving(true)
+  async function mergeSession(sk: string) {
+    if (!user?.id || !influencer?.id) return
+    const res = await fetch('/api/sarah-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'merge',
+        session_key: sk || sessionKey,
+        user_id: user.id,
+        influencer_id: influencer.id,
+      }),
+    })
+    const data = await res.json()
+    if (data.phase === 'screenshots') {
+      setPlatforms(data.platforms || [])
+      setInfluencerId(data.influencer_id)
+      if (data.first_name) setFirstName(data.first_name)
+      setPhase('screenshots')
+      setupRealtimeForScreenshots(data.influencer_id, data.platforms || [])
+    }
+  }
+
+  function setupRealtimeForScreenshots(infId: string, plats: Platform[]) {
+    const initial: Record<string, string> = {}
+    for (const p of plats) initial[p.id] = 'pending'
+    setPlatformStatuses(initial)
+
+    supabase.channel('onboarding-platform-status')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'influencer_platforms',
+        filter: `influencer_id=eq.${infId}`,
+      }, (payload: any) => {
+        const updated = payload.new
+        setPlatformStatuses(prev => ({ ...prev, [updated.id]: updated.parse_status || 'pending' }))
+      })
+      .subscribe()
+  }
+
+  useEffect(() => {
+    if (phase !== 'screenshots' || platforms.length === 0) return
+    const statusVals = Object.values(platformStatuses)
+    if (statusVals.length === 0) return
+    const allDone = platforms.every(p => {
+      const s = platformStatuses[p.id]
+      return s === 'complete' || s === 'failed'
+    })
+    if (allDone) setAllUploaded(true)
+  }, [platformStatuses, phase, platforms])
+
+  function addSarahMessage(text: string, chips: string[] = []) {
+    setMessages(prev => [...prev, { role: 'sarah', text, chips }])
+  }
+
+  function addUserMessage(text: string) {
+    setMessages(prev => [...prev, { role: 'user', text }])
+  }
+
+  async function sendMessage(text: string) {
+    if (!text.trim() || isThinking) return
+    addUserMessage(text)
+    setInput('')
+    setIsThinking(true)
+    setMessages(prev => prev.map((m, i) =>
+      i === prev.length - 1 && m.role === 'sarah' ? { ...m, chips: [] } : m
+    ))
+
     try {
-      if (step === 2) {
-        await supabase.from('influencers').update({
-          first_name: firstName, last_name: lastName,
-          phone, city, country, languages: langs,
-          onboarding_step: 3,
-        }).eq('user_id', userId)
-      } else if (step === 3) {
-        // Upsert platform rows
-        for (const platform of platforms) {
-          const { data: existing } = await supabase
-            .from('influencer_platforms')
-            .select('id')
-            .eq('influencer_id', influencer.id)
-            .eq('platform', platform)
-            .single()
+      const res = await fetch('/api/sarah-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'message',
+          session_key: sessionKey,
+          step,
+          user_message: text,
+          data: sessionData,
+        }),
+      })
+      const data = await res.json()
 
-          if (!existing) {
-            const { data: platRow } = await supabase.from('influencer_platforms').insert({
-              influencer_id: influencer.id,
-              platform,
-              handle: handles[platform] || null,
-              parse_status: uploadedFiles[platform]?.length ? 'processing' : 'pending',
-            }).select('id').single()
+      if (data.extracted) setSessionData((prev: Record<string, any>) => ({ ...prev, ...data.extracted }))
+      if (data.step) setStep(data.step)
 
-            // If files uploaded, trigger AI parsing
-            if (uploadedFiles[platform]?.length && platRow) {
-              triggerParsing(platRow.id, platform, uploadedFiles[platform])
-            }
-          }
-        }
-        await supabase.from('influencers').update({ onboarding_step: 4 }).eq('user_id', userId)
-      } else if (step === 4) {
-        await supabase.from('influencers').update({
-          primary_niche: primaryNiche,
-          secondary_niches: secondaryNiches,
-          content_style: contentStyle,
-          formats: contentFormats,
-          posting_frequency: postingFrequency,
-          bio,
-          onboarding_step: 5,
-        }).eq('user_id', userId)
-      } else if (step === 5) {
-        await supabase.from('influencers').update({
-          brand_loves: loveCats,
-          brand_never: neverCats,
-          brand_loves_custom: loveCustom.trim() || null,
-          brand_never_custom: neverCustom.trim() || null,
-          past_partnerships: pastPartners,
-          onboarding_step: 6,
-        }).eq('user_id', userId)
-      } else if (step === 6) {
-        // Save rates
-        const rateRows = [
-          { platform: 'instagram', content_type: 'reel',        rate_eur: Math.round(parseFloat(rates.instagram_reel || '0') * 100) },
-          { platform: 'instagram', content_type: 'post',        rate_eur: Math.round(parseFloat(rates.instagram_post || '0') * 100) },
-          { platform: 'instagram', content_type: 'story',       rate_eur: Math.round(parseFloat(rates.instagram_story || '0') * 100) },
-          { platform: 'tiktok',    content_type: 'video',       rate_eur: Math.round(parseFloat(rates.tiktok_video || '0') * 100) },
-          { platform: 'youtube',   content_type: 'integration', rate_eur: Math.round(parseFloat(rates.youtube_integration || '0') * 100) },
-        ].filter(r => r.rate_eur > 0).map(r => ({ ...r, influencer_id: influencer.id, currency: 'EUR' }))
-
-        if (rateRows.length) {
-          await supabase.from('influencer_rates').upsert(rateRows, { onConflict: 'influencer_id,platform,content_type' })
-        }
-
-        await supabase.from('influencers').update({
-          open_to_gifting: openGifting,
-          open_to_rev_share: openRevShare,
-          open_to_exclusivity: openExclusivity,
-          onboarding_complete: true,
-          onboarding_step: 7,
-          status: 'active',
-        }).eq('user_id', userId)
-
-        await supabase.from('notifications').insert({
-          influencer_id: influencer.id,
-          type: 'system',
-          title: 'Welcome to Truleado! 🎉',
-          body: 'Your profile is live. Sarah will reach out when a campaign matches your profile.',
-        })
-
-        router.push('/dashboard')
-        return
-      }
-
-      setStep(targetStep)
+      addSarahMessage(data.sarah_reply, data.chips || [])
+      if (data.phase === 'auth') setPhase('auth')
+    } catch {
+      addSarahMessage("Sorry, I had a hiccup — can you say that again? 😅")
     } finally {
-      setSaving(false)
+      setIsThinking(false)
+      setTimeout(() => inputRef.current?.focus(), 100)
     }
   }
 
-  async function triggerParsing(platformId: string, platform: string, files: File[]) {
+  async function signInWithGoogle() {
+    const sk = sessionKey || localStorage.getItem(SESSION_KEY_LS)
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback?onboarding=true&sk=${sk}` },
+    })
+  }
+
+  async function handleScreenshotUpload(platformId: string, files: FileList) {
+    if (!files.length || !influencerId) return
+    setUploadingPlatform(platformId)
+    setPlatformStatuses(prev => ({ ...prev, [platformId]: 'processing' }))
+
     const formData = new FormData()
-    files.forEach(f => formData.append('files', f))
-    formData.append('platform', platform)
-    formData.append('platformId', platformId)
-    formData.append('influencerId', influencer.id)
+    formData.append('influencer_id', influencerId)
+    formData.append('platform_id', platformId)
+    for (const f of Array.from(files)) formData.append('screenshots', f)
 
     fetch('/api/parse-screenshots', { method: 'POST', body: formData })
-      .then(() => setParsing(p => ({ ...p, [platform]: false })))
-      .catch(() => setParsing(p => ({ ...p, [platform]: false })))
+      .catch(console.error)
+      .finally(() => setUploadingPlatform(null))
   }
 
-  const progress = step > 6 ? 6 : step
+  async function completeOnboarding() {
+    await fetch('/api/sarah-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'complete',
+        session_key: sessionKey,
+        influencer_id: influencerId,
+      }),
+    })
+    localStorage.removeItem(SESSION_KEY_LS)
+    window.location.href = '/dashboard'
+  }
 
   return (
-    <div style={{ background: 'var(--surface)', minHeight: '100vh' }}>
-      {/* NAV */}
-      <nav style={{
-        display:'flex', alignItems:'center', justifyContent:'space-between',
-        padding:'0 24px', height:56,
-        borderBottom:'1px solid var(--border)',
-        background:'var(--surface)',
-        position:'sticky', top:0, zIndex:100,
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--surface)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+    }}>
+      {/* Header */}
+      <div style={{
+        width: '100%',
+        padding: '16px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--white)',
       }}>
-        <a href="#" style={{ display:'flex', alignItems:'center', gap:7, fontSize:16, fontWeight:800, color:'var(--text)', textDecoration:'none' }}>
-          <LogoMark /> Truleado
-        </a>
-        <p style={{ fontSize:12, fontWeight:500, color:'var(--text-2)' }}>
-          Step <span style={{ color:'var(--text)', fontWeight:700 }}>{Math.min(step, 6)}</span> of 6
-        </p>
-      </nav>
-
-      {/* PROGRESS */}
-      <div style={{ background:'var(--surface)', padding:'16px 24px 0', position:'sticky', top:56, zIndex:99 }}>
-        <div style={{ display:'flex', gap:6, marginBottom:10 }}>
-          {[1,2,3,4,5,6].map(i => (
-            <div key={i} style={{
-              flex:1, height:3, borderRadius:2,
-              background: i < progress ? 'var(--gold)' : i === progress ? 'rgba(196,154,60,0.5)' : 'var(--border)',
-              transition:'background 0.4s',
-            }} />
-          ))}
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%',
+          background: 'var(--gold-bg)', border: '2px solid var(--gold-border)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 16,
+        }}>✨</div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Sarah Chen</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Creator Partnerships · Truleado</div>
         </div>
-        <p style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', letterSpacing:'0.05em', paddingBottom:12, borderBottom:'1px solid var(--border)' }}>
-          Step {Math.min(step, 6)} — <span style={{ color:'var(--gold)' }}>{LABELS[Math.min(step,6)-1]}</span>
-        </p>
       </div>
 
-      {/* MAIN */}
-      <div style={{ maxWidth:520, margin:'0 auto', padding:'32px 24px 100px' }}>
+      <div style={{ width: '100%', maxWidth: 640, flex: 1, display: 'flex', flexDirection: 'column' }}>
 
-        {/* STEP 1 — Account (already signed in via Google, just confirm) */}
-        {step === 1 && (
-          <div>
-            <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>You&apos;re signed in!</h2>
-            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:28, lineHeight:1.6 }}>
-              Your Google account is connected. Let&apos;s set up your creator profile — takes about 5 minutes.
-            </p>
-            <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-              {[
-                { n:1, title:'Fill in your creator profile', sub:'Takes about 5 minutes' },
-                { n:2, title:'Upload social screenshots', sub:'Our AI builds your profile automatically' },
-                { n:3, title:'Get matched to brand campaigns', sub:'You only hear from us when it\'s relevant' },
-              ].map(item => (
-                <div key={item.n} style={{ display:'flex', alignItems:'flex-start', gap:12, background:'var(--white)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
-                  <div style={{ width:24, height:24, borderRadius:'50%', background:'var(--gold-bg)', border:'1px solid var(--gold-border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'var(--gold)', flexShrink:0, marginTop:1 }}>{item.n}</div>
-                  <div>
-                    <p style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>{item.title}</p>
-                    <span style={{ fontSize:12, color:'var(--text-2)' }}>{item.sub}</span>
+        {phase === 'loading' && (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
+              <div style={{ fontSize: 24, marginBottom: 8 }}>✨</div>
+              Getting things ready…
+            </div>
+          </div>
+        )}
+
+        {(phase === 'chat' || phase === 'auth') && (
+          <>
+            <div style={{ flex: 1, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
+              {messages.map((msg, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: 8 }}>
+                  <div style={{
+                    maxWidth: '80%',
+                    padding: '12px 16px',
+                    borderRadius: msg.role === 'sarah' ? '4px 18px 18px 18px' : '18px 4px 18px 18px',
+                    background: msg.role === 'sarah' ? 'var(--white)' : 'var(--gold)',
+                    color: msg.role === 'sarah' ? 'var(--text)' : '#fff',
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    boxShadow: 'var(--shadow)',
+                    border: msg.role === 'sarah' ? '1px solid var(--border)' : 'none',
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {msg.text}
                   </div>
+                  {msg.chips && msg.chips.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxWidth: '80%' }}>
+                      {msg.chips.map(chip => (
+                        <button
+                          key={chip}
+                          onClick={() => sendMessage(chip)}
+                          disabled={isThinking}
+                          style={{
+                            padding: '6px 14px',
+                            borderRadius: 20,
+                            border: '1px solid var(--gold-border)',
+                            background: 'var(--gold-bg)',
+                            color: 'var(--gold)',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            cursor: isThinking ? 'default' : 'pointer',
+                            opacity: isThinking ? 0.6 : 1,
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
-            </div>
-          </div>
-        )}
 
-        {/* STEP 2 — Basic info */}
-        {step === 2 && (
-          <div>
-            <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Tell us about yourself.</h2>
-            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:28, lineHeight:1.6 }}>Basic info so brands know who they&apos;re working with.</p>
-
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-              <Field label="First name"><input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="First name" style={inputStyle} /></Field>
-              <Field label="Last name"><input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" style={inputStyle} /></Field>
-            </div>
-            <Field label="Phone number" hint="Only used by Truleado. Never shared with brands.">
-              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+44 7700 900000" style={inputStyle} />
-            </Field>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
-              <Field label="City"><input type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="Amsterdam" style={inputStyle} /></Field>
-              <Field label="Country">
-                <select value={country} onChange={e => setCountry(e.target.value)} style={selectStyle}>
-                  <option value="">Select…</option>
-                  {['United Kingdom','Germany','France','Netherlands','Spain','Italy','Sweden','Denmark','Belgium','Switzerland','Portugal','Austria','Poland','Other'].map(c => <option key={c}>{c}</option>)}
-                </select>
-              </Field>
-            </div>
-            <Field label="Languages you create in">
-              <LanguageSelector value={langs} onChange={setLangs} />
-            </Field>
-          </div>
-        )}
-
-        {/* STEP 3 — Social accounts */}
-        {step === 3 && (
-          <div>
-            <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Your social accounts.</h2>
-            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:20, lineHeight:1.6 }}>Select the platforms you&apos;re active on, then upload screenshots. Our AI reads them automatically.</p>
-
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:20 }}>
-              {PLATFORMS_LIST.map(p => {
-                const sel = platforms.includes(p.key)
-                return (
-                  <div key={p.key} onClick={() => toggleArr(platforms, p.key, setPlatforms)} style={{
-                    display:'flex', alignItems:'center', gap:10,
-                    background: sel ? 'var(--gold-bg)' : 'var(--white)',
-                    border: `1px solid ${sel ? 'var(--gold-border)' : 'var(--border)'}`,
-                    borderRadius:10, padding:'13px 14px', cursor:'pointer',
-                    transition:'all 0.2s', userSelect:'none',
-                  }}>
-                    <span style={{ fontSize:20 }}>{p.icon}</span>
-                    <div style={{ flex:1 }}>
-                      <p style={{ fontSize:14, fontWeight:600 }}>{p.label}</p>
-                      <span style={{ fontSize:11, color:'var(--text-2)' }}>{p.sub}</span>
-                    </div>
-                    <div style={{
-                      width:18, height:18, borderRadius:'50%', marginLeft:'auto', flexShrink:0,
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      background: sel ? 'var(--gold)' : 'transparent',
-                      border: `1.5px solid ${sel ? 'var(--gold)' : 'var(--border)'}`,
-                      transition:'all 0.2s',
-                    }}>
-                      {sel && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#090E1A" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <div style={{ background:'var(--gold-bg)', border:'1px solid var(--gold-border)', borderRadius:10, padding:'12px 14px', fontSize:13, color:'var(--text)', lineHeight:1.6, marginBottom:20, display:'flex', gap:10, alignItems:'flex-start' }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0, marginTop:2 }}><circle cx="8" cy="8" r="7" stroke="#C49A3C" strokeWidth="1.4"/><path d="M8 7v4M8 5v.5" stroke="#C49A3C" strokeWidth="1.4" strokeLinecap="round"/></svg>
-              Upload screenshots of your profile stats, recent posts, and audience insights page. We&apos;ll extract the numbers automatically.
-            </div>
-
-            {platforms.map(platform => {
-              const platInfo = PLATFORMS_LIST.find(p => p.key === platform)!
-              const files = uploadedFiles[platform] || []
-              return (
-                <div key={platform} style={{ marginBottom:20 }}>
-                  <h4 style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>
-                    {platInfo.label} screenshots{' '}
-                    <span style={{ fontSize:11, fontWeight:600, color:'var(--gold)', background:'var(--gold-bg)', border:'1px solid var(--gold-border)', padding:'2px 8px', borderRadius:20 }}>{platInfo.label}</span>
-                  </h4>
-                  <div style={{ marginBottom:10 }}>
-                    <Field label="Handle (optional)">
-                      <input type="text" value={handles[platform] || ''} onChange={e => setHandles(h => ({ ...h, [platform]: e.target.value }))} placeholder={`@your${platform}handle`} style={inputStyle} />
-                    </Field>
-                  </div>
-                  <ScreenshotGuide platform={platform} />
+              {isThinking && (
+                <div style={{ display: 'flex', alignItems: 'flex-start' }}>
                   <div style={{
-                    border: `1.5px dashed ${files.length ? 'var(--gold-border)' : 'var(--border)'}`,
-                    background: files.length ? 'var(--gold-bg)' : 'transparent',
-                    borderRadius:12, overflow:'hidden', transition:'all 0.2s',
+                    padding: '12px 16px',
+                    borderRadius: '4px 18px 18px 18px',
+                    background: 'var(--white)',
+                    border: '1px solid var(--border)',
+                    boxShadow: 'var(--shadow)',
+                    display: 'flex',
+                    gap: 4,
+                    alignItems: 'center',
                   }}>
-                    <input
-                      type="file" multiple accept="image/*" style={{ display:'none' }}
-                      ref={el => { fileRefs.current[platform] = el }}
-                      onChange={e => { if (e.target.files) handleFileUpload(platform, Array.from(e.target.files)) }}
-                    />
-                    {UPLOAD_HINTS[platform] && (
-                      <div style={{ padding:'12px 14px 10px', borderBottom:`1px dashed ${files.length ? 'var(--gold-border)' : 'var(--border)'}` }}>
-                        <p style={{ fontSize:12, color:'var(--text-2)', marginBottom:6 }}>For the best match, upload screenshots of:</p>
-                        <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:3 }}>
-                          {UPLOAD_HINTS[platform].map((hint, i) => (
-                            <li key={i} style={{ fontSize:12, color:'var(--text-2)', display:'flex', gap:6 }}>
-                              <span style={{ color:'var(--gold)', flexShrink:0 }}>·</span>{hint}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    <div onClick={() => fileRefs.current[platform]?.click()} style={{ padding:'18px 16px', textAlign:'center', cursor:'pointer' }}>
-                      <div style={{ fontSize:22, marginBottom:6 }}>📂</div>
-                      <p style={{ fontSize:13, fontWeight:600, color:'var(--text)', marginBottom:2 }}>Tap to upload screenshots</p>
-                      <span style={{ fontSize:12, color:'var(--text-2)' }}>PNG, JPG — multiple files OK</span>
-                    </div>
+                    {[0, 1, 2].map(i => (
+                      <span key={i} style={{
+                        width: 6, height: 6, borderRadius: '50%',
+                        background: 'var(--text-3)',
+                        display: 'inline-block',
+                        animation: `bounce 1.2s ${i * 0.2}s infinite`,
+                      }} />
+                    ))}
                   </div>
-                  {files.length > 0 && (
-                    <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:6 }}>
-                      {files.map((f, i) => (
-                        <div key={i} style={{ display:'flex', alignItems:'center', gap:8, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px' }}>
-                          <span style={{ fontSize:12, fontWeight:500, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{f.name}</span>
-                          <span style={{ fontSize:11, color:'var(--text-2)', flexShrink:0 }}>{(f.size / 1024 / 1024).toFixed(1)} MB</span>
-                        </div>
-                      ))}
-                      {parsing[platform] && (
-                        <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, fontWeight:500, color:'var(--gold)', marginTop:4 }}>
-                          <div style={{ width:6, height:6, borderRadius:'50%', background:'var(--gold)', animation:'pulse 1.4s infinite' }} />
-                          AI is reading your screenshots…
-                        </div>
-                      )}
+                </div>
+              )}
+
+              {phase === 'auth' && (
+                <div style={{
+                  margin: '8px 0',
+                  padding: 20,
+                  background: 'var(--white)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 16,
+                  boxShadow: 'var(--shadow)',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16 }}>
+                    Your info is saved — just sign in to continue.
+                  </div>
+                  <button
+                    onClick={signInWithGoogle}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 10,
+                      padding: '12px 24px',
+                      borderRadius: 10,
+                      border: '1px solid var(--border)',
+                      background: 'var(--white)',
+                      color: 'var(--text)',
+                      fontSize: 14, fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      boxShadow: 'var(--shadow)',
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 18 18">
+                      <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+                      <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/>
+                      <path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                      <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                    </svg>
+                    Continue with Google
+                  </button>
+                </div>
+              )}
+
+              <div ref={bottomRef} />
+            </div>
+
+            {phase === 'chat' && (
+              <div style={{
+                padding: '12px 16px',
+                borderTop: '1px solid var(--border)',
+                background: 'var(--white)',
+                display: 'flex',
+                gap: 8,
+              }}>
+                <input
+                  ref={inputRef}
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
+                  placeholder="Type your answer…"
+                  disabled={isThinking}
+                  autoFocus
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: 24,
+                    border: '1px solid var(--border)',
+                    background: 'var(--surface)',
+                    fontSize: 14,
+                    color: 'var(--text)',
+                    outline: 'none',
+                    fontFamily: 'inherit',
+                    opacity: isThinking ? 0.6 : 1,
+                  }}
+                />
+                <button
+                  onClick={() => sendMessage(input)}
+                  disabled={!input.trim() || isThinking}
+                  style={{
+                    width: 40, height: 40,
+                    borderRadius: '50%',
+                    background: input.trim() && !isThinking ? 'var(--gold)' : 'var(--border)',
+                    border: 'none',
+                    cursor: input.trim() && !isThinking ? 'pointer' : 'default',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M14 8L2 2l2.5 6L2 14l12-6z" fill={input.trim() && !isThinking ? '#fff' : 'var(--text-3)'} />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </>
+        )}
+
+        {phase === 'screenshots' && (
+          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{
+              padding: '16px 20px',
+              background: 'var(--white)',
+              border: '1px solid var(--border)',
+              borderRadius: 16,
+              boxShadow: 'var(--shadow)',
+              fontSize: 14,
+              color: 'var(--text)',
+              lineHeight: 1.6,
+            }}>
+              {firstName ? `Amazing, ${firstName}! 🎉` : 'Amazing! 🎉'} Last step — upload some screenshots from your platforms so brands can see your stats at a glance.
+            </div>
+
+            <div style={{
+              padding: '12px 16px',
+              background: 'var(--gold-bg)',
+              borderLeft: '3px solid var(--gold)',
+              borderRadius: 8,
+              fontSize: 13,
+              color: 'var(--text-2)',
+              lineHeight: 1.6,
+            }}>
+              <strong style={{ color: 'var(--gold)' }}>What to upload:</strong> your profile page + post/reel insights. Instagram: profile + tap any post → View Insights. TikTok: profile + Analytics overview.
+            </div>
+
+            {platforms.map(p => {
+              const status = platformStatuses[p.id] || 'pending'
+              const isProcessing = status === 'processing' || uploadingPlatform === p.id
+              const isComplete = status === 'complete'
+              const isFailed = status === 'failed'
+
+              return (
+                <div key={p.id} style={{
+                  padding: 20,
+                  background: 'var(--white)',
+                  border: `1px solid ${isComplete ? '#a7f3d0' : 'var(--border)'}`,
+                  borderRadius: 16,
+                  boxShadow: 'var(--shadow)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 20 }}>{PLATFORM_ICONS[p.platform] || '📱'}</span>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', textTransform: 'capitalize' }}>{p.platform}</div>
+                        {p.handle && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>@{p.handle}</div>}
+                      </div>
                     </div>
+                    {isComplete && (
+                      <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, background: 'var(--green-bg)', color: 'var(--green)' }}>
+                        Parsed ✓
+                      </span>
+                    )}
+                    {isFailed && (
+                      <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, background: 'var(--red-bg)', color: 'var(--red)' }}>
+                        Try again
+                      </span>
+                    )}
+                  </div>
+
+                  {isProcessing ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 13 }}>
+                      <span style={{
+                        display: 'inline-block', width: 14, height: 14,
+                        border: '2px solid var(--border)', borderTopColor: 'var(--gold)',
+                        borderRadius: '50%', animation: 'spin 0.8s linear infinite',
+                      }} />
+                      Reading your screenshots…
+                    </div>
+                  ) : (
+                    <label style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      padding: '10px 16px',
+                      border: '2px dashed var(--border)',
+                      borderRadius: 10,
+                      cursor: 'pointer',
+                      color: 'var(--text-3)',
+                      fontSize: 13,
+                    }}>
+                      📤 {isComplete ? 'Upload more screenshots' : 'Upload screenshots'}
+                      <input
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={e => { if (e.target.files?.length) handleScreenshotUpload(p.id, e.target.files) }}
+                      />
+                    </label>
                   )}
                 </div>
               )
             })}
-          </div>
-        )}
 
-        {/* STEP 4 — Content profile */}
-        {step === 4 && (
-          <div>
-            <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Your content style.</h2>
-            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:28, lineHeight:1.6 }}>Help us understand what you create so we match you to the right campaigns.</p>
-
-            <Field label="Primary niche">
-              <select value={primaryNiche} onChange={e => setPrimaryNiche(e.target.value)} style={selectStyle}>
-                <option value="">Select your main niche…</option>
-                {['Fashion & Style','Fitness & Health','Food & Cooking','Travel & Adventure','Beauty & Skincare','Lifestyle','Technology','Finance & Business','Parenting & Family','Gaming','Home & Interior','Sustainability','Music & Arts','Sports','Education','Other'].map(n => <option key={n}>{n}</option>)}
-              </select>
-            </Field>
-            <Field label="Secondary niches (pick all that apply)">
-              <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-                {NICHES.map(n => <TagPill key={n} label={n} selected={secondaryNiches.includes(n)} onToggle={() => toggleArr(secondaryNiches, n, setSecondaryNiches)} />)}
-              </div>
-            </Field>
-            <Field label="Content style">
-              <select value={contentStyle} onChange={e => setContentStyle(e.target.value)} style={selectStyle}>
-                <option value="">How would you describe your content?</option>
-                {['Educational — I teach and explain','Inspirational — I motivate and uplift','Entertainment — I entertain and amuse','Review-based — I test and recommend','Lifestyle — I share my daily life','Comedy — I make people laugh','Mixed — a bit of everything'].map(s => <option key={s}>{s}</option>)}
-              </select>
-            </Field>
-            <Field label="Content formats you make">
-              <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-                {FORMATS.map(f => <TagPill key={f} label={f} selected={contentFormats.includes(f)} onToggle={() => toggleArr(contentFormats, f, setContentFormats)} />)}
-              </div>
-            </Field>
-            <Field label="How often do you post?">
-              <select value={postingFrequency} onChange={e => setPostingFrequency(e.target.value)} style={selectStyle}>
-                <option value="">Select posting frequency…</option>
-                <option>Daily</option>
-                <option>4–6x per week</option>
-                <option>2–3x per week</option>
-                <option>Once a week</option>
-                <option>Less than once a week</option>
-              </select>
-            </Field>
-            <Field label="Short bio (shown to brands)" hint="Max 220 characters. Keep it natural — this is the first thing brands read about you.">
-              <textarea rows={3} value={bio} onChange={e => setBio(e.target.value)} maxLength={220} placeholder="Briefly describe yourself and your audience in your own words…" style={{ ...inputStyle, resize:'none', lineHeight:1.6 }} />
-              <p style={{ fontSize:12, color:'var(--text-2)', marginTop:5, textAlign:'right' }}>{bio.length} / 220</p>
-            </Field>
-          </div>
-        )}
-
-        {/* STEP 5 — Brand preferences */}
-        {step === 5 && (
-          <div>
-            <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Brand preferences.</h2>
-            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:28, lineHeight:1.6 }}>Tell us what you love and what you&apos;ll never promote. We take this seriously.</p>
-
-            <Field label="Brands & categories you love working with">
-              <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:10 }}>
-                {LOVE_CATS.map(c => <TagPill key={c} label={c} selected={loveCats.includes(c)} onToggle={() => toggleArr(loveCats, c, setLoveCats)} />)}
-              </div>
-              <input type="text" value={loveCustom} onChange={e => setLoveCustom(e.target.value)} placeholder="Add your own (e.g. Scandinavian design brands)" style={inputStyle} />
-            </Field>
-
-            <div style={{ height:1, background:'var(--border)', margin:'16px 0' }} />
-
-            <Field label="Brands & categories you will never promote">
-              <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:10 }}>
-                {NEVER_CATS.map(c => <TagPill key={c} label={c} selected={neverCats.includes(c)} onToggle={() => toggleArr(neverCats, c, setNeverCats)} danger />)}
-              </div>
-              <input type="text" value={neverCustom} onChange={e => setNeverCustom(e.target.value)} placeholder="Add your own exclusions…" style={inputStyle} />
-            </Field>
-
-            <div style={{ height:1, background:'var(--border)', margin:'16px 0' }} />
-
-            <Field label="Notable brand partnerships (optional)" hint="Helps brands understand your experience level.">
-              <input type="text" value={pastPartners} onChange={e => setPastPartners(e.target.value)} placeholder="e.g. Nike, Glossier, Oatly…" style={inputStyle} />
-            </Field>
-          </div>
-        )}
-
-        {/* STEP 6 — Rates */}
-        {step === 6 && (
-          <div>
-            <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:-0.8, marginBottom:6 }}>Your rates.</h2>
-            <p style={{ fontSize:14, color:'var(--text-2)', marginBottom:20, lineHeight:1.6 }}>We only match you to campaigns that fit your rate card. Set your minimum — you can always negotiate up.</p>
-
-            <div style={{ background:'var(--gold-bg)', border:'1px solid var(--gold-border)', borderRadius:10, padding:'12px 14px', fontSize:13, color:'var(--text)', lineHeight:1.6, marginBottom:20, display:'flex', gap:10, alignItems:'flex-start' }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0, marginTop:2 }}><circle cx="8" cy="8" r="7" stroke="#C49A3C" strokeWidth="1.4"/><path d="M8 7v4M8 5v.5" stroke="#C49A3C" strokeWidth="1.4" strokeLinecap="round"/></svg>
-              These are your minimums. Brands see a range, not your exact number. You can negotiate on every deal.
-            </div>
-
-            {[
-              { key:'instagram_reel',       label:'Instagram Reel',      sub:'Per video',        placeholder:'800' },
-              { key:'instagram_post',       label:'Instagram Post',      sub:'Static image',     placeholder:'500' },
-              { key:'instagram_story',      label:'Instagram Story',     sub:'Per frame set',    placeholder:'200' },
-              { key:'tiktok_video',         label:'TikTok Video',        sub:'Per video',        placeholder:'600' },
-              { key:'youtube_integration',  label:'YouTube Integration', sub:'Per video mention', placeholder:'1200' },
-            ].map(r => (
-              <div key={r.key} style={{ display:'flex', alignItems:'center', gap:10, background:'var(--white)', border:'1px solid var(--border)', borderRadius:10, padding:'12px 16px', marginBottom:10 }}>
-                <div style={{ flex:1 }}>
-                  <p style={{ fontSize:13, fontWeight:500 }}>{r.label}</p>
-                  <span style={{ fontSize:11, color:'var(--text-2)' }}>{r.sub}</span>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:4, background:'var(--surface)', borderRadius:7, padding:'6px 10px', minWidth:100 }}>
-                  <span style={{ fontSize:13, color:'var(--text-2)' }}>€</span>
-                  <input
-                    type="number" placeholder={r.placeholder} min="0"
-                    value={(rates as any)[r.key]}
-                    onChange={e => setRates(prev => ({ ...prev, [r.key]: e.target.value }))}
-                    style={{ background:'transparent', border:'none', outline:'none', fontFamily:'inherit', fontSize:14, fontWeight:600, color:'var(--text)', width:70, textAlign:'right', padding:0 }}
-                  />
-                </div>
-              </div>
-            ))}
-
-            <div style={{ height:1, background:'var(--border)', margin:'16px 0' }} />
-
-            {[
-              { key:'gifting', label:'Open to gifting-only deals', sub:'Receive products with no cash fee', val:openGifting, set:setOpenGifting },
-              { key:'revshare', label:'Open to revenue share deals', sub:'Earn a % of sales you drive', val:openRevShare, set:setOpenRevShare },
-              { key:'exclusivity', label:'Open to exclusivity clauses', sub:'Agree not to work with competitors', val:openExclusivity, set:setOpenExclusivity },
-            ].map(t => (
-              <div key={t.key} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 0', borderBottom:'1px solid var(--border)' }}>
-                <div>
-                  <p style={{ fontSize:14, fontWeight:500 }}>{t.label}</p>
-                  <span style={{ fontSize:12, color:'var(--text-2)' }}>{t.sub}</span>
-                </div>
-                <button onClick={() => t.set(!t.val)} style={{
-                  width:40, height:22, borderRadius:11, flexShrink:0,
-                  background: t.val ? 'var(--gold)' : 'var(--border)',
-                  border:'none', cursor:'pointer', position:'relative', transition:'background 0.25s',
-                }}>
-                  <span style={{
-                    position:'absolute', width:16, height:16, borderRadius:'50%',
-                    background:'#fff', top:3, left:3,
-                    transform: t.val ? 'translateX(18px)' : 'none',
-                    transition:'transform 0.25s',
-                  }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+              {allUploaded && (
+                <button
+                  onClick={completeOnboarding}
+                  style={{
+                    padding: '14px 24px',
+                    borderRadius: 12,
+                    border: 'none',
+                    background: 'var(--gold)',
+                    color: '#fff',
+                    fontSize: 15,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Go to my dashboard →
                 </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* STEP 7 — Success */}
-        {step === 7 && (
-          <div style={{ textAlign:'center', padding:'48px 0' }}>
-            <div style={{ width:72, height:72, borderRadius:'50%', background:'var(--green-bg)', border:'1px solid var(--green-border)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 24px' }}>
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <path d="M6 16l7 7 13-13" stroke="#4ADE80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <h2 style={{ fontSize:24, fontWeight:800, letterSpacing:-0.8, marginBottom:10 }}>You&apos;re in. 🎉</h2>
-            <p style={{ fontSize:15, color:'var(--text-2)', lineHeight:1.7, marginBottom:32 }}>
-              Your profile is live and our AI is already building your match profile. Sarah will reach out when a campaign fits.
-            </p>
-            <div style={{ display:'flex', flexDirection:'column', gap:10, textAlign:'left' }}>
-              {[
-                { n:1, title:'AI is parsing your screenshots', sub:'Usually done within a few minutes' },
-                { n:2, title:'Your profile is now active', sub:'You\'re in the matching pool from today' },
-                { n:3, title:'Sarah will message you when there\'s a match', sub:'Check your Truleado inbox — no email needed' },
-              ].map(item => (
-                <div key={item.n} style={{ display:'flex', alignItems:'flex-start', gap:12, background:'var(--white)', border:'1px solid var(--border)', borderRadius:10, padding:'14px 16px' }}>
-                  <div style={{ width:24, height:24, borderRadius:'50%', background:'var(--gold-bg)', border:'1px solid var(--gold-border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'var(--gold)', flexShrink:0, marginTop:1 }}>{item.n}</div>
-                  <div>
-                    <p style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>{item.title}</p>
-                    <span style={{ fontSize:12, color:'var(--text-2)' }}>{item.sub}</span>
-                  </div>
-                </div>
-              ))}
+              )}
+              <button
+                onClick={completeOnboarding}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: 12,
+                  border: '1px solid var(--border)',
+                  background: 'transparent',
+                  color: 'var(--text-3)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Skip for now — I'll add screenshots later
+              </button>
             </div>
           </div>
         )}
-
       </div>
 
-      {/* BOTTOM NAV */}
-      {step <= 6 && (
-        <div style={{
-          position:'fixed', bottom:0, left:0, right:0,
-          background:'var(--surface)', borderTop:'1px solid var(--border)',
-          padding:'16px 24px', display:'flex', gap:12, zIndex:100,
-        }}>
-          {step > 1 && (
-            <button onClick={() => setStep(s => s - 1)} style={{
-              flexShrink:0, background:'var(--surface)', border:'1px solid var(--border)',
-              borderRadius:10, padding:'14px 20px',
-              fontFamily:'inherit', fontSize:14, fontWeight:600, color:'var(--text-2)',
-              cursor:'pointer',
-            }}>← Back</button>
-          )}
-          <button onClick={() => saveStep(step + 1)} disabled={saving} style={{
-            flex:1, background:'var(--gold)', border:'none',
-            borderRadius:10, padding:14,
-            fontFamily:'inherit', fontSize:15, fontWeight:700, color:'#fff',
-            cursor:'pointer', opacity: saving ? 0.7 : 1,
-            display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-          }}>
-            {saving ? 'Saving…' : BTN_LABELS[step - 1]}
-            {!saving && <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 7.5h11M9 3.5l4 4-4 4" stroke="#090E1A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-          </button>
-        </div>
-      )}
+      <style>{`
+        @keyframes bounce {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-5px); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
-}
-
-function Field({ label, children, hint }: { label: string, children: React.ReactNode, hint?: string }) {
-  return (
-    <div style={{ marginBottom:16 }}>
-      <label style={{ display:'block', fontSize:12, fontWeight:600, letterSpacing:'0.05em', color:'var(--text-2)', textTransform:'uppercase', marginBottom:7 }}>{label}</label>
-      {children}
-      {hint && <p style={{ fontSize:12, color:'var(--text-2)', marginTop:5 }}>{hint}</p>}
-    </div>
-  )
-}
-
-const inputStyle: React.CSSProperties = {
-  width:'100%', background:'var(--white)', border:'1px solid var(--border)',
-  borderRadius:10, padding:'13px 16px',
-  fontFamily:'Inter, sans-serif', fontSize:15, fontWeight:400, color:'var(--text)',
-  outline:'none',
-}
-
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
-  cursor:'pointer',
-  backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 4.5L11 1' stroke='%23E8E3DA' strokeWidth='1.5' fill='none' strokeLinecap='round' strokeLinejoin='round' opacity='.35'/%3E%3C/svg%3E")`,
-  backgroundRepeat:'no-repeat', backgroundPosition:'right 14px center',
-  paddingRight:40, appearance:'none',
 }
