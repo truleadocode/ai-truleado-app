@@ -37,8 +37,6 @@ export default async function ProfilePage() {
     .select('*')
     .eq('influencer_id', inf.id)
 
-  const rateByPlatform = Object.fromEntries((rates || []).map(r => [r.platform, r]))
-
   return (
     <div style={{ padding:'24px 28px 40px', maxWidth:680 }}>
 
