@@ -70,6 +70,15 @@ export default function OnboardingClient({ user, influencer }: Props) {
         influencer_id: influencer?.id || null,
       }),
     })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      console.error('Sarah chat init failed:', err)
+      setPhase('chat')
+      addSarahMessage("Hey! 👋 I'm Sarah from Truleado. What's your name?")
+      return
+    }
+
     const data = await res.json()
 
     if (data.session_key) {

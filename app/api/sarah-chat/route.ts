@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
 
   // ── INIT ───────────────────────────────────────────────────────────
   if (action === 'init') {
+    try {
     // Post-OAuth: user is authenticated, find or merge session
     if (user_id && influencer_id) {
       const { data: session } = await service
@@ -176,6 +177,10 @@ export async function POST(request: NextRequest) {
       sarah_reply: `Hey! 👋 I'm Sarah from Truleado. I match creators like you with brands that actually fit your content — no cold emails, no chasing briefs.\n\nThis takes about 3 minutes. Let's start simple — what's your name?`,
       chips: [],
     })
+    } catch (err) {
+      console.error('Init error:', err)
+      return NextResponse.json({ error: String(err) }, { status: 500 })
+    }
   }
 
   // ── MESSAGE ────────────────────────────────────────────────────────

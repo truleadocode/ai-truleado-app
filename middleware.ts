@@ -29,7 +29,7 @@ export async function middleware(request: NextRequest) {
 
   // Public routes — no auth needed
   const publicRoutes = ['/', '/auth/callback', '/auth/error', '/onboarding']
-  const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith('/auth/') || pathname === '/onboarding')
+  const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith('/auth/') || pathname === '/onboarding' || pathname === '/api/sarah-chat')
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
