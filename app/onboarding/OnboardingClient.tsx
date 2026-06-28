@@ -29,9 +29,10 @@ interface Platform {
 interface Props {
   user: { id: string; email?: string } | null
   influencer: { id: string; first_name?: string; onboarding_complete?: boolean } | null
+  embedded?: boolean
 }
 
-export default function OnboardingClient({ user, influencer }: Props) {
+export default function OnboardingClient({ user, influencer, embedded = false }: Props) {
   const [phase, setPhase] = useState<Phase>('loading')
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
@@ -100,7 +101,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
     } else if (data.phase === 'merge_needed') {
       await mergeSession(data.session_key)
     } else if (data.phase === 'resume') {
-      // Store the real step from DB, set resume prompt flag
       setResumeStep(data.step)
       setStep(data.step)
       setSessionData(data.data || {})
@@ -182,7 +182,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
         body: JSON.stringify({
           action: 'resume_continue',
           session_key: sessionKey,
-          step: currentStep, // use the real DB step, not greeting
+          step: currentStep,
         }),
       })
       const data = await res.json()
@@ -217,15 +217,14 @@ export default function OnboardingClient({ user, influencer }: Props) {
 
     const trimmed = text.trim().toLowerCase()
 
-    // Handle resume response in natural language
     if (isResumePrompt) {
-      const isYes = ['yes', 'yeah', 'sure', 'ok', 'yep', 'continue', 'yup', 'let\'s go', 'lets go'].includes(trimmed)
+      const isYes = ['yes', 'yeah', 'sure', 'ok', 'yep', 'continue', 'yup', "let's go", 'lets go'].includes(trimmed)
       const isNo = ['no', 'nope', 'start fresh', 'restart', 'start over', 'fresh', 'new'].includes(trimmed)
 
       if (isYes) {
         addUserMessage(text)
         setInput('')
-        await continueFromStep(resumeStep) // use resumeStep (from DB), not step
+        await continueFromStep(resumeStep)
         return
       }
       if (isNo) {
@@ -235,7 +234,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
         await startFresh()
         return
       }
-      // If unclear, prompt again
       addUserMessage(text)
       setInput('')
       addSarahMessage('Just say "yes" to continue where we left off, or "no" to start over.')
@@ -279,6 +277,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback?onboarding=true&sk=${sk}`,
+        queryParams: { prompt: 'select_account' },
       },
     })
   }
@@ -314,11 +313,15 @@ export default function OnboardingClient({ user, influencer }: Props) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: embedded ? 0 : '100vh',
+      height: embedded ? '100%' : undefined,
       background: 'var(--surface)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
+      borderRadius: embedded ? 16 : 0,
+      border: embedded ? '1px solid var(--border)' : undefined,
+      overflow: embedded ? 'hidden' : undefined,
     }}>
       {/* Header */}
       <div style={{
@@ -329,6 +332,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
         gap: 10,
         borderBottom: '1px solid var(--border)',
         background: 'var(--white)',
+        flexShrink: 0,
       }}>
         <div style={{
           width: 36, height: 36, borderRadius: '50%',
@@ -342,10 +346,10 @@ export default function OnboardingClient({ user, influencer }: Props) {
         </div>
       </div>
 
-      <div style={{ width: '100%', maxWidth: 640, flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: '100%', maxWidth: 640, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
         {phase === 'loading' && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
             <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
               <div style={{ fontSize: 24, marginBottom: 8 }}>✨</div>
               Getting things ready…
@@ -355,7 +359,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
 
         {(phase === 'chat' || phase === 'auth') && (
           <>
-            <div style={{ flex: 1, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
+            <div style={{ flex: 1, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', minHeight: 0 }}>
               {messages.map((msg, i) => (
                 <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                   <div style={{
@@ -448,6 +452,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
                 background: 'var(--white)',
                 display: 'flex',
                 gap: 8,
+                flexShrink: 0,
               }}>
                 <input
                   ref={inputRef}
@@ -456,7 +461,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
                   placeholder={isResumePrompt ? 'Say "yes" to continue or "no" to start fresh…' : 'Type your answer…'}
                   disabled={isThinking}
-                  autoFocus
                   style={{
                     flex: 1,
                     padding: '10px 14px',
@@ -494,7 +498,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
         )}
 
         {phase === 'screenshots' && (
-          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20, overflowY: 'auto', minHeight: 0 }}>
             <div style={{
               padding: '16px 20px',
               background: 'var(--white)',
@@ -548,7 +552,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
                     <ParseProgressCard
                       status={parseStatus}
                       onSettled={() => {
-                        // After 2s settle, reset to idle so upload button reappears
                         setPlatformStatuses(prev => ({
                           ...prev,
                           [p.id]: parseStatus === 'complete' ? 'complete' : 'pending',
