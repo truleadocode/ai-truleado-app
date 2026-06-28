@@ -16,9 +16,10 @@ interface Message {
 interface Props {
   user: { id: string; email?: string } | null
   advertiser: { id: string; onboarding_complete?: boolean } | null
+  embedded?: boolean
 }
 
-export default function AdvertiserOnboardingClient({ user, advertiser }: Props) {
+export default function AdvertiserOnboardingClient({ user, advertiser, embedded = false }: Props) {
   const router = useRouter()
   const [phase, setPhase] = useState<Phase>('loading')
   const [messages, setMessages] = useState<Message[]>([])
@@ -283,9 +284,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/advertiser-callback?sk=${sk}`,
-        queryParams: {
-          prompt: 'select_account',  // ← always show the account picker
-        },
+        queryParams: { prompt: 'select_account' },
       },
     })
   }
@@ -300,7 +299,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
     setAuthLoading(true)
 
     try {
-      // Signup: create the account first (server-side, auto-confirmed)
       if (authMode === 'signup') {
         const res = await fetch('/api/advertiser/email-signup', {
           method: 'POST',
@@ -315,22 +313,16 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
         }
       }
 
-      // Sign in (both signup and login paths)
       const { error: signInErr } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       })
       if (signInErr) {
-        setAuthError(
-          authMode === 'login'
-            ? 'Incorrect email or password.'
-            : signInErr.message
-        )
+        setAuthError(authMode === 'login' ? 'Incorrect email or password.' : signInErr.message)
         setAuthLoading(false)
         return
       }
 
-      // Finalize: ensure advertiser row + save the brief + trigger matching
       const sk = sessionKey || localStorage.getItem(SESSION_KEY_LS)
       const finRes = await fetch('/api/advertiser/finalize-auth', {
         method: 'POST',
@@ -402,8 +394,18 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
   const showMessages = phase !== 'loading'
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--surface)', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, sans-serif' }}>
-      <div style={{ padding: '14px 24px', background: 'var(--white)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{
+      minHeight: embedded ? 0 : '100vh',
+      height: embedded ? '100%' : undefined,
+      background: 'var(--surface)',
+      display: 'flex',
+      flexDirection: 'column',
+      fontFamily: 'Inter, sans-serif',
+      borderRadius: embedded ? 16 : 0,
+      border: embedded ? '1px solid var(--border)' : undefined,
+      overflow: embedded ? 'hidden' : undefined,
+    }}>
+      <div style={{ padding: '14px 24px', background: 'var(--white)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--gold-bg)', border: '2px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>✨</div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 600 }}>Sarah Chen</div>
@@ -412,9 +414,9 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
         <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-3)', background: 'var(--surface)', padding: '4px 10px', borderRadius: 20, border: '1px solid var(--border)' }}>For brands & agencies</div>
       </div>
 
-      <div style={{ flex: 1, maxWidth: 640, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, maxWidth: 640, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {phase === 'loading' && (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
             <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
               <div style={{ fontSize: 24, marginBottom: 8 }}>✨</div>Getting things ready…
             </div>
@@ -422,7 +424,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
         )}
 
         {showMessages && (
-          <div style={{ flex: 1, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto' }}>
+          <div style={{ flex: 1, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 14, overflowY: 'auto', minHeight: 0 }}>
             {messages.map((msg, i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                 <div style={bubbleStyle(msg.role)}>{msg.text}</div>
@@ -469,7 +471,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
               </div>
             )}
 
-            {/* AUTH — Google + email/password */}
             {phase === 'auth' && !isThinking && (
               <div style={{ margin: '8px 0', padding: 24, background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                 <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, textAlign: 'center' }}>
@@ -481,7 +482,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
                     : 'Log in to submit your brief and view your shortlist.'}
                 </p>
 
-                {/* Google */}
                 <button
                   onClick={signInWithGoogle}
                   style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '11px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--text)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 }}
@@ -490,14 +490,12 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
                   Continue with Google
                 </button>
 
-                {/* Divider */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0 16px' }}>
                   <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                   <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>OR</span>
                   <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
                 </div>
 
-                {/* Email/password */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <input
                     type="email"
@@ -533,7 +531,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
                   </button>
                 </div>
 
-                {/* Toggle signup/login */}
                 <p style={{ fontSize: 12, color: 'var(--text-2)', textAlign: 'center', marginTop: 16 }}>
                   {authMode === 'signup' ? 'Already have an account?' : 'New to Truleado?'}{' '}
                   <button
@@ -551,7 +548,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
         )}
 
         {showInput && (
-          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--white)', display: 'flex', gap: 8 }}>
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--white)', display: 'flex', gap: 8, flexShrink: 0 }}>
             <input
               ref={inputRef}
               value={input}
@@ -559,7 +556,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
               placeholder={isResumePrompt ? 'Say "yes" to continue or "no" to start fresh…' : 'Type your answer…'}
               disabled={isThinking}
-              autoFocus
               style={{ flex: 1, padding: '10px 14px', borderRadius: 24, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 14, color: 'var(--text)', outline: 'none', fontFamily: 'inherit', opacity: isThinking ? 0.6 : 1 }}
             />
             <button
