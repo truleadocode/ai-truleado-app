@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ScreenshotGuide from '@/components/ScreenshotGuide'
 import LanguageSelector from '@/components/LanguageSelector'
+import ParseProgressCard from '@/components/ParseProgressCard'
+import type { ParseStatus } from '@/hooks/useParseProgress'
 
 const UPLOAD_HINTS: Record<string, string[]> = {
   instagram: [
@@ -562,19 +564,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             </ul>
           </div>
 
-          {/* Notification banner */}
-          {banner === 'processing' && (
-            <div style={{ background:'var(--blue-bg)', border:'1px solid var(--blue-border)', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{ width:16, height:16, border:'2px solid var(--blue)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite', flexShrink:0 }} />
-              <p style={{ fontSize:13, color:'var(--blue)', fontWeight:500 }}>Reading your screenshots and updating your profile… this takes about 10–15 seconds.</p>
-            </div>
-          )}
-          {banner === 'complete' && (
-            <div style={{ background:'var(--green-bg)', border:'1px solid var(--green-border)', borderRadius:10, padding:'12px 16px', marginBottom:14, display:'flex', alignItems:'center', gap:10 }}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="var(--green)" strokeWidth="1.5"/><path d="M5 8l2 2 4-4" stroke="var(--green)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <p style={{ fontSize:13, color:'var(--green)', fontWeight:500 }}>Profile updated! Your AI summary has been refreshed with your latest stats.</p>
-            </div>
-          )}
+          {/* Notification banner — kept for non-platform-card level feedback */}
 
           {platforms.length === 0 && (
             <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'32px 24px', textAlign:'center' }}>
@@ -588,22 +578,29 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             const isUploading = uploadingPlatform === p.id
             const liveStatus = platformStatuses[p.id] || 'pending'
 
-            const statusBadge = liveStatus === 'complete'
-              ? { label: `Parsed ✓ · Last updated ${p.last_parsed_at ? new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' }) : ''}`, bg: 'var(--green-bg)', color: 'var(--green)', border: 'var(--green-border)', spinner: false }
-              : liveStatus === 'processing'
-              ? { label: 'Reading your screenshots…', bg: 'var(--gold-bg)', color: 'var(--gold)', border: 'var(--gold-border)', spinner: true }
-              : liveStatus === 'failed'
-              ? { label: 'Something went wrong — try uploading again', bg: 'var(--red-bg)', color: 'var(--red)', border: 'var(--red-border)', spinner: false }
-              : { label: 'No screenshots uploaded yet', bg: 'var(--surface)', color: 'var(--text-2)', border: 'var(--border)', spinner: false }
+            const parseStatus: ParseStatus =
+              liveStatus === 'processing' ? 'processing' :
+              liveStatus === 'complete'   ? 'complete'   :
+              liveStatus === 'failed'     ? 'failed'     : 'idle'
+
+            const showProgress = parseStatus === 'processing' || parseStatus === 'complete' || parseStatus === 'failed'
+
+            const parsedLabel = liveStatus === 'complete'
+              ? `Parsed ✓ · Last updated ${p.last_parsed_at ? new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' }) : ''}`
+              : 'No screenshots uploaded yet'
+            const parsedBadge = liveStatus === 'complete'
+              ? { bg: 'var(--green-bg)', color: 'var(--green)', border: 'var(--green-border)' }
+              : { bg: 'var(--surface)', color: 'var(--text-2)', border: 'var(--border)' }
 
             return (
               <div key={p.id} style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'14px 18px', marginBottom:10 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
                   <p style={{ fontSize:14, fontWeight:700, textTransform:'capitalize', flex:1 }}>{p.platform}</p>
-                  <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:statusBadge.bg, color:statusBadge.color, border:`1px solid ${statusBadge.border}` }}>
-                    {statusBadge.spinner && <span style={{ width:8, height:8, border:'1.5px solid currentColor', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite', display:'inline-block' }} />}
-                    {statusBadge.label}
-                  </span>
+                  {!showProgress && (
+                    <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:parsedBadge.bg, color:parsedBadge.color, border:`1px solid ${parsedBadge.border}` }}>
+                      {parsedLabel}
+                    </span>
+                  )}
                 </div>
 
                 {/* Handle edit row */}
@@ -655,30 +652,35 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                     if (files.length) uploadAndParseScreenshots(p.id, p.platform, files)
                   }}
                 />
-                <div
-                  onClick={() => !isUploading && fileInputRefs.current[p.id]?.click()}
-                  style={{
-                    border:`2px dashed ${isUploading ? 'var(--gold-border)' : 'var(--border)'}`,
-                    borderRadius:10, padding:'14px', textAlign:'center',
-                    cursor: isUploading ? 'default' : 'pointer',
-                    background: isUploading ? 'rgba(196,154,60,0.05)' : 'transparent',
-                    transition:'border-color 0.15s', marginBottom:10,
-                  }}
-                >
-                  {isUploading ? (
-                    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
-                      <div style={{ width:12, height:12, border:'2px solid var(--gold)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
-                      <p style={{ fontSize:12, color:'var(--gold)', fontWeight:600 }}>Uploading…</p>
-                    </div>
-                  ) : (
-                    <>
-                      <p style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>
-                        {platformScreenshots.length > 0 ? 'Upload new screenshots' : 'Upload screenshots'}
-                      </p>
-                      <p style={{ fontSize:11, color:'var(--text-2)' }}>Click to select · multiple files OK · JPG or PNG</p>
-                    </>
-                  )}
-                </div>
+
+                {showProgress ? (
+                  <div style={{ marginBottom: 10 }}>
+                    <ParseProgressCard
+                      status={parseStatus}
+                      onSettled={() => {
+                        setPlatformStatuses(prev => ({
+                          ...prev,
+                          [p.id]: parseStatus === 'complete' ? 'complete' : 'pending',
+                        }))
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => !isUploading && fileInputRefs.current[p.id]?.click()}
+                    style={{
+                      border:'2px dashed var(--border)',
+                      borderRadius:10, padding:'14px', textAlign:'center',
+                      cursor: 'pointer',
+                      transition:'border-color 0.15s', marginBottom:10,
+                    }}
+                  >
+                    <p style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>
+                      {platformScreenshots.length > 0 ? 'Upload new screenshots' : 'Upload screenshots'}
+                    </p>
+                    <p style={{ fontSize:11, color:'var(--text-2)' }}>Click to select · multiple files OK · JPG or PNG</p>
+                  </div>
+                )}
 
                 {UPLOAD_HINTS[p.platform.toLowerCase()] && (
                   <div style={{ marginBottom:10 }}>

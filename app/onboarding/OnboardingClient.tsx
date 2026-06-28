@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import ParseProgressCard from '@/components/ParseProgressCard'
+import type { ParseStatus } from '@/hooks/useParseProgress'
 
 const SESSION_KEY_LS = 'truleado_session_key'
 const PLATFORM_ICONS: Record<string, string> = {
@@ -519,48 +521,40 @@ export default function OnboardingClient({ user, influencer }: Props) {
             </div>
 
             {platforms.map(p => {
-              const status = platformStatuses[p.id] || 'pending'
-              const isProcessing = status === 'processing' || uploadingPlatform === p.id
-              const isComplete = status === 'complete'
-              const isFailed = status === 'failed'
+              const rawStatus = platformStatuses[p.id] || 'pending'
+              const parseStatus: ParseStatus =
+                rawStatus === 'processing' ? 'processing' :
+                rawStatus === 'complete'   ? 'complete'   :
+                rawStatus === 'failed'     ? 'failed'     : 'idle'
+              const showProgress = parseStatus === 'processing' || parseStatus === 'complete' || parseStatus === 'failed'
 
               return (
                 <div key={p.id} style={{
                   padding: 20,
                   background: 'var(--white)',
-                  border: `1px solid ${isComplete ? '#a7f3d0' : 'var(--border)'}`,
+                  border: `1px solid ${parseStatus === 'complete' ? '#a7f3d0' : 'var(--border)'}`,
                   borderRadius: 16,
                   boxShadow: 'var(--shadow)',
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 20 }}>{PLATFORM_ICONS[p.platform] || '📱'}</span>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', textTransform: 'capitalize' }}>{p.platform}</div>
-                        {p.handle && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>@{p.handle}</div>}
-                      </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <span style={{ fontSize: 20 }}>{PLATFORM_ICONS[p.platform] || '📱'}</span>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', textTransform: 'capitalize' }}>{p.platform}</div>
+                      {p.handle && <div style={{ fontSize: 12, color: 'var(--text-3)' }}>@{p.handle}</div>}
                     </div>
-                    {isComplete && (
-                      <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, background: 'var(--green-bg)', color: 'var(--green)' }}>
-                        Parsed ✓
-                      </span>
-                    )}
-                    {isFailed && (
-                      <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, background: 'var(--red-bg)', color: 'var(--red)' }}>
-                        Try again
-                      </span>
-                    )}
                   </div>
 
-                  {isProcessing ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-3)', fontSize: 13 }}>
-                      <span style={{
-                        display: 'inline-block', width: 14, height: 14,
-                        border: '2px solid var(--border)', borderTopColor: 'var(--gold)',
-                        borderRadius: '50%', animation: 'spin 0.8s linear infinite',
-                      }} />
-                      Reading your screenshots…
-                    </div>
+                  {showProgress ? (
+                    <ParseProgressCard
+                      status={parseStatus}
+                      onSettled={() => {
+                        // After 2s settle, reset to idle so upload button reappears
+                        setPlatformStatuses(prev => ({
+                          ...prev,
+                          [p.id]: parseStatus === 'complete' ? 'complete' : 'pending',
+                        }))
+                      }}
+                    />
                   ) : (
                     <label style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -571,7 +565,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
                       color: 'var(--text-3)',
                       fontSize: 13,
                     }}>
-                      📤 {isComplete ? 'Upload more screenshots' : 'Upload screenshots'}
+                      📤 {rawStatus === 'complete' ? 'Upload more screenshots' : 'Upload screenshots'}
                       <input
                         type="file"
                         multiple
