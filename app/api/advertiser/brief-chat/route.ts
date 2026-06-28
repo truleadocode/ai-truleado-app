@@ -47,10 +47,10 @@ const STEPS: Record<string, { question: string; extractPrompt: string; extractSc
     extractPrompt: `Extract go_live_date as ISO date string (YYYY-MM-DD). If vague like "Q1 2026", use the last day of that period. If "ASAP" or unclear, return null.`,
     extractSchema: `{"go_live_date":"string|null"}`,
     nextStep: 'niche',
-    nextQuestion: 'What kind of creator are you looking for? Any niche, tone notes, dos or don'ts?',
+    nextQuestion: "What kind of creator are you looking for? Any niche, tone notes, dos or don'ts?",
   },
   niche: {
-    question: 'What kind of creator are you looking for?',
+    question: "What kind of creator are you looking for?",
     extractPrompt: `Extract niche_fit (string describing ideal creator niche), tone_notes (string), dos (string), donts (string). All nullable.`,
     extractSchema: `{"niche_fit":"string|null","tone_notes":"string|null","dos":"string|null","donts":"string|null"}`,
     nextStep: null,
@@ -94,7 +94,6 @@ export async function POST(request: NextRequest) {
     const extracted = result.extracted || {}
     const nextStep = isLast ? null : stepInfo.nextStep
 
-    // Update brief session
     const updates: Record<string, any> = { current_step: nextStep || 'done', last_seen_at: new Date().toISOString() }
     if (extracted.brand_name) updates.brand_name = extracted.brand_name
     if (extracted.product_description) updates.product_description = extracted.product_description
@@ -115,7 +114,6 @@ export async function POST(request: NextRequest) {
     await service.from('brief_sessions').update(updates).eq('session_key', session_key)
 
     if (isLast) {
-      // Return all session data for review
       const { data: session } = await service.from('brief_sessions').select('*').eq('session_key', session_key).single()
       return NextResponse.json({ phase: 'review', step: 'done', extracted, sarah_reply: result.reply, session_data: session })
     }
