@@ -12,77 +12,90 @@ type StepInfo = {
   extractSchema: string
   nextStep: string | null
   nextQuestion: string | null
+  // chips belong to THIS step's question — shown when Sarah asks THIS step's question
   chips?: string[]
 }
 
+// IMPORTANT: chips on a step are shown when Sarah ASKS that step's question.
+// So platforms.chips = the chips shown when Sarah asks "which platforms are you on?"
+// The API returns currentStepInfo.chips (not nextStepInfo.chips)
 const STEPS: Record<string, StepInfo> = {
   greeting: {
     extractPrompt: `Extract their name. Split into first_name and last_name. If only one name given, use it for first_name and null for last_name.`,
     extractSchema: `{"first_name": "string", "last_name": "string | null"}`,
     nextStep: 'location',
     nextQuestion: 'Where are you based?',
+    // no chips — greeting is free text
   },
   location: {
     extractPrompt: `Extract city and country from their response. Either can be null.`,
     extractSchema: `{"city": "string | null", "country": "string | null"}`,
     nextStep: 'platforms',
-    nextQuestion: 'Which platforms are you active on? (Instagram, TikTok, YouTube, Pinterest)',
-    chips: ['Instagram', 'TikTok', 'YouTube', 'Pinterest', 'Instagram + TikTok', 'All of them'],
+    nextQuestion: 'Which platforms are you active on?',
+    // no chips — location is free text
   },
   platforms: {
     extractPrompt: `Extract platform names. Map to lowercase: instagram, tiktok, youtube, pinterest. Return array of objects. "All of them" means all four. "Instagram + TikTok" means both.`,
     extractSchema: `{"platforms": [{"platform": "instagram|tiktok|youtube|pinterest", "handle": null}]}`,
     nextStep: 'handles',
     nextQuestion: 'What are your handles on those platforms?',
+    chips: ['Instagram', 'TikTok', 'YouTube', 'Pinterest', 'Instagram + TikTok', 'All of them'],
   },
   handles: {
-    extractPrompt: `Match handles to platforms. The collected data has a platforms array. Try to match each @handle or username to a platform. Return the updated platforms array with handles filled in. If only one platform, assign the handle to it. If multiple, match by context.`,
+    extractPrompt: `Match handles to platforms. The collected data has a platforms array. Try to match each @handle or username to a platform. Return the updated platforms array with handles filled in. If only one platform, assign the handle to it. If multiple, match by context clues in the message.`,
     extractSchema: `{"platforms": [{"platform": "string", "handle": "string | null"}]}`,
     nextStep: 'niche',
     nextQuestion: 'What kind of content do you make? (fitness, beauty, food, travel, etc.)',
+    // no chips — handles is free text
   },
   niche: {
     extractPrompt: `Extract primary_niche (capitalize, e.g. "Fitness") and any secondary_niches mentioned as an array of strings.`,
     extractSchema: `{"primary_niche": "string", "secondary_niches": ["string"]}`,
     nextStep: 'content_style',
     nextQuestion: 'How would you describe your content style? (educational, entertaining, aesthetic, raw and authentic, etc.)',
+    // no chips — niche is free text
   },
   content_style: {
     extractPrompt: `Extract their content style as a short descriptive phrase.`,
     extractSchema: `{"content_style": "string"}`,
     nextStep: 'languages',
     nextQuestion: 'What languages do you create content in?',
+    // no chips — content_style is free text
   },
   languages: {
-    extractPrompt: `Extract languages as an array. Common: English, German, French, Spanish, Italian, Dutch, Portuguese, etc.`,
+    extractPrompt: `Extract languages as an array. Common: English, German, French, Spanish, Italian, Dutch, Portuguese, Hindi, etc.`,
     extractSchema: `{"languages": ["string"]}`,
     nextStep: 'posting_frequency',
     nextQuestion: 'How often do you post?',
-    chips: ['Daily', '4–6x per week', '2–3x per week', 'Once a week', 'Less than once a week'],
+    // no chips — languages is free text
   },
   posting_frequency: {
-    extractPrompt: `Extract posting frequency. Normalize to closest: Daily, 4–6x per week, 2–3x per week, Once a week, Less than once a week.`,
+    extractPrompt: `Extract posting frequency. Normalize to closest: Daily, 4-6x per week, 2-3x per week, Once a week, Less than once a week.`,
     extractSchema: `{"posting_frequency": "string"}`,
     nextStep: 'bio',
-    nextQuestion: 'Almost there! Give me 2–3 sentences about you and your content — this is what brands read first.',
+    nextQuestion: 'Almost there! Give me 2-3 sentences about you and your content — this is what brands read first.',
+    chips: ['Daily', '4-6x per week', '2-3x per week', 'Once a week', 'Less than once a week'],
   },
   bio: {
     extractPrompt: `Use their message as the bio. Keep their voice, fix obvious typos. Return as bio field.`,
     extractSchema: `{"bio": "string"}`,
     nextStep: 'brand_prefs',
     nextQuestion: `Two quick ones — which brand categories do you love working with, and any you'd never do?`,
+    // no chips — bio is free text
   },
   brand_prefs: {
     extractPrompt: `Extract brand_loves (categories they enjoy) and brand_never (hard nos) as string arrays. Capitalize each.`,
     extractSchema: `{"brand_loves": ["string"], "brand_never": ["string"]}`,
     nextStep: 'rates',
     nextQuestion: `Last question — what do you charge for sponsored content? A rough idea is fine.`,
+    // no chips — brand_prefs is free text
   },
   rates: {
     extractPrompt: `Return their rates description verbatim as rates_raw.`,
     extractSchema: `{"rates_raw": "string"}`,
     nextStep: null,
     nextQuestion: null,
+    // no chips — rates is free text, and it's the last step
   },
 }
 
@@ -108,75 +121,73 @@ export async function POST(request: NextRequest) {
   // ── INIT ───────────────────────────────────────────────────────────
   if (action === 'init') {
     try {
-    // Post-OAuth: user is authenticated, find or merge session
-    if (user_id && influencer_id) {
-      const { data: session } = await service
-        .from('onboarding_sessions')
-        .select('*')
-        .eq('session_key', session_key || '')
-        .single()
+      // Post-OAuth: user is authenticated
+      if (user_id && influencer_id) {
+        const { data: session } = await service
+          .from('onboarding_sessions')
+          .select('*')
+          .eq('session_key', session_key || '')
+          .single()
 
-      // Already merged
-      if (session?.influencer_id) {
+        if (session?.influencer_id) {
+          const { data: platforms } = await service
+            .from('influencer_platforms')
+            .select('id, platform, handle')
+            .eq('influencer_id', session.influencer_id)
+          return NextResponse.json({ phase: 'screenshots', influencer_id: session.influencer_id, platforms, data: session })
+        }
+
+        if (session) {
+          return NextResponse.json({ phase: 'merge_needed', session_key, data: session })
+        }
+
         const { data: platforms } = await service
           .from('influencer_platforms')
           .select('id, platform, handle')
-          .eq('influencer_id', session.influencer_id)
-        return NextResponse.json({ phase: 'screenshots', influencer_id: session.influencer_id, platforms, data: session })
+          .eq('influencer_id', influencer_id)
+        return NextResponse.json({ phase: 'screenshots', influencer_id, platforms: platforms || [], data: {} })
       }
 
-      // Needs merge
-      if (session) {
-        return NextResponse.json({ phase: 'merge_needed', session_key, data: session })
+      // Pre-auth: resume or create
+      if (session_key) {
+        const { data: session } = await service
+          .from('onboarding_sessions')
+          .select('*')
+          .eq('session_key', session_key)
+          .single()
+
+        if (session && !session.completed) {
+          const step = session.current_step || 'greeting'
+          const name = session.first_name ? `, ${session.first_name}` : ''
+          const stepLabel = step === 'greeting' ? 'your name' : step.replace(/_/g, ' ')
+          return NextResponse.json({
+            phase: 'resume',
+            session_key,
+            step,
+            data: session,
+            sarah_reply: `Welcome back${name}! 👋 We got as far as ${stepLabel} — want to continue where we left off?`,
+            chips: ['Yes, continue', 'Start fresh'],
+          })
+        }
       }
 
-      // No pre-auth session — go straight to screenshots
-      const { data: platforms } = await service
-        .from('influencer_platforms')
-        .select('id, platform, handle')
-        .eq('influencer_id', influencer_id)
-      return NextResponse.json({ phase: 'screenshots', influencer_id, platforms: platforms || [], data: {} })
-    }
+      // New session
+      const newKey = `tr_${crypto.randomUUID()}`
+      await service.from('onboarding_sessions').insert({
+        session_key: newKey,
+        current_step: 'greeting',
+        last_seen_at: new Date().toISOString(),
+      })
 
-    // Pre-auth: resume or create
-    if (session_key) {
-      const { data: session } = await service
-        .from('onboarding_sessions')
-        .select('*')
-        .eq('session_key', session_key)
-        .single()
-
-      if (session && !session.completed) {
-        const step = session.current_step || 'greeting'
-        const name = session.first_name ? `, ${session.first_name}` : ''
-        const stepLabel = step === 'greeting' ? 'your name' : step.replace(/_/g, ' ')
-        return NextResponse.json({
-          phase: 'resume',
-          session_key,
-          step,
-          data: session,
-          sarah_reply: `Welcome back${name}! 👋 We got as far as ${stepLabel} — want to continue where we left off?`,
-          chips: ['Yes, continue', 'Start fresh'],
-        })
-      }
-    }
-
-    // New session
-    const newKey = `tr_${crypto.randomUUID()}`
-    await service.from('onboarding_sessions').insert({
-      session_key: newKey,
-      current_step: 'greeting',
-      last_seen_at: new Date().toISOString(),
-    })
-
-    return NextResponse.json({
-      phase: 'chat',
-      session_key: newKey,
-      step: 'greeting',
-      data: {},
-      sarah_reply: `Hey! 👋 I'm Sarah from Truleado. I match creators like you with brands that actually fit your content — no cold emails, no chasing briefs.\n\nThis takes about 3 minutes. Let's start simple — what's your name?`,
-      chips: [],
-    })
+      return NextResponse.json({
+        phase: 'chat',
+        session_key: newKey,
+        step: 'greeting',
+        data: {},
+        // No chips on greeting — it's a free text name question
+        sarah_reply: `Hey! 👋 I'm Sarah from Truleado. I match creators like you with brands that actually fit your content — no cold emails, no chasing briefs.\n\nThis takes about 3 minutes. Let's start simple — what's your name?`,
+        chips: [],
+      })
     } catch (err) {
       console.error('Init error:', err)
       return NextResponse.json({ error: String(err) }, { status: 500 })
@@ -189,14 +200,15 @@ export async function POST(request: NextRequest) {
     const stepInfo = STEPS[currentStep]
     if (!stepInfo) {
       return NextResponse.json({
-        sarah_reply: "Let's pick up where we left off! What's your name?",
+        sarah_reply: "Let's start fresh! What's your name?",
         chips: [],
         step: 'greeting',
       })
     }
+    // Re-ask the current step's question with its chips
     const question = stepInfo.nextQuestion || 'Can you tell me more?'
     return NextResponse.json({
-      sarah_reply: `Got it, let's keep going! ${question}`,
+      sarah_reply: `Great, let's keep going! ${question}`,
       chips: stepInfo.chips || [],
       step: currentStep,
     })
@@ -216,6 +228,7 @@ export async function POST(request: NextRequest) {
     }
 
     const isLastStep = stepInfo.nextStep === null
+    // The NEXT step's chips are shown with the next question Sarah is about to ask
     const nextStepInfo = stepInfo.nextStep ? STEPS[stepInfo.nextStep] : null
 
     const prompt = `Current step: ${step}
@@ -232,7 +245,7 @@ ${isLastStep
   : `Then ask: "${stepInfo.nextQuestion}"`
 }
 
-Return ONLY valid JSON:
+Return ONLY valid JSON with no markdown fences:
 {
   "extracted": <extracted data matching schema>,
   "reply": "your message"
@@ -249,13 +262,11 @@ Return ONLY valid JSON:
     const extracted = geminiResult.extracted || {}
     const reply = geminiResult.reply || ''
 
-    // Merge extracted into session data
     const updates: Record<string, any> = {
       current_step: isLastStep ? 'rates_done' : (stepInfo.nextStep || step),
       last_seen_at: new Date().toISOString(),
     }
 
-    // Map extracted fields to DB columns
     if (step === 'greeting') {
       if (extracted.first_name) updates.first_name = extracted.first_name
       if (extracted.last_name) updates.last_name = extracted.last_name
@@ -265,10 +276,8 @@ Return ONLY valid JSON:
     } else if (step === 'platforms') {
       updates.platforms = extracted.platforms || []
     } else if (step === 'handles') {
-      // Merge handles into existing platforms
       const existingPlatforms: any[] = data?.platforms || []
-      const updatedPlatforms = extracted.platforms || existingPlatforms
-      updates.platforms = updatedPlatforms
+      updates.platforms = extracted.platforms || existingPlatforms
     } else if (step === 'niche') {
       if (extracted.primary_niche) updates.primary_niche = extracted.primary_niche
       if (extracted.secondary_niches) updates.secondary_niches = extracted.secondary_niches
@@ -296,6 +305,7 @@ Return ONLY valid JSON:
       step: updates.current_step,
       extracted,
       sarah_reply: reply,
+      // Return the NEXT step's chips — these are shown alongside the next question Sarah just asked
       chips: isLastStep ? [] : (nextStepInfo?.chips || []),
       step_number: stepIndex(step),
     })
@@ -314,7 +324,6 @@ Return ONLY valid JSON:
       .single()
 
     if (!session) {
-      // No pre-auth session, just go to screenshots with empty platform list
       const { data: platforms } = await service
         .from('influencer_platforms')
         .select('id, platform, handle')
@@ -322,7 +331,6 @@ Return ONLY valid JSON:
       return NextResponse.json({ phase: 'screenshots', influencer_id, platforms: platforms || [] })
     }
 
-    // Update the influencer row with all collected data
     const influencerUpdates: Record<string, any> = {}
     if (session.first_name) influencerUpdates.first_name = session.first_name
     if (session.last_name) influencerUpdates.last_name = session.last_name
@@ -341,7 +349,6 @@ Return ONLY valid JSON:
       await service.from('influencers').update(influencerUpdates).eq('id', influencer_id)
     }
 
-    // Create platform rows
     const platforms: any[] = session.platforms || []
     const createdPlatforms: any[] = []
 
@@ -370,7 +377,6 @@ Return ONLY valid JSON:
       }
     }
 
-    // Parse rates if available
     if (session.rates_raw) {
       try {
         const ratesPrompt = `Extract rate information from this creator's text and return ONLY valid JSON.
@@ -384,7 +390,7 @@ Return:
   "open_to_rev_share": boolean,
   "open_to_exclusivity": boolean
 }
-Convert amounts to euro cents (€500 = 50000). Omit rates not mentioned. Default booleans to false.`
+Convert amounts to euro cents (500 = 50000). Omit rates not mentioned. Default booleans to false.`
 
         const ratesResult = await callGemini('You extract structured rate data from text. Return only valid JSON.', ratesPrompt)
 
@@ -411,7 +417,6 @@ Convert amounts to euro cents (€500 = 50000). Omit rates not mentioned. Defaul
       }
     }
 
-    // Mark session as merged
     await service.from('onboarding_sessions').update({
       user_id,
       influencer_id,
