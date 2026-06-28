@@ -1,13 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
-export default async function RootPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Logged-in users get redirected by middleware
-  // This page only shows for unauthenticated visitors
+export default function RootPage() {
   return (
     <div style={{
       minHeight: '100vh',
@@ -39,10 +32,13 @@ export default async function RootPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
           <Link href="/influencer" style={{ textDecoration: 'none' }}>
-            <div style={{ background: 'var(--surface)', border: '2px solid var(--border)', borderRadius: 16, padding: '28px 20px', cursor: 'pointer', textAlign: 'left', transition: 'border-color 0.15s' }}
-              onMouseEnter={(e: any) => e.currentTarget.style.borderColor = 'var(--gold)'}
-              onMouseLeave={(e: any) => e.currentTarget.style.borderColor = 'var(--border)'}
-            >
+            <div style={{
+              background: 'var(--surface)',
+              border: '2px solid var(--border)',
+              borderRadius: 16,
+              padding: '28px 20px',
+              textAlign: 'left',
+            }}>
               <div style={{ fontSize: 28, marginBottom: 12 }}>📸</div>
               <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>I'm a creator</p>
               <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>Join free and get matched with brands that fit your content.</p>
@@ -50,10 +46,13 @@ export default async function RootPage() {
           </Link>
 
           <Link href="/advertiser" style={{ textDecoration: 'none' }}>
-            <div style={{ background: 'var(--surface)', border: '2px solid var(--border)', borderRadius: 16, padding: '28px 20px', cursor: 'pointer', textAlign: 'left', transition: 'border-color 0.15s' }}
-              onMouseEnter={(e: any) => e.currentTarget.style.borderColor = 'var(--gold)'}
-              onMouseLeave={(e: any) => e.currentTarget.style.borderColor = 'var(--border)'}
-            >
+            <div style={{
+              background: 'var(--surface)',
+              border: '2px solid var(--border)',
+              borderRadius: 16,
+              padding: '28px 20px',
+              textAlign: 'left',
+            }}>
               <div style={{ fontSize: 28, marginBottom: 12 }}>🎯</div>
               <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: 'var(--text)' }}>I'm a brand or agency</p>
               <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>Submit a brief and receive a shortlist of matched creators.</p>
