@@ -27,6 +27,7 @@ export async function middleware(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/api/') ||
+    pathname.startsWith('/login') ||
     pathname.startsWith('/influencer') ||
     pathname.startsWith('/advertiser')
 
@@ -37,12 +38,10 @@ export async function middleware(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { cookies: { getAll: () => [], setAll: () => {} } }
     )
-    // Check if advertiser
     const { data: advertiser } = await service.from('advertisers').select('id, onboarding_complete').eq('user_id', user.id).single()
     if (advertiser?.onboarding_complete) {
       return NextResponse.redirect(new URL('/advertiser/dashboard', request.url))
     }
-    // Check if influencer
     const { data: influencer } = await service.from('influencers').select('id, onboarding_complete').eq('user_id', user.id).single()
     if (influencer?.onboarding_complete) {
       return NextResponse.redirect(new URL('/influencer/dashboard', request.url))

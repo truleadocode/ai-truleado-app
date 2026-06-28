@@ -25,6 +25,19 @@ export async function GET(request: Request) {
 
   const service = createServiceClient()
 
+  // ── CROSS-ROLE GUARD ─────────────────────────────────────────────
+  // Block advertisers from signing up as creators with the same email
+  const { data: existingAdvertiser } = await service
+    .from('advertisers')
+    .select('id')
+    .eq('user_id', user.id)
+    .single()
+
+  if (existingAdvertiser) {
+    await supabase.auth.signOut()
+    return NextResponse.redirect(`${origin}/influencer?error=already_advertiser`)
+  }
+
   // Check if influencer row exists
   const { data: influencer } = await service
     .from('influencers')
@@ -63,14 +76,14 @@ export async function GET(request: Request) {
       })
     }
 
-    // Go back to root — Sarah chat will detect screenshots phase
-    return NextResponse.redirect(`${origin}/`)
+    // Go to the dedicated influencer onboarding page — Sarah resumes at screenshots
+    return NextResponse.redirect(`${origin}/influencer`)
   }
 
   if (influencer.onboarding_complete) {
     return NextResponse.redirect(`${origin}/dashboard`)
   }
 
-  // Not complete — go to root, Sarah chat resumes
-  return NextResponse.redirect(`${origin}/`)
+  // Not complete — resume onboarding on the dedicated page
+  return NextResponse.redirect(`${origin}/influencer`)
 }
