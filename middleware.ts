@@ -9,15 +9,11 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
+        getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
         },
       },
     }
@@ -26,14 +22,34 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // Public routes — accessible without auth
+  // Always public
   const isPublic =
     pathname === '/' ||
     pathname.startsWith('/auth/') ||
-    pathname.startsWith('/api/sarah-chat') ||
-    pathname.startsWith('/api/')
+    pathname.startsWith('/api/') ||
+    pathname.startsWith('/influencer') ||
+    pathname.startsWith('/advertiser')
 
-  // Protect dashboard and other private routes
+  // Logged-in user hits root — redirect to correct dashboard
+  if (pathname === '/' && user) {
+    const service = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { cookies: { getAll: () => [], setAll: () => {} } }
+    )
+    // Check if advertiser
+    const { data: advertiser } = await service.from('advertisers').select('id, onboarding_complete').eq('user_id', user.id).single()
+    if (advertiser?.onboarding_complete) {
+      return NextResponse.redirect(new URL('/advertiser/dashboard', request.url))
+    }
+    // Check if influencer
+    const { data: influencer } = await service.from('influencers').select('id, onboarding_complete').eq('user_id', user.id).single()
+    if (influencer?.onboarding_complete) {
+      return NextResponse.redirect(new URL('/influencer/dashboard', request.url))
+    }
+  }
+
+  // Protect dashboard routes
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
@@ -44,7 +60,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 }
