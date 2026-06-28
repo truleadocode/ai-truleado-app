@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import OpportunityCards from './OpportunityCards'
 
 function formatEur(cents: number) {
   return `€${(cents / 100).toLocaleString('en-EU')}`
@@ -35,6 +36,17 @@ export default async function DashboardHome() {
     .single()
 
   if (!influencer) redirect('/')
+
+  // ── Brief opportunities (outreached matches awaiting creator response) ──
+  const { data: opportunities } = await supabase
+    .from('brief_matches')
+    .select(`
+      id, outreach_message, score,
+      brief:brief_id ( platforms, content_types, budget_per_creator_eur, budget_flexible, go_live_date, niche_fit )
+    `)
+    .eq('influencer_id', influencer.id)
+    .eq('status', 'outreached')
+    .order('created_at', { ascending: false })
 
   const { data: allGigs } = await supabase.from('gigs').select('id, status, budget_eur').eq('influencer_id', influencer.id)
   const totalGigs = allGigs?.length || 0
@@ -85,6 +97,9 @@ export default async function DashboardHome() {
           {activeGigsCount > 0 ? `You have ${activeGigsCount} active gig${activeGigsCount > 1 ? 's' : ''}.` : 'No active gigs right now.'}
         </p>
       </div>
+
+      {/* Brief opportunities — top priority, creators accept/decline here */}
+      <OpportunityCards opportunities={opportunities || []} influencerId={influencer.id} />
 
       {/* Completion card */}
       {completionPct < 100 && (
@@ -166,12 +181,6 @@ export default async function DashboardHome() {
                 </div>
               )}
             </div>
-            {gig.status === 'offered' && (
-              <div style={{ display: 'flex', gap: 8, marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border)' }}>
-                <button style={{ flex: 1, padding: 8, borderRadius: 'var(--radius-sm)', background: 'var(--gold)', color: '#fff', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>View offer</button>
-                <button style={{ flex: 1, padding: 8, borderRadius: 'var(--radius-sm)', background: 'var(--red-bg)', color: 'var(--red)', border: '1px solid var(--red-border)', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Not interested</button>
-              </div>
-            )}
           </Link>
         )
       })}
