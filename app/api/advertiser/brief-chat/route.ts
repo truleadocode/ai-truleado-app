@@ -16,7 +16,7 @@ const STEPS: Record<string, { question: string; extractPrompt: string; extractSc
   },
   platforms: {
     question: 'Which platforms do you need creators on?',
-    extractPrompt: `Extract platforms as array of lowercase strings: instagram, tiktok, youtube, pinterest. Accept natural language.`,
+    extractPrompt: `Extract platforms as array of lowercase strings: instagram, tiktok, youtube, pinterest.`,
     extractSchema: `{"platforms":["string"]}`,
     nextStep: 'audience',
     nextQuestion: 'Who is your target audience? Age range, gender, and which countries?',
@@ -33,7 +33,7 @@ const STEPS: Record<string, { question: string; extractPrompt: string; extractSc
     extractPrompt: `Extract content_types (array: reel, story, post, video, integration), creators_needed (int, default 5).`,
     extractSchema: `{"content_types":["string"],"creators_needed":5}`,
     nextStep: 'budget',
-    nextQuestion: `What's your budget per creator? A rough range is fine — or say "flexible" if you're not sure.`,
+    nextQuestion: `What's your budget per creator? A rough range is fine — or say "flexible".`,
   },
   budget: {
     question: `What's your budget per creator?`,
@@ -51,7 +51,7 @@ const STEPS: Record<string, { question: string; extractPrompt: string; extractSc
   },
   niche: {
     question: "What kind of creator are you looking for?",
-    extractPrompt: `Extract niche_fit (string describing ideal creator niche), tone_notes (string), dos (string), donts (string). All nullable.`,
+    extractPrompt: `Extract niche_fit, tone_notes, dos, donts as strings. All nullable.`,
     extractSchema: `{"niche_fit":"string|null","tone_notes":"string|null","dos":"string|null","donts":"string|null"}`,
     nextStep: null,
     nextQuestion: null,
@@ -71,30 +71,58 @@ export async function POST(request: NextRequest) {
   const { action, session_key, advertiser_id, step, user_message, data } = body
   const service = createServiceClient()
 
+  // ── INIT: ensure brief_session row exists ─────────────────────────
   if (action === 'init') {
-    if (session_key) {
-      const { error } = await service.from('brief_sessions').insert({ session_key, advertiser_id, current_step: 'brand' })
-      if (error) console.error('Brief session init error:', error)
-    }
+    if (!session_key) return NextResponse.json({ ok: true })
+    // Upsert so calling init multiple times is safe
+    const { error } = await service
+      .from('brief_sessions')
+      .upsert(
+        { session_key, advertiser_id: advertiser_id || null, current_step: 'brand' },
+        { onConflict: 'session_key', ignoreDuplicates: true }
+      )
+    if (error) console.error('Brief session init error:', error)
     return NextResponse.json({ ok: true })
   }
 
+  // ── MESSAGE ───────────────────────────────────────────────────────
   if (action === 'message') {
-    if (!session_key || !step || !user_message) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    if (!session_key || !step || !user_message) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    }
     const stepInfo = STEPS[step]
-    if (!stepInfo) return NextResponse.json({ error: 'Unknown step' }, { status: 400 })
+    if (!stepInfo) {
+      return NextResponse.json({ error: `Unknown step: ${step}` }, { status: 400 })
+    }
     const isLast = stepInfo.nextStep === null
 
-    const prompt = `Step: ${step}\nData so far: ${JSON.stringify(data || {})}\nUser said: "${user_message}"\n\nExtract: ${stepInfo.extractPrompt}\nSchema: ${stepInfo.extractSchema}\n\nReply: 1 warm sentence acknowledging their answer.\n${isLast ? `Then say: "That's everything I need! Let me put this together for you."` : `Then ask: "${stepInfo.nextQuestion}"`}\n\nReturn ONLY JSON: {"extracted":<schema>,"reply":"string"}`
+    const prompt = `Step: ${step}
+Data so far: ${JSON.stringify(data || {})}
+User said: "${user_message}"
+
+Extract: ${stepInfo.extractPrompt}
+Schema: ${stepInfo.extractSchema}
+
+Reply: 1 warm sentence acknowledging their answer.
+${ isLast
+  ? `Then say: "That's everything I need! Type \'yes\' to confirm and I'll get your brief in front of the right creators."`
+  : `Then ask: "${stepInfo.nextQuestion}"`
+}
+
+Return ONLY JSON: {"extracted":<data matching schema>,"reply":"string"}`
 
     let result: any
     try { result = await callGemini(SARAH_SYSTEM, prompt) }
-    catch { return NextResponse.json({ error: 'AI error' }, { status: 500 }) }
+    catch (e) { return NextResponse.json({ error: 'AI error', detail: String(e) }, { status: 500 }) }
 
     const extracted = result.extracted || {}
     const nextStep = isLast ? null : stepInfo.nextStep
 
-    const updates: Record<string, any> = { current_step: nextStep || 'done', last_seen_at: new Date().toISOString() }
+    // Build update object — only set fields that were extracted
+    const updates: Record<string, any> = {
+      current_step: nextStep || 'confirm',
+      last_seen_at: new Date().toISOString(),
+    }
     if (extracted.brand_name) updates.brand_name = extracted.brand_name
     if (extracted.product_description) updates.product_description = extracted.product_description
     if (extracted.platforms) updates.platforms = extracted.platforms
@@ -111,11 +139,22 @@ export async function POST(request: NextRequest) {
     if (extracted.dos) updates.dos = extracted.dos
     if (extracted.donts) updates.donts = extracted.donts
 
-    await service.from('brief_sessions').update(updates).eq('session_key', session_key)
+    // Upsert brief session — create if it doesn't exist yet (handles case where init wasn't called)
+    await service.from('brief_sessions').upsert(
+      { session_key, ...updates },
+      { onConflict: 'session_key' }
+    )
 
     if (isLast) {
-      const { data: session } = await service.from('brief_sessions').select('*').eq('session_key', session_key).single()
-      return NextResponse.json({ phase: 'review', step: 'done', extracted, sarah_reply: result.reply, session_data: session })
+      const { data: session } = await service
+        .from('brief_sessions').select('*').eq('session_key', session_key).single()
+      return NextResponse.json({
+        phase: 'review',
+        step: 'confirm',
+        extracted,
+        sarah_reply: result.reply,
+        session_data: session,
+      })
     }
 
     return NextResponse.json({ phase: 'chat', step: nextStep, extracted, sarah_reply: result.reply })
