@@ -470,16 +470,17 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
           <div>
             <p style={{ fontSize:13, fontWeight:700, marginBottom:4 }}>Brand categories I love ❤️</p>
             <p style={{ fontSize:12, color:'var(--text-2)', marginBottom:10 }}>Categories you enjoy working with</p>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
-              {CATEGORIES.map(c => chip(c, brandLoves.includes(c), () => toggle(brandLoves, setBrandLoves, c), 'var(--green)', 'var(--green-bg)', 'var(--green-border)'))}
+            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:6 }}>
+              {CATEGORIES.filter(c => !brandNever.includes(c)).map(c => chip(c, brandLoves.includes(c), () => { toggle(brandLoves, setBrandLoves, c); setBrandNever(prev => prev.filter(x => x !== c)) }, 'var(--green)', 'var(--green-bg)', 'var(--green-border)'))}
             </div>
+            <p style={{ fontSize:11, color:'var(--text-3)', marginBottom:10 }}>Selected categories won't appear in the never list.</p>
             <textarea style={{ ...inputStyle, minHeight:60, resize:'vertical' }} value={brandLovesCustom} onChange={e => setBrandLovesCustom(e.target.value)} placeholder="Add your own (e.g. sustainable brands, indie brands...)" />
           </div>
           <div>
             <p style={{ fontSize:13, fontWeight:700, marginBottom:4 }}>Categories I never work with 🚫</p>
             <p style={{ fontSize:12, color:'var(--text-2)', marginBottom:10 }}>Hard stops — Sarah will never match you with these</p>
             <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
-              {CATEGORIES.map(c => chip(c, brandNever.includes(c), () => toggle(brandNever, setBrandNever, c), 'var(--red)', 'var(--red-bg)', 'var(--red-border)'))}
+              {CATEGORIES.filter(c => !brandLoves.includes(c)).map(c => chip(c, brandNever.includes(c), () => { toggle(brandNever, setBrandNever, c); setBrandLoves(prev => prev.filter(x => x !== c)) }, 'var(--red)', 'var(--red-bg)', 'var(--red-border)'))}
             </div>
             <textarea style={{ ...inputStyle, minHeight:60, resize:'vertical' }} value={brandNeverCustom} onChange={e => setBrandNeverCustom(e.target.value)} placeholder="Add your own (e.g. tobacco, gambling, fast fashion...)" />
           </div>
