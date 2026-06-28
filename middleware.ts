@@ -24,22 +24,19 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-
   const { pathname } = request.nextUrl
 
-  // Public routes — no auth needed
-  const publicRoutes = ['/', '/auth/callback', '/auth/error', '/onboarding']
-  const isPublic = publicRoutes.some(r => pathname === r || pathname.startsWith('/auth/') || pathname === '/onboarding' || pathname === '/api/sarah-chat')
+  // Public routes — accessible without auth
+  const isPublic =
+    pathname === '/' ||
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/api/sarah-chat') ||
+    pathname.startsWith('/api/')
 
+  // Protect dashboard and other private routes
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
-    return NextResponse.redirect(url)
-  }
-
-  if (user && pathname === '/') {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
