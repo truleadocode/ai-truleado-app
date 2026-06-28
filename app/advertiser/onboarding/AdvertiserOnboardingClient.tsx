@@ -31,6 +31,13 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
   const [isResumePrompt, setIsResumePrompt] = useState(false)
   const [resumeStep, setResumeStep] = useState('greeting')
 
+  // Email/password auth state
+  const [authMode, setAuthMode] = useState<'signup' | 'login'>('signup')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
+
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const initCalledRef = useRef(false)
@@ -163,13 +170,12 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
   // ── START BRIEF CHAT INLINE ──────────────────────────────────────
   function startBriefChat() {
     setPhase('brief_chat')
-    setStep('brand')  // ← matches the brief-chat API step names exactly
+    setStep('brand')
     addSarah(`Let's build your brief! I'll ask you a few quick questions.\n\nFirst — what's the brand name and what are you promoting?`)
     setTimeout(() => inputRef.current?.focus(), 100)
   }
 
   // ── BRIEF CHAT ───────────────────────────────────────────────────
-  // Steps: brand → platforms → audience → content → budget → timeline → niche
   async function sendBriefMessage(text: string) {
     addUser(text); setInput('')
     setIsThinking(true)
@@ -180,7 +186,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
         body: JSON.stringify({
           action: 'message',
           session_key: sessionKey,
-          step,           // 'brand', 'platforms', 'audience', etc — matches API exactly
+          step,
           user_message: text,
           data: briefData,
           advertiser_id: advertiser?.id || null,
@@ -261,7 +267,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
     const trimmed = text.trim().toLowerCase()
     addUser(text); setInput('')
     if (['yes', 'looks good', 'correct', 'submit', 'yep', 'ok', 'sure'].includes(trimmed)) {
-      addSarah(`Perfect! Sign in with Google to submit your brief and see your creator shortlist when it's ready.`)
+      addSarah(`Perfect! Create your account below to submit your brief and see your creator shortlist when it's ready.`)
       setPhase('auth')
     } else {
       addSarah(`No problem — what would you like to change?`)
@@ -269,6 +275,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
     }
   }
 
+  // ── AUTH: GOOGLE ─────────────────────────────────────────────────
   function signInWithGoogle() {
     const sk = sessionKey || localStorage.getItem(SESSION_KEY_LS)
     localStorage.setItem('truleado_pending_brief', JSON.stringify(briefData))
@@ -276,8 +283,74 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/advertiser-callback?sk=${sk}`,
+        queryParams: {
+          prompt: 'select_account',  // ← always show the account picker
+        },
       },
     })
+  }
+
+  // ── AUTH: EMAIL/PASSWORD ─────────────────────────────────────────
+  async function handleEmailAuth() {
+    setAuthError('')
+    if (!email.trim() || !password.trim()) {
+      setAuthError('Please enter both email and password.')
+      return
+    }
+    setAuthLoading(true)
+
+    try {
+      // Signup: create the account first (server-side, auto-confirmed)
+      if (authMode === 'signup') {
+        const res = await fetch('/api/advertiser/email-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim(), password }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          setAuthError(data.error || 'Could not create account.')
+          setAuthLoading(false)
+          return
+        }
+      }
+
+      // Sign in (both signup and login paths)
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
+      if (signInErr) {
+        setAuthError(
+          authMode === 'login'
+            ? 'Incorrect email or password.'
+            : signInErr.message
+        )
+        setAuthLoading(false)
+        return
+      }
+
+      // Finalize: ensure advertiser row + save the brief + trigger matching
+      const sk = sessionKey || localStorage.getItem(SESSION_KEY_LS)
+      const finRes = await fetch('/api/advertiser/finalize-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_key: sk }),
+      })
+      const finData = await finRes.json()
+
+      if (finData.error === 'already_influencer') {
+        await supabase.auth.signOut()
+        setAuthError('This email is registered as a creator. Please use a different email for your brand account.')
+        setAuthLoading(false)
+        return
+      }
+
+      router.push('/advertiser/dashboard')
+    } catch (e) {
+      setAuthError('Something went wrong. Please try again.')
+      setAuthLoading(false)
+    }
   }
 
   // ── MESSAGE ROUTER ───────────────────────────────────────────────
@@ -318,6 +391,12 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
     border: role === 'sarah' ? '1px solid var(--border)' : 'none',
     boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
   })
+
+  const inputFieldStyle: React.CSSProperties = {
+    width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid var(--border)',
+    background: 'var(--surface)', fontSize: 14, color: 'var(--text)', outline: 'none',
+    fontFamily: 'inherit', boxSizing: 'border-box',
+  }
 
   const showInput = phase === 'chat' || phase === 'brief_chat'
   const showMessages = phase !== 'loading'
@@ -390,18 +469,80 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
               </div>
             )}
 
+            {/* AUTH — Google + email/password */}
             {phase === 'auth' && !isThinking && (
-              <div style={{ margin: '8px 0', padding: 20, background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, textAlign: 'center' }}>
-                <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16, lineHeight: 1.6 }}>
-                  Your brief is saved — sign in to see your creator shortlist when it's ready.
+              <div style={{ margin: '8px 0', padding: 24, background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                <p style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, textAlign: 'center' }}>
+                  {authMode === 'signup' ? 'Create your account' : 'Welcome back'}
                 </p>
+                <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 20, textAlign: 'center', lineHeight: 1.5 }}>
+                  {authMode === 'signup'
+                    ? 'Your brief is saved — create an account to submit it.'
+                    : 'Log in to submit your brief and view your shortlist.'}
+                </p>
+
+                {/* Google */}
                 <button
                   onClick={signInWithGoogle}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '12px 24px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--text)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
+                  style={{ width: '100%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '11px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--text)', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 }}
                 >
                   <svg width="18" height="18" viewBox="0 0 18 18"><path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/><path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z" fill="#34A853"/><path d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/><path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/></svg>
                   Continue with Google
                 </button>
+
+                {/* Divider */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0 16px' }}>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                  <span style={{ fontSize: 11, color: 'var(--text-3)', fontWeight: 500 }}>OR</span>
+                  <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                </div>
+
+                {/* Email/password */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <input
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleEmailAuth() }}
+                    style={inputFieldStyle}
+                    autoComplete="email"
+                  />
+                  <input
+                    type="password"
+                    placeholder={authMode === 'signup' ? 'Create a password (min 6 chars)' : 'Your password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleEmailAuth() }}
+                    style={inputFieldStyle}
+                    autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
+                  />
+
+                  {authError && (
+                    <p style={{ fontSize: 12, color: 'var(--red)', lineHeight: 1.5, padding: '2px 2px' }}>{authError}</p>
+                  )}
+
+                  <button
+                    onClick={handleEmailAuth}
+                    disabled={authLoading}
+                    style={{ width: '100%', padding: '12px', borderRadius: 10, background: 'var(--gold)', color: '#fff', fontSize: 14, fontWeight: 700, border: 'none', cursor: authLoading ? 'default' : 'pointer', fontFamily: 'inherit', opacity: authLoading ? 0.7 : 1, marginTop: 4 }}
+                  >
+                    {authLoading
+                      ? 'Just a moment…'
+                      : authMode === 'signup' ? 'Create account & submit brief' : 'Log in & submit brief'}
+                  </button>
+                </div>
+
+                {/* Toggle signup/login */}
+                <p style={{ fontSize: 12, color: 'var(--text-2)', textAlign: 'center', marginTop: 16 }}>
+                  {authMode === 'signup' ? 'Already have an account?' : 'New to Truleado?'}{' '}
+                  <button
+                    onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError('') }}
+                    style={{ background: 'none', border: 'none', color: 'var(--gold)', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, padding: 0 }}
+                  >
+                    {authMode === 'signup' ? 'Log in' : 'Create an account'}
+                  </button>
+                </p>
               </div>
             )}
 
