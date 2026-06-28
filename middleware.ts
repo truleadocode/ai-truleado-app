@@ -22,6 +22,13 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
+  // Which surface are we on? truleado.com / :3000 = marketing, app.truleado.com / :3001 = app
+  const host = request.headers.get('host') || ''
+  const isAppSurface =
+    host.startsWith('app.') ||
+    host.includes('localhost:3001') ||
+    host.includes('127.0.0.1:3001')
+
   // Always public
   const isPublic =
     pathname === '/' ||
@@ -31,8 +38,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/influencer') ||
     pathname.startsWith('/advertiser')
 
-  // Logged-in user hits root — redirect to correct dashboard
-  if (pathname === '/' && user) {
+  // Logged-in user hits root ON THE APP SURFACE — send to correct dashboard.
+  // On the marketing surface (:3000 / truleado.com) we always render the marketing page.
+  if (pathname === '/' && user && isAppSurface) {
     const service = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
