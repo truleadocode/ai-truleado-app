@@ -26,7 +26,6 @@ CREATOR:
 - Languages: ${influencer.languages?.join(', ') || 'unknown'}
 - Content style: ${influencer.content_style || 'unknown'}
 - Platforms: ${platforms.map(p => `${p.platform} (${p.followers?.toLocaleString() || '?'} followers, ${p.engagement_rate || '?'}% engagement, top countries: ${p.audience_top_countries?.join(', ') || 'unknown'}, audience age: ${p.audience_age_range || 'unknown'}, gender: ${p.audience_gender_split || 'unknown'})`).join('; ')}
-- Rates: ${platforms.map(p => `${p.platform}`).join(', ')}
 
 Score on these dimensions (return all):
 - niche_fit: 0-20 (how well their niche matches the brand category)
@@ -52,18 +51,16 @@ export async function POST(request: NextRequest) {
   const service = createServiceClient()
 
   try {
-    // Get brief
     const { data: brief } = await service.from('briefs').select('*').eq('id', brief_id).single()
     if (!brief) return NextResponse.json({ error: 'Brief not found' }, { status: 404 })
 
-    // Update brief status
-    await service.from('briefs').update({ status: 'matching' }).eq('id', brief_id)
+    await service.from('briefs').update({ status: 'matching', last_matched_at: new Date().toISOString() }).eq('id', brief_id)
 
-    // Get all influencers with parsed data
+    // Get all creators who completed onboarding (NOT status='active' — creators stay 'pending')
     const { data: influencers } = await service
       .from('influencers')
       .select('id, primary_niche, secondary_niches, bio, languages, content_style, brand_loves, brand_never, open_to_exclusivity')
-      .eq('status', 'active')
+      .eq('onboarding_complete', true)
 
     if (!influencers?.length) {
       await service.from('briefs').update({ status: 'needs_review', match_exhausted: true }).eq('id', brief_id)
@@ -73,12 +70,10 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction: MATCH_SYSTEM })
 
-    // Score all creators
     const scores: { influencer_id: string; score: number; breakdown: any; match_reason: string }[] = []
 
     for (const influencer of influencers) {
       try {
-        // Get their platform data
         const { data: platforms } = await service
           .from('influencer_platforms')
           .select('platform, followers, engagement_rate, audience_top_countries, audience_age_range, audience_gender_split')
@@ -103,31 +98,34 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Sort by score descending
-    scores.sort((a, b) => b.score - a.score)
-
-    // Insert all scores into brief_matches
-    if (scores.length > 0) {
-      await service.from('brief_matches').insert(
-        scores.map(s => ({
-          brief_id,
-          influencer_id: s.influencer_id,
-          score: s.score,
-          score_breakdown: s.breakdown,
-          match_reason: s.match_reason,
-          status: 'scored',
-        }))
-      )
+    // No one could be scored — flag for review
+    if (scores.length === 0) {
+      await service.from('briefs').update({ status: 'needs_review', match_exhausted: true }).eq('id', brief_id)
+      return NextResponse.json({ ok: true, message: 'No creators could be scored' })
     }
 
-    // Start outreach — top 15 first
+    scores.sort((a, b) => b.score - a.score)
+
+    // Insert all scores (upsert to avoid duplicate-key errors on re-runs)
+    await service.from('brief_matches').upsert(
+      scores.map(s => ({
+        brief_id,
+        influencer_id: s.influencer_id,
+        score: s.score,
+        score_breakdown: s.breakdown,
+        match_reason: s.match_reason,
+        status: 'scored',
+      })),
+      { onConflict: 'brief_id,influencer_id', ignoreDuplicates: true }
+    )
+
+    // Outreach — top 15
     const toContact = scores.slice(0, 15)
     let contacted = 0
 
     for (const match of toContact) {
       try {
-        // Check exclusivity conflict
-        const { data: influencer } = await service.from('influencers').select('open_to_exclusivity, first_name').eq('id', match.influencer_id).single()
+        const { data: influencer } = await service.from('influencers').select('open_to_exclusivity').eq('id', match.influencer_id).single()
         if (influencer?.open_to_exclusivity) {
           const { count: activeConfirmed } = await service.from('brief_matches')
             .select('id', { count: 'exact', head: true })
@@ -136,7 +134,6 @@ export async function POST(request: NextRequest) {
           if ((activeConfirmed || 0) > 0) continue
         }
 
-        // Generate personalised outreach message
         const outreachPrompt = `Write a short, friendly message from Sarah at Truleado to a creator about a brand opportunity.
 Keep it to 3-4 sentences. Don't reveal the brand name. Sound human.
 Opportunity: ${brief.niche_fit || 'content'} campaign, budget around €${brief.budget_per_creator_eur ? Math.round(brief.budget_per_creator_eur/100) : 'flexible'}, content: ${brief.content_types?.join(', ')}.
@@ -153,7 +150,6 @@ Return ONLY the message text.`
           response_timeout_at: timeoutAt,
         }).eq('brief_id', brief_id).eq('influencer_id', match.influencer_id)
 
-        // Create in-app notification for creator
         await service.from('notifications').insert({
           influencer_id: match.influencer_id,
           type: 'brief_opportunity',
@@ -162,9 +158,8 @@ Return ONLY the message text.`
           gig_id: null,
         })
 
-        // Update brief counter
-        await service.from('briefs').update({ creators_contacted: contacted + 1 }).eq('id', brief_id)
         contacted++
+        await service.from('briefs').update({ creators_contacted: contacted }).eq('id', brief_id)
       } catch (err) {
         console.error('Outreach error:', err)
       }

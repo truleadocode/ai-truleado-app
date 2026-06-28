@@ -69,12 +69,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Mark handoff sent
     await service.from('brief_matches').update({ handoff_sent_at: new Date().toISOString(), status: 'completed' }).eq('id', match_id)
-
-    // Update confirmed counter on brief
-    const { count } = await service.from('brief_matches').select('id', { count: 'exact', head: true }).eq('brief_id', brief_id).eq('status', 'completed')
-    await service.from('briefs').update({ creators_confirmed: count || 0 }).eq('id', brief_id)
 
     return NextResponse.json({ ok: true })
   } catch (err) {
