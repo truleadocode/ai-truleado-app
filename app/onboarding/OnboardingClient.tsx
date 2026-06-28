@@ -43,6 +43,8 @@ export default function OnboardingClient({ user, influencer }: Props) {
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, string>>({})
   const [uploadingPlatform, setUploadingPlatform] = useState<string | null>(null)
   const [allUploaded, setAllUploaded] = useState(false)
+  const [isResumePrompt, setIsResumePrompt] = useState(false)
+  const [resumeStep, setResumeStep] = useState<string>('greeting')
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -96,11 +98,13 @@ export default function OnboardingClient({ user, influencer }: Props) {
     } else if (data.phase === 'merge_needed') {
       await mergeSession(data.session_key)
     } else if (data.phase === 'resume') {
+      // Store the real step from DB, set resume prompt flag
+      setResumeStep(data.step)
       setStep(data.step)
       setSessionData(data.data || {})
+      setIsResumePrompt(true)
       setPhase('chat')
-      // Resume: show Sarah's message with inline yes/no as text options
-      addSarahMessage(data.sarah_reply + '\n\nReply "yes" to continue or "no" to start fresh.')
+      addSarahMessage(data.sarah_reply)
     } else if (data.phase === 'chat') {
       setStep(data.step)
       setPhase('chat')
@@ -173,10 +177,15 @@ export default function OnboardingClient({ user, influencer }: Props) {
       const res = await fetch('/api/sarah-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resume_continue', session_key: sessionKey, step: currentStep }),
+        body: JSON.stringify({
+          action: 'resume_continue',
+          session_key: sessionKey,
+          step: currentStep, // use the real DB step, not greeting
+        }),
       })
       const data = await res.json()
       if (data.step) setStep(data.step)
+      setIsResumePrompt(false)
       addSarahMessage(data.sarah_reply)
     } catch {
       addSarahMessage("Let's pick up where we left off!")
@@ -192,6 +201,8 @@ export default function OnboardingClient({ user, influencer }: Props) {
     setSessionKey(null)
     setSessionData({})
     setStep('greeting')
+    setResumeStep('greeting')
+    setIsResumePrompt(false)
     setPhase('loading')
     await new Promise(r => setTimeout(r, 50))
     initCalledRef.current = false
@@ -205,20 +216,28 @@ export default function OnboardingClient({ user, influencer }: Props) {
     const trimmed = text.trim().toLowerCase()
 
     // Handle resume response in natural language
-    if (step === 'greeting' && messages.some(m => m.role === 'sarah' && m.text.includes('continue where we left off'))) {
-      if (trimmed === 'yes' || trimmed === 'yeah' || trimmed === 'sure' || trimmed === 'ok' || trimmed === 'yep' || trimmed === 'continue') {
+    if (isResumePrompt) {
+      const isYes = ['yes', 'yeah', 'sure', 'ok', 'yep', 'continue', 'yup', 'let\'s go', 'lets go'].includes(trimmed)
+      const isNo = ['no', 'nope', 'start fresh', 'restart', 'start over', 'fresh', 'new'].includes(trimmed)
+
+      if (isYes) {
         addUserMessage(text)
         setInput('')
-        await continueFromStep(step)
+        await continueFromStep(resumeStep) // use resumeStep (from DB), not step
         return
       }
-      if (trimmed === 'no' || trimmed === 'nope' || trimmed === 'start fresh' || trimmed === 'restart' || trimmed === 'start over') {
+      if (isNo) {
         addUserMessage(text)
         setInput('')
         addSarahMessage('No problem, starting fresh!')
         await startFresh()
         return
       }
+      // If unclear, prompt again
+      addUserMessage(text)
+      setInput('')
+      addSarahMessage('Just say "yes" to continue where we left off, or "no" to start over.')
+      return
     }
 
     addUserMessage(text)
@@ -256,7 +275,9 @@ export default function OnboardingClient({ user, influencer }: Props) {
     const sk = sessionKey || localStorage.getItem(SESSION_KEY_LS)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?onboarding=true&sk=${sk}` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?onboarding=true&sk=${sk}`,
+      },
     })
   }
 
@@ -431,7 +452,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
-                  placeholder="Type your answer…"
+                  placeholder={isResumePrompt ? 'Say "yes" to continue or "no" to start fresh…' : 'Type your answer…'}
                   disabled={isThinking}
                   autoFocus
                   style={{
