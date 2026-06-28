@@ -175,16 +175,46 @@ Return only the summary text, no formatting or labels.`
 
 export async function POST(request: NextRequest) {
   const formData = await request.formData()
-  const files = formData.getAll('files') as File[]
-  const platform = formData.get('platform') as string
-  const platformId = formData.get('platformId') as string
-  const influencerId = formData.get('influencerId') as string
+
+  // Accept both naming conventions from different clients
+  // OnboardingClient sends: screenshots, platform_id, influencer_id
+  // ProfileEditClient sends: files, platformId, influencerId
+  const files = (
+    formData.getAll('screenshots').length
+      ? formData.getAll('screenshots')
+      : formData.getAll('files')
+  ) as File[]
+
+  const platformId = (
+    formData.get('platform_id') || formData.get('platformId')
+  ) as string
+
+  const influencerId = (
+    formData.get('influencer_id') || formData.get('influencerId')
+  ) as string
+
+  // Platform can come from form data or we look it up from the platform row
+  let platform = (formData.get('platform') || '') as string
 
   if (!files.length || !platformId || !influencerId) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    console.error('Missing fields:', { files: files.length, platformId, influencerId })
+    return NextResponse.json(
+      { error: 'Missing required fields', details: { files: files.length, platformId, influencerId } },
+      { status: 400 }
+    )
   }
 
   const service = createServiceClient()
+
+  // If platform not provided, look it up from the platform row
+  if (!platform) {
+    const { data: platformRow } = await service
+      .from('influencer_platforms')
+      .select('platform')
+      .eq('id', platformId)
+      .single()
+    platform = platformRow?.platform || 'instagram'
+  }
 
   await service.from('influencer_platforms')
     .update({ parse_status: 'processing', parse_error: null })
@@ -194,8 +224,7 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
-    // Convert files to inline data parts
-    // Save screenshots to storage and record in influencer_screenshots table
+    // Save screenshots to storage
     const savedScreenshots: string[] = []
     await Promise.all(
       files.map(async (file, idx) => {
@@ -220,6 +249,7 @@ export async function POST(request: NextRequest) {
       })
     )
 
+    // Convert files to base64 for Gemini
     const imageParts = await Promise.all(
       files.map(async file => {
         const buffer = await file.arrayBuffer()
@@ -241,7 +271,6 @@ export async function POST(request: NextRequest) {
     ])
 
     const raw = parseResult.response.text().trim()
-    // Strip markdown fences if Gemini wraps the JSON
     const clean = raw.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim()
     const parsed = JSON.parse(clean)
 
@@ -264,7 +293,7 @@ export async function POST(request: NextRequest) {
       last_parsed_at: new Date().toISOString(),
     }).eq('id', platformId)
 
-    // Generate ai_summary
+    // Generate AI summary
     const { data: influencer } = await service
       .from('influencers')
       .select('primary_niche, bio, first_name')
@@ -278,7 +307,6 @@ export async function POST(request: NextRequest) {
       .eq('parse_status', 'complete')
 
     const summaryPayload = JSON.stringify({ influencer, platforms: allPlatforms, latestParse: parsed })
-
     const summaryResult = await model.generateContent([SUMMARY_PROMPT, summaryPayload])
     const aiSummary = summaryResult.response.text().trim()
 
@@ -287,17 +315,19 @@ export async function POST(request: NextRequest) {
       ai_parsed_at: new Date().toISOString(),
     }).eq('id', influencerId)
 
-    // Mark saved screenshots as processed
+    // Mark screenshots as processed
     if (savedScreenshots.length) {
-      await service.from('influencer_screenshots').update({ processed: true, processed_at: new Date().toISOString() })
-        .eq('platform_id', platformId).in('storage_path', savedScreenshots)
+      await service.from('influencer_screenshots')
+        .update({ processed: true, processed_at: new Date().toISOString() })
+        .eq('platform_id', platformId)
+        .in('storage_path', savedScreenshots)
     }
 
     await service.from('notifications').insert({
       influencer_id: influencerId,
       type: 'profile_parsed',
       title: 'Profile updated',
-      body: `Your ${platform} stats have been parsed and your profile has been updated.`,
+      body: `Your ${platform} stats have been read and your profile has been updated.`,
     })
 
     return NextResponse.json({ success: true, parsed })
