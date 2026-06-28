@@ -12,90 +12,74 @@ type StepInfo = {
   extractSchema: string
   nextStep: string | null
   nextQuestion: string | null
-  // chips belong to THIS step's question — shown when Sarah asks THIS step's question
-  chips?: string[]
 }
 
-// IMPORTANT: chips on a step are shown when Sarah ASKS that step's question.
-// So platforms.chips = the chips shown when Sarah asks "which platforms are you on?"
-// The API returns currentStepInfo.chips (not nextStepInfo.chips)
 const STEPS: Record<string, StepInfo> = {
   greeting: {
     extractPrompt: `Extract their name. Split into first_name and last_name. If only one name given, use it for first_name and null for last_name.`,
     extractSchema: `{"first_name": "string", "last_name": "string | null"}`,
     nextStep: 'location',
     nextQuestion: 'Where are you based?',
-    // no chips — greeting is free text
   },
   location: {
     extractPrompt: `Extract city and country from their response. Either can be null.`,
     extractSchema: `{"city": "string | null", "country": "string | null"}`,
     nextStep: 'platforms',
-    nextQuestion: 'Which platforms are you active on?',
-    // no chips — location is free text
+    nextQuestion: 'Which platforms are you active on? Instagram, TikTok, YouTube, Pinterest?',
   },
   platforms: {
-    extractPrompt: `Extract platform names. Map to lowercase: instagram, tiktok, youtube, pinterest. Return array of objects. "All of them" means all four. "Instagram + TikTok" means both.`,
+    extractPrompt: `Extract platform names. Map to lowercase: instagram, tiktok, youtube, pinterest. Return array of objects. "All of them" means all four. Accept any natural language like "insta and tiktok" or "just instagram".`,
     extractSchema: `{"platforms": [{"platform": "instagram|tiktok|youtube|pinterest", "handle": null}]}`,
     nextStep: 'handles',
     nextQuestion: 'What are your handles on those platforms?',
-    chips: ['Instagram', 'TikTok', 'YouTube', 'Pinterest', 'Instagram + TikTok', 'All of them'],
   },
   handles: {
     extractPrompt: `Match handles to platforms. The collected data has a platforms array. Try to match each @handle or username to a platform. Return the updated platforms array with handles filled in. If only one platform, assign the handle to it. If multiple, match by context clues in the message.`,
     extractSchema: `{"platforms": [{"platform": "string", "handle": "string | null"}]}`,
     nextStep: 'niche',
-    nextQuestion: 'What kind of content do you make? (fitness, beauty, food, travel, etc.)',
-    // no chips — handles is free text
+    nextQuestion: 'What kind of content do you make?',
   },
   niche: {
     extractPrompt: `Extract primary_niche (capitalize, e.g. "Fitness") and any secondary_niches mentioned as an array of strings.`,
     extractSchema: `{"primary_niche": "string", "secondary_niches": ["string"]}`,
     nextStep: 'content_style',
-    nextQuestion: 'How would you describe your content style? (educational, entertaining, aesthetic, raw and authentic, etc.)',
-    // no chips — niche is free text
+    nextQuestion: 'How would you describe your content style?',
   },
   content_style: {
     extractPrompt: `Extract their content style as a short descriptive phrase.`,
     extractSchema: `{"content_style": "string"}`,
     nextStep: 'languages',
     nextQuestion: 'What languages do you create content in?',
-    // no chips — content_style is free text
   },
   languages: {
-    extractPrompt: `Extract languages as an array. Common: English, German, French, Spanish, Italian, Dutch, Portuguese, Hindi, etc.`,
+    extractPrompt: `Extract languages as an array. Accept any natural phrasing like "english and a bit of hindi" or "mainly dutch". Common: English, German, French, Spanish, Italian, Dutch, Portuguese, Hindi, etc.`,
     extractSchema: `{"languages": ["string"]}`,
     nextStep: 'posting_frequency',
     nextQuestion: 'How often do you post?',
-    // no chips — languages is free text
   },
   posting_frequency: {
-    extractPrompt: `Extract posting frequency. Normalize to closest: Daily, 4-6x per week, 2-3x per week, Once a week, Less than once a week.`,
+    extractPrompt: `Extract posting frequency from natural language. Normalize to one of: Daily, 4-6x per week, 2-3x per week, Once a week, Less than once a week. Accept anything like "couple times a week" or "every day" or "a few times a month".`,
     extractSchema: `{"posting_frequency": "string"}`,
     nextStep: 'bio',
     nextQuestion: 'Almost there! Give me 2-3 sentences about you and your content — this is what brands read first.',
-    chips: ['Daily', '4-6x per week', '2-3x per week', 'Once a week', 'Less than once a week'],
   },
   bio: {
     extractPrompt: `Use their message as the bio. Keep their voice, fix obvious typos. Return as bio field.`,
     extractSchema: `{"bio": "string"}`,
     nextStep: 'brand_prefs',
     nextQuestion: `Two quick ones — which brand categories do you love working with, and any you'd never do?`,
-    // no chips — bio is free text
   },
   brand_prefs: {
-    extractPrompt: `Extract brand_loves (categories they enjoy) and brand_never (hard nos) as string arrays. Capitalize each.`,
+    extractPrompt: `Extract brand_loves (categories they enjoy) and brand_never (hard nos) as string arrays. Capitalize each. Accept natural language like "I love fitness brands, hate alcohol and gambling".`,
     extractSchema: `{"brand_loves": ["string"], "brand_never": ["string"]}`,
     nextStep: 'rates',
     nextQuestion: `Last question — what do you charge for sponsored content? A rough idea is fine.`,
-    // no chips — brand_prefs is free text
   },
   rates: {
     extractPrompt: `Return their rates description verbatim as rates_raw.`,
     extractSchema: `{"rates_raw": "string"}`,
     nextStep: null,
     nextQuestion: null,
-    // no chips — rates is free text, and it's the last step
   },
 }
 
@@ -118,10 +102,9 @@ export async function POST(request: NextRequest) {
   const { action, session_key, user_id, influencer_id, user_message } = body
   const service = createServiceClient()
 
-  // ── INIT ───────────────────────────────────────────────────────────
+  // ── INIT ──────────────────────────────────────────────────────────
   if (action === 'init') {
     try {
-      // Post-OAuth: user is authenticated
       if (user_id && influencer_id) {
         const { data: session } = await service
           .from('onboarding_sessions')
@@ -148,7 +131,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ phase: 'screenshots', influencer_id, platforms: platforms || [], data: {} })
       }
 
-      // Pre-auth: resume or create
       if (session_key) {
         const { data: session } = await service
           .from('onboarding_sessions')
@@ -166,12 +148,10 @@ export async function POST(request: NextRequest) {
             step,
             data: session,
             sarah_reply: `Welcome back${name}! 👋 We got as far as ${stepLabel} — want to continue where we left off?`,
-            chips: ['Yes, continue', 'Start fresh'],
           })
         }
       }
 
-      // New session
       const newKey = `tr_${crypto.randomUUID()}`
       await service.from('onboarding_sessions').insert({
         session_key: newKey,
@@ -184,9 +164,7 @@ export async function POST(request: NextRequest) {
         session_key: newKey,
         step: 'greeting',
         data: {},
-        // No chips on greeting — it's a free text name question
         sarah_reply: `Hey! 👋 I'm Sarah from Truleado. I match creators like you with brands that actually fit your content — no cold emails, no chasing briefs.\n\nThis takes about 3 minutes. Let's start simple — what's your name?`,
-        chips: [],
       })
     } catch (err) {
       console.error('Init error:', err)
@@ -201,20 +179,17 @@ export async function POST(request: NextRequest) {
     if (!stepInfo) {
       return NextResponse.json({
         sarah_reply: "Let's start fresh! What's your name?",
-        chips: [],
         step: 'greeting',
       })
     }
-    // Re-ask the current step's question with its chips
     const question = stepInfo.nextQuestion || 'Can you tell me more?'
     return NextResponse.json({
       sarah_reply: `Great, let's keep going! ${question}`,
-      chips: stepInfo.chips || [],
       step: currentStep,
     })
   }
 
-  // ── MESSAGE ────────────────────────────────────────────────────────
+  // ── MESSAGE ───────────────────────────────────────────────────────
   if (action === 'message') {
     const { step, data } = body
 
@@ -228,8 +203,6 @@ export async function POST(request: NextRequest) {
     }
 
     const isLastStep = stepInfo.nextStep === null
-    // The NEXT step's chips are shown with the next question Sarah is about to ask
-    const nextStepInfo = stepInfo.nextStep ? STEPS[stepInfo.nextStep] : null
 
     const prompt = `Current step: ${step}
 Collected data so far: ${JSON.stringify(data || {})}
@@ -305,13 +278,11 @@ Return ONLY valid JSON with no markdown fences:
       step: updates.current_step,
       extracted,
       sarah_reply: reply,
-      // Return the NEXT step's chips — these are shown alongside the next question Sarah just asked
-      chips: isLastStep ? [] : (nextStepInfo?.chips || []),
       step_number: stepIndex(step),
     })
   }
 
-  // ── MERGE (post-OAuth) ─────────────────────────────────────────────
+  // ── MERGE (post-OAuth) ────────────────────────────────────────────
   if (action === 'merge') {
     if (!session_key || !user_id || !influencer_id) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
@@ -431,7 +402,7 @@ Convert amounts to euro cents (500 = 50000). Omit rates not mentioned. Default b
     })
   }
 
-  // ── COMPLETE ───────────────────────────────────────────────────────
+  // ── COMPLETE ──────────────────────────────────────────────────────
   if (action === 'complete') {
     const { influencer_id: infId } = body
     if (infId) {

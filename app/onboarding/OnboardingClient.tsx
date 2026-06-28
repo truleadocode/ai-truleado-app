@@ -16,7 +16,6 @@ type Phase = 'loading' | 'chat' | 'auth' | 'screenshots' | 'done'
 interface ChatMessage {
   role: 'sarah' | 'user'
   text: string
-  chips?: string[]
 }
 
 interface Platform {
@@ -75,8 +74,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
     })
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      console.error('Sarah chat init failed:', err)
+      console.error('Sarah chat init failed')
       setPhase('chat')
       addSarahMessage("Hey! 👋 I'm Sarah from Truleado. What's your name?")
       return
@@ -101,11 +99,12 @@ export default function OnboardingClient({ user, influencer }: Props) {
       setStep(data.step)
       setSessionData(data.data || {})
       setPhase('chat')
-      addSarahMessage(data.sarah_reply, data.chips || [])
+      // Resume: show Sarah's message with inline yes/no as text options
+      addSarahMessage(data.sarah_reply + '\n\nReply "yes" to continue or "no" to start fresh.')
     } else if (data.phase === 'chat') {
       setStep(data.step)
       setPhase('chat')
-      addSarahMessage(data.sarah_reply, [])
+      addSarahMessage(data.sarah_reply)
     }
   }
 
@@ -160,11 +159,8 @@ export default function OnboardingClient({ user, influencer }: Props) {
     if (allDone) setAllUploaded(true)
   }, [platformStatuses, phase, platforms])
 
-  function addSarahMessage(text: string, chips: string[] = []) {
-    setMessages(prev => [
-      ...prev.map(m => ({ ...m, chips: [] })),
-      { role: 'sarah' as const, text, chips },
-    ])
+  function addSarahMessage(text: string) {
+    setMessages(prev => [...prev, { role: 'sarah' as const, text }])
   }
 
   function addUserMessage(text: string) {
@@ -172,7 +168,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
   }
 
   async function continueFromStep(currentStep: string) {
-    addUserMessage("Yes, let's continue")
     setIsThinking(true)
     try {
       const res = await fetch('/api/sarah-chat', {
@@ -182,9 +177,9 @@ export default function OnboardingClient({ user, influencer }: Props) {
       })
       const data = await res.json()
       if (data.step) setStep(data.step)
-      addSarahMessage(data.sarah_reply, data.chips || [])
+      addSarahMessage(data.sarah_reply)
     } catch {
-      addSarahMessage("Let's pick up where we left off! What was your answer?")
+      addSarahMessage("Let's pick up where we left off!")
     } finally {
       setIsThinking(false)
       setTimeout(() => inputRef.current?.focus(), 100)
@@ -192,16 +187,14 @@ export default function OnboardingClient({ user, influencer }: Props) {
   }
 
   async function startFresh() {
-    addUserMessage('Start fresh')
     localStorage.removeItem(SESSION_KEY_LS)
     setMessages([])
     setSessionKey(null)
     setSessionData({})
     setStep('greeting')
     setPhase('loading')
-    initCalledRef.current = false
-    // Small delay so state settles before re-init
     await new Promise(r => setTimeout(r, 50))
+    initCalledRef.current = false
     initCalledRef.current = true
     await initSession(true)
   }
@@ -209,22 +202,28 @@ export default function OnboardingClient({ user, influencer }: Props) {
   async function sendMessage(text: string) {
     if (!text.trim() || isThinking) return
 
-    // Handle resume chip choices without going through the message action
-    if (text === 'Yes, continue') {
-      setMessages(prev => prev.map(m => ({ ...m, chips: [] })))
-      await continueFromStep(step)
-      return
-    }
-    if (text === 'Start fresh') {
-      setMessages(prev => prev.map(m => ({ ...m, chips: [] })))
-      await startFresh()
-      return
+    const trimmed = text.trim().toLowerCase()
+
+    // Handle resume response in natural language
+    if (step === 'greeting' && messages.some(m => m.role === 'sarah' && m.text.includes('continue where we left off'))) {
+      if (trimmed === 'yes' || trimmed === 'yeah' || trimmed === 'sure' || trimmed === 'ok' || trimmed === 'yep' || trimmed === 'continue') {
+        addUserMessage(text)
+        setInput('')
+        await continueFromStep(step)
+        return
+      }
+      if (trimmed === 'no' || trimmed === 'nope' || trimmed === 'start fresh' || trimmed === 'restart' || trimmed === 'start over') {
+        addUserMessage(text)
+        setInput('')
+        addSarahMessage('No problem, starting fresh!')
+        await startFresh()
+        return
+      }
     }
 
     addUserMessage(text)
     setInput('')
     setIsThinking(true)
-    setMessages(prev => prev.map(m => ({ ...m, chips: [] })))
 
     try {
       const res = await fetch('/api/sarah-chat', {
@@ -243,7 +242,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
       if (data.extracted) setSessionData((prev: Record<string, any>) => ({ ...prev, ...data.extracted }))
       if (data.step) setStep(data.step)
 
-      addSarahMessage(data.sarah_reply, data.chips || [])
+      addSarahMessage(data.sarah_reply)
       if (data.phase === 'auth') setPhase('auth')
     } catch {
       addSarahMessage("Sorry, I had a hiccup — can you say that again? 😅")
@@ -335,7 +334,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
           <>
             <div style={{ flex: 1, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto' }}>
               {messages.map((msg, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: 8 }}>
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                   <div style={{
                     maxWidth: '80%',
                     padding: '12px 16px',
@@ -350,31 +349,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
                   }}>
                     {msg.text}
                   </div>
-                  {msg.chips && msg.chips.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxWidth: '80%' }}>
-                      {msg.chips.map(chip => (
-                        <button
-                          key={chip}
-                          onClick={() => sendMessage(chip)}
-                          disabled={isThinking}
-                          style={{
-                            padding: '6px 14px',
-                            borderRadius: 20,
-                            border: '1px solid var(--gold-border)',
-                            background: 'var(--gold-bg)',
-                            color: 'var(--gold)',
-                            fontSize: 13,
-                            fontWeight: 500,
-                            cursor: isThinking ? 'default' : 'pointer',
-                            opacity: isThinking ? 0.6 : 1,
-                            fontFamily: 'inherit',
-                          }}
-                        >
-                          {chip}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               ))}
 
