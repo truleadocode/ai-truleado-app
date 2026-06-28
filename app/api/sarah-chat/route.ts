@@ -8,74 +8,86 @@ You onboard creators through friendly chat. Be warm, encouraging, brief.
 You MUST respond with valid JSON only — no markdown, no extra text.`
 
 type StepInfo = {
+  question: string        // THIS step's own question (used on resume)
   extractPrompt: string
   extractSchema: string
   nextStep: string | null
-  nextQuestion: string | null
+  nextQuestion: string | null  // question for the NEXT step (used in normal flow)
 }
 
 const STEPS: Record<string, StepInfo> = {
   greeting: {
-    extractPrompt: `Extract their name. Split into first_name and last_name. If only one name given, use it for first_name and null for last_name.`,
+    question: `What's your name?`,
+    extractPrompt: `Extract their name. Split into first_name and last_name. If only one name given, use it as first_name and null for last_name.`,
     extractSchema: `{"first_name": "string", "last_name": "string | null"}`,
     nextStep: 'location',
     nextQuestion: 'Where are you based?',
   },
   location: {
+    question: 'Where are you based?',
     extractPrompt: `Extract city and country from their response. Either can be null.`,
     extractSchema: `{"city": "string | null", "country": "string | null"}`,
     nextStep: 'platforms',
     nextQuestion: 'Which platforms are you active on? Instagram, TikTok, YouTube, Pinterest?',
   },
   platforms: {
+    question: 'Which platforms are you active on? Instagram, TikTok, YouTube, Pinterest?',
     extractPrompt: `Extract platform names. Map to lowercase: instagram, tiktok, youtube, pinterest. Return array of objects. "All of them" means all four. Accept any natural language like "insta and tiktok" or "just instagram".`,
     extractSchema: `{"platforms": [{"platform": "instagram|tiktok|youtube|pinterest", "handle": null}]}`,
     nextStep: 'handles',
     nextQuestion: 'What are your handles on those platforms?',
   },
   handles: {
+    question: 'What are your handles on those platforms?',
     extractPrompt: `Match handles to platforms. The collected data has a platforms array. Try to match each @handle or username to a platform. Return the updated platforms array with handles filled in. If only one platform, assign the handle to it. If multiple, match by context clues in the message.`,
     extractSchema: `{"platforms": [{"platform": "string", "handle": "string | null"}]}`,
     nextStep: 'niche',
     nextQuestion: 'What kind of content do you make?',
   },
   niche: {
+    question: 'What kind of content do you make?',
     extractPrompt: `Extract primary_niche (capitalize, e.g. "Fitness") and any secondary_niches mentioned as an array of strings.`,
     extractSchema: `{"primary_niche": "string", "secondary_niches": ["string"]}`,
     nextStep: 'content_style',
     nextQuestion: 'How would you describe your content style?',
   },
   content_style: {
+    question: 'How would you describe your content style?',
     extractPrompt: `Extract their content style as a short descriptive phrase.`,
     extractSchema: `{"content_style": "string"}`,
     nextStep: 'languages',
     nextQuestion: 'What languages do you create content in?',
   },
   languages: {
+    question: 'What languages do you create content in?',
     extractPrompt: `Extract languages as an array. Accept any natural phrasing like "english and a bit of hindi" or "mainly dutch". Common: English, German, French, Spanish, Italian, Dutch, Portuguese, Hindi, etc.`,
     extractSchema: `{"languages": ["string"]}`,
     nextStep: 'posting_frequency',
     nextQuestion: 'How often do you post?',
   },
   posting_frequency: {
+    question: 'How often do you post?',
     extractPrompt: `Extract posting frequency from natural language. Normalize to one of: Daily, 4-6x per week, 2-3x per week, Once a week, Less than once a week. Accept anything like "couple times a week" or "every day" or "a few times a month".`,
     extractSchema: `{"posting_frequency": "string"}`,
     nextStep: 'bio',
     nextQuestion: 'Almost there! Give me 2-3 sentences about you and your content — this is what brands read first.',
   },
   bio: {
+    question: 'Can you give me 2-3 sentences about you and your content? This is what brands read first.',
     extractPrompt: `Use their message as the bio. Keep their voice, fix obvious typos. Return as bio field.`,
     extractSchema: `{"bio": "string"}`,
     nextStep: 'brand_prefs',
     nextQuestion: `Two quick ones — which brand categories do you love working with, and any you'd never do?`,
   },
   brand_prefs: {
+    question: `Which brand categories do you love working with, and any you'd never do?`,
     extractPrompt: `Extract brand_loves (categories they enjoy) and brand_never (hard nos) as string arrays. Capitalize each. Accept natural language like "I love fitness brands, hate alcohol and gambling".`,
     extractSchema: `{"brand_loves": ["string"], "brand_never": ["string"]}`,
     nextStep: 'rates',
     nextQuestion: `Last question — what do you charge for sponsored content? A rough idea is fine.`,
   },
   rates: {
+    question: `What do you charge for sponsored content? A rough idea is fine.`,
     extractPrompt: `Return their rates description verbatim as rates_raw.`,
     extractSchema: `{"rates_raw": "string"}`,
     nextStep: null,
@@ -102,7 +114,7 @@ export async function POST(request: NextRequest) {
   const { action, session_key, user_id, influencer_id, user_message } = body
   const service = createServiceClient()
 
-  // ── INIT ──────────────────────────────────────────────────────────
+  // ── INIT ────────────────────────────────────────────────────────
   if (action === 'init') {
     try {
       if (user_id && influencer_id) {
@@ -182,9 +194,9 @@ export async function POST(request: NextRequest) {
         step: 'greeting',
       })
     }
-    const question = stepInfo.nextQuestion || 'Can you tell me more?'
+    // Use THIS step's own question — not the next step's question
     return NextResponse.json({
-      sarah_reply: `Great, let's keep going! ${question}`,
+      sarah_reply: `Great, let's keep going! ${stepInfo.question}`,
       step: currentStep,
     })
   }
