@@ -18,17 +18,6 @@ interface Props {
   advertiser: { id: string; onboarding_complete?: boolean } | null
 }
 
-// Brief creation steps — asked inline after onboarding
-const BRIEF_STEPS: Record<string, { question: string; nextStep: string | null }> = {
-  brief_brand:    { question: `What's the brand name and what are you promoting?`, nextStep: 'brief_platforms' },
-  brief_platforms:{ question: 'Which platforms do you need creators on? Instagram, TikTok, YouTube, Pinterest?', nextStep: 'brief_audience' },
-  brief_audience: { question: 'Who is your target audience? Age range, gender, and which countries?', nextStep: 'brief_content' },
-  brief_content:  { question: 'What content do you need, and how many creators? E.g. "2 Reels per creator, 5 creators total"', nextStep: 'brief_budget' },
-  brief_budget:   { question: `What's your budget per creator? A rough range is fine, or say "flexible".`, nextStep: 'brief_timeline' },
-  brief_timeline: { question: 'When does content need to go live?', nextStep: 'brief_niche' },
-  brief_niche:    { question: 'Any niche preferences, tone notes, dos or don\'ts for creators?', nextStep: null },
-}
-
 export default function AdvertiserOnboardingClient({ user, advertiser }: Props) {
   const router = useRouter()
   const [phase, setPhase] = useState<Phase>('loading')
@@ -41,8 +30,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
   const [isThinking, setIsThinking] = useState(false)
   const [isResumePrompt, setIsResumePrompt] = useState(false)
   const [resumeStep, setResumeStep] = useState('greeting')
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [uploading, setUploading] = useState(false)
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -82,7 +69,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
     }
 
     const data = await res.json()
-
     if (data.session_key) {
       localStorage.setItem(SESSION_KEY_LS, data.session_key)
       setSessionKey(data.session_key)
@@ -163,7 +149,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
       const data = await res.json()
       if (data.extracted) setSessionData((prev: any) => ({ ...prev, ...data.extracted }))
       if (data.step) setStep(data.step)
-      addSarah(data.sarah_reply)
+      addSarah(data.sarah_reply || "Got it!")
       if (data.phase === 'brief_choice') setPhase('brief_choice')
       else if (data.phase === 'auth') setPhase('auth')
     } catch {
@@ -177,12 +163,13 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
   // ── START BRIEF CHAT INLINE ──────────────────────────────────────
   function startBriefChat() {
     setPhase('brief_chat')
-    setStep('brief_brand')
+    setStep('brand')  // ← matches the brief-chat API step names exactly
     addSarah(`Let's build your brief! I'll ask you a few quick questions.\n\nFirst — what's the brand name and what are you promoting?`)
     setTimeout(() => inputRef.current?.focus(), 100)
   }
 
   // ── BRIEF CHAT ───────────────────────────────────────────────────
+  // Steps: brand → platforms → audience → content → budget → timeline → niche
   async function sendBriefMessage(text: string) {
     addUser(text); setInput('')
     setIsThinking(true)
@@ -193,7 +180,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
         body: JSON.stringify({
           action: 'message',
           session_key: sessionKey,
-          step,
+          step,           // 'brand', 'platforms', 'audience', etc — matches API exactly
           user_message: text,
           data: briefData,
           advertiser_id: advertiser?.id || null,
@@ -201,17 +188,21 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
       })
       const data = await res.json()
 
+      if (data.error) {
+        addSarah(`Something went wrong — let me try again. ${data.error}`)
+        return
+      }
+
       if (data.extracted) setBriefData((prev: any) => ({ ...prev, ...data.extracted }))
       if (data.step) setStep(data.step)
-
-      addSarah(data.sarah_reply)
+      addSarah(data.sarah_reply || "Got it!")
 
       if (data.phase === 'review') {
-        // All brief questions answered — show auth gate
         setBriefData(data.session_data || briefData)
-        setPhase('auth')
+        addSarah(`That's everything I need! Here's a quick summary:\n\n${buildBriefSummary(data.session_data || briefData)}\n\nType "yes" to submit, or tell me what to change.`)
+        setStep('brief_confirm')
       }
-    } catch {
+    } catch (e) {
       addSarah("Sorry, I had a hiccup — can you say that again? 😅")
     } finally {
       setIsThinking(false)
@@ -221,9 +212,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
 
   // ── UPLOAD BRIEF ─────────────────────────────────────────────────
   async function handleFileUpload(file: File) {
-    setUploadedFile(file)
-    setUploading(true)
-    setPhase('brief_chat') // switch to chat to show activity
+    setPhase('brief_chat')
     addSarah(`Got it — reading your brief now...`)
     setIsThinking(true)
 
@@ -235,27 +224,25 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
       const res = await fetch('/api/advertiser/parse-brief', { method: 'POST', body: formData })
       const data = await res.json()
 
-      if (data.extracted && data.confidence !== 'low') {
+      if (data.extracted && data.extracted.confidence !== 'low') {
         setBriefData(data.extracted)
-        const summary = buildBriefSummary(data.extracted)
-        addSarah(`Here's what I found in your brief:\n\n${summary}\n\nDoes this look right? Type "yes" to submit, or tell me what to change.`)
+        addSarah(`Here's what I found in your brief:\n\n${buildBriefSummary(data.extracted)}\n\nDoes this look right? Type "yes" to submit, or tell me what to change.`)
         setStep('brief_confirm')
       } else {
-        addSarah(`I had some trouble reading that brief clearly. Let me ask you a few quick questions instead.\n\nWhat's the brand name and what are you promoting?`)
-        setStep('brief_brand')
+        addSarah(`I had some trouble reading that brief. Let me ask you a few quick questions instead.\n\nWhat's the brand name and what are you promoting?`)
+        setStep('brand')
       }
     } catch {
-      addSarah(`Something went wrong reading the file. Let me ask you directly — what's the brand name and what are you promoting?`)
-      setStep('brief_brand')
+      addSarah(`Something went wrong. Let me ask you directly — what's the brand name and what are you promoting?`)
+      setStep('brand')
     } finally {
       setIsThinking(false)
-      setUploading(false)
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }
 
   function buildBriefSummary(d: Record<string, any>) {
-    const lines = []
+    const lines: string[] = []
     if (d.brand_name) lines.push(`Brand: ${d.brand_name}`)
     if (d.product_description) lines.push(`Product: ${d.product_description}`)
     if (d.platforms?.length) lines.push(`Platforms: ${d.platforms.join(', ')}`)
@@ -263,7 +250,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
     if (d.creators_needed) lines.push(`Creators: ${d.creators_needed}`)
     if (d.budget_flexible) lines.push(`Budget: Flexible`)
     else if (d.budget_per_creator_eur) lines.push(`Budget: €${Math.round(d.budget_per_creator_eur / 100)} per creator`)
-    if (d.target_age_range) lines.push(`Audience age: ${d.target_age_range}`)
+    if (d.target_age_range) lines.push(`Audience: ${d.target_age_range}`)
     if (d.target_countries?.length) lines.push(`Countries: ${d.target_countries.join(', ')}`)
     if (d.go_live_date) lines.push(`Go-live: ${d.go_live_date}`)
     if (d.niche_fit) lines.push(`Niche: ${d.niche_fit}`)
@@ -273,21 +260,17 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
   async function handleBriefConfirm(text: string) {
     const trimmed = text.trim().toLowerCase()
     addUser(text); setInput('')
-
-    if (trimmed === 'yes' || trimmed === 'looks good' || trimmed === 'correct' || trimmed === 'submit') {
-      setPhase('auth')
+    if (['yes', 'looks good', 'correct', 'submit', 'yep', 'ok', 'sure'].includes(trimmed)) {
       addSarah(`Perfect! Sign in with Google to submit your brief and see your creator shortlist when it's ready.`)
+      setPhase('auth')
     } else {
-      // They want to change something — go back to chat
-      addSarah(`No problem! What would you like to change?`)
-      setStep('brief_brand')
+      addSarah(`No problem — what would you like to change?`)
+      setStep('brand')
     }
   }
 
-  // ── SIGN IN ──────────────────────────────────────────────────────
   function signInWithGoogle() {
     const sk = sessionKey || localStorage.getItem(SESSION_KEY_LS)
-    // Store brief data in localStorage so callback can save it
     localStorage.setItem('truleado_pending_brief', JSON.stringify(briefData))
     supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -297,12 +280,11 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
     })
   }
 
-  // ── SEND MESSAGE (router) ────────────────────────────────────────
+  // ── MESSAGE ROUTER ───────────────────────────────────────────────
   async function sendMessage(text: string) {
     if (!text.trim() || isThinking) return
     const trimmed = text.trim().toLowerCase()
 
-    // Resume prompt handling
     if (isResumePrompt) {
       const isYes = ['yes','yeah','sure','ok','yep','continue','yup'].includes(trimmed)
       const isNo = ['no','nope','start fresh','restart','start over'].includes(trimmed)
@@ -342,7 +324,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--surface)', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, sans-serif' }}>
-      {/* Header */}
       <div style={{ padding: '14px 24px', background: 'var(--white)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--gold-bg)', border: '2px solid var(--gold-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>✨</div>
         <div>
@@ -353,7 +334,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
       </div>
 
       <div style={{ flex: 1, maxWidth: 640, width: '100%', margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-
         {phase === 'loading' && (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <div style={{ textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
@@ -380,7 +360,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
               </div>
             )}
 
-            {/* Brief choice cards — shown inline after onboarding */}
             {phase === 'brief_choice' && !isThinking && (
               <div style={{ margin: '4px 0' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -411,7 +390,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
               </div>
             )}
 
-            {/* Auth gate — after brief is complete */}
             {phase === 'auth' && !isThinking && (
               <div style={{ margin: '8px 0', padding: 20, background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, textAlign: 'center' }}>
                 <p style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 16, lineHeight: 1.6 }}>
@@ -431,7 +409,6 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
           </div>
         )}
 
-        {/* Input — shown during chat and brief_chat phases */}
         {showInput && (
           <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', background: 'var(--white)', display: 'flex', gap: 8 }}>
             <input
@@ -439,11 +416,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
-              placeholder={
-                isResumePrompt ? 'Say "yes" to continue or "no" to start fresh…' :
-                phase === 'brief_chat' ? 'Type your answer…' :
-                'Type your answer…'
-              }
+              placeholder={isResumePrompt ? 'Say "yes" to continue or "no" to start fresh…' : 'Type your answer…'}
               disabled={isThinking}
               autoFocus
               style={{ flex: 1, padding: '10px 14px', borderRadius: 24, border: '1px solid var(--border)', background: 'var(--surface)', fontSize: 14, color: 'var(--text)', outline: 'none', fontFamily: 'inherit', opacity: isThinking ? 0.6 : 1 }}
