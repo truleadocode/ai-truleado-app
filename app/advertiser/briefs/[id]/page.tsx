@@ -3,6 +3,8 @@ import { redirect, notFound } from 'next/navigation'
 import DashboardShell from '@/components/DashboardShell'
 import BriefDetailClient from './BriefDetailClient'
 
+export const dynamic = 'force-dynamic'
+
 export default async function BriefDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -30,7 +32,7 @@ export default async function BriefDetailPage({ params }: { params: { id: string
   const { data: matches } = await supabase
     .from('brief_matches')
     .select(`
-      id, status, match_score, why_matched,
+      id, status, score, match_reason,
       influencer_id,
       influencers(first_name, last_name, email,
         influencer_platforms(platform, handle, followers, engagement_rate)
@@ -38,7 +40,7 @@ export default async function BriefDetailPage({ params }: { params: { id: string
     `)
     .eq('brief_id', params.id)
     .in('status', ['creator_confirmed','advertiser_confirmed','advertiser_passed','completed'])
-    .order('match_score', { ascending: false })
+    .order('score', { ascending: false })
 
   return (
     <DashboardShell role="advertiser">

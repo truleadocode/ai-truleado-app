@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { ChevronRight, Zap, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+export const dynamic = 'force-dynamic'
+
 const STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning' | 'blue' | 'outline' }> = {
   draft:          { label: 'Draft',            variant: 'outline' },
   submitted:      { label: 'Matching',         variant: 'blue'    },
@@ -44,7 +46,7 @@ export default async function AdvertiserDashboardPage() {
 
   return (
     <DashboardShell role="advertiser">
-      {/* ── Page header ───────────────────────────────────────── */}
+      {/* ── Page header ─────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight">

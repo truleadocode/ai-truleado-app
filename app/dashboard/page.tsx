@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import DashboardShell from '@/components/DashboardShell'
 import OpportunityCards from './OpportunityCards'
 
+export const dynamic = 'force-dynamic'
+
 export default async function InfluencerDashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

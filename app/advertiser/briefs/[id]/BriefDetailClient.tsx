@@ -12,8 +12,8 @@ import { cn } from '@/lib/utils'
 interface Match {
   id: string
   status: string
-  match_score: number | null
-  why_matched: string | null
+  score: number | null
+  match_reason: string | null
   influencer_id: string
   influencers: {
     first_name: string
@@ -67,7 +67,7 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
   const [loading, setLoading] = useState(false)
   const inf = match.influencers
   const plat = inf.influencer_platforms?.[0]
-  const score = match.match_score || 0
+  const score = match.score || 0
 
   const isConfirmed = localStatus === 'advertiser_confirmed' || localStatus === 'completed'
   const isPassed    = localStatus === 'advertiser_passed'
@@ -150,10 +150,10 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
         </div>
 
         {/* Why matched */}
-        {match.why_matched && (
+        {match.match_reason && (
           <div className="bg-accent border border-gold-border rounded-lg p-3">
             <p className="text-[10px] font-bold text-gold uppercase tracking-wider mb-1">Why we matched them</p>
-            <p className="text-xs text-foreground/80 leading-relaxed">{match.why_matched}</p>
+            <p className="text-xs text-foreground/80 leading-relaxed">{match.match_reason}</p>
           </div>
         )}
       </CardContent>
@@ -200,14 +200,14 @@ export default function BriefDetailClient({ brief, initialMatches }: Props) {
           const { data } = await supabase
             .from('brief_matches')
             .select(`
-              id, status, match_score, why_matched, influencer_id,
+              id, status, score, match_reason, influencer_id,
               influencers(first_name, last_name, email,
                 influencer_platforms(platform, handle, followers, engagement_rate)
               )
             `)
             .eq('brief_id', brief.id)
             .in('status', ['creator_confirmed','advertiser_confirmed','advertiser_passed','completed'])
-            .order('match_score', { ascending: false })
+            .order('score', { ascending: false })
           if (data) setMatches(data as any)
         }
       ).subscribe()
