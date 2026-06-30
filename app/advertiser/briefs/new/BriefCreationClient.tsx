@@ -3,12 +3,37 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import DashboardShell from '@/components/DashboardShell'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { cn } from '@/lib/utils'
+import { Loader2, MessageCircle, FileText, Send, Lock, Pencil, AlertCircle, Check, X } from 'lucide-react'
 
 const SESSION_KEY_LS = 'truleado_brief_session_key'
 
-type Phase = 'loading' | 'choose' | 'chat' | 'upload' | 'review' | 'submitting' | 'done'
-
+type Phase = 'choose' | 'loading' | 'chat' | 'upload' | 'review' | 'submitting'
 interface Message { role: 'sarah' | 'user'; text: string }
+
+const REVIEW_FIELDS: { label: string; format: (d: Record<string, any>) => string | null }[] = [
+  { label: 'Brand',              format: d => d.brand_name || null },
+  { label: 'Product',            format: d => d.product_description || null },
+  { label: 'Platforms',          format: d => d.platforms?.length ? d.platforms.join(', ') : null },
+  { label: 'Content',            format: d => d.content_types?.length ? d.content_types.join(', ') : null },
+  { label: 'Creators needed',    format: d => d.creators_needed ? String(d.creators_needed) : null },
+  { label: 'Budget per creator', format: d => d.budget_flexible ? 'Flexible' : d.budget_per_creator_eur ? `€${Math.round(d.budget_per_creator_eur / 100)}` : null },
+  { label: 'Target audience',    format: d => [d.target_age_range, d.target_gender, d.target_countries?.join(', ')].filter(Boolean).join(' · ') || null },
+  { label: 'Go-live date',       format: d => d.go_live_date || null },
+  { label: 'Niche',              format: d => d.niche_fit || null },
+  { label: 'Tone notes',         format: d => d.tone_notes || null },
+]
+
+// Minimum signal that an upload actually produced something usable — without
+// this, a near-empty extraction (all nulls but a non-'low' confidence) would
+// silently sail through to a blank review screen and a submittable empty brief.
+function hasBriefContent(d: Record<string, any> | null) {
+  return Boolean(d?.brand_name || d?.product_description || d?.platforms?.length)
+}
 
 export default function BriefCreationClient({ advertiser, needsSubscription }: { advertiser: any; needsSubscription: boolean }) {
   const router = useRouter()
@@ -20,8 +45,13 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
   const [sessionData, setSessionData] = useState<Record<string, any>>({})
   const [isThinking, setIsThinking] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [uploading, setUploading] = useState(false)
   const [reviewData, setReviewData] = useState<Record<string, any> | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [editNote, setEditNote] = useState<string | null>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -30,85 +60,72 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages, isThinking])
 
-  // Paddle subscription gate
+  // Generate (or restore) a session key as soon as the component mounts, so
+  // it's always ready — whether the user starts with chat, jumps straight to
+  // an upload, or edits a reviewed brief without ever having chatted.
+  useEffect(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(SESSION_KEY_LS) : null
+    const key = stored || `trbrf_${crypto.randomUUID()}`
+    if (typeof window !== 'undefined') localStorage.setItem(SESSION_KEY_LS, key)
+    setSessionKey(key)
+  }, [])
+
+  function ensureSessionKey() {
+    if (sessionKey) return sessionKey
+    const key = `trbrf_${crypto.randomUUID()}`
+    if (typeof window !== 'undefined') localStorage.setItem(SESSION_KEY_LS, key)
+    setSessionKey(key)
+    return key
+  }
+
+  // ── Paddle subscription gate ───────────────────────────────
   if (needsSubscription) {
     return (
-      <div style={{ minHeight:'100vh', background:'var(--surface)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter, sans-serif', padding:24 }}>
-        <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:20, padding:'40px 36px', maxWidth:480, width:'100%', textAlign:'center', boxShadow:'0 4px 20px rgba(0,0,0,0.08)' }}>
-          <div style={{ fontSize:40, marginBottom:16 }}>🔓</div>
-          <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:'-0.5px', marginBottom:10 }}>Unlock unlimited briefs</h2>
-          <p style={{ fontSize:14, color:'var(--text-2)', lineHeight:1.6, marginBottom:28 }}>You've used your free brief. Subscribe to submit unlimited briefs and keep finding the right creators.</p>
-          <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:14, padding:'20px 24px', marginBottom:24 }}>
-            <p style={{ fontSize:28, fontWeight:800, color:'var(--text)', letterSpacing:'-0.5px' }}>$99 <span style={{ fontSize:14, fontWeight:500, color:'var(--text-2)' }}>/month</span></p>
-            <p style={{ fontSize:13, color:'var(--text-2)', marginTop:4 }}>Unlimited briefs · Unlimited creator matches</p>
+      <DashboardShell role="advertiser">
+        <div className="max-w-md mx-auto text-center py-12">
+          <div className="w-14 h-14 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center mx-auto mb-5">
+            <Lock size={22} className="text-gold" />
           </div>
-          <button
-            onClick={() => {
-              // Paddle checkout — TODO: replace with real Paddle.js integration
-              alert('Paddle checkout coming soon. For now, contact hello@truleado.com to subscribe.')
-            }}
-            style={{ width:'100%', background:'var(--gold)', color:'#fff', border:'none', borderRadius:12, padding:'14px', fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit', marginBottom:12 }}
+          <h2 className="text-xl font-extrabold tracking-tight mb-2">Unlock unlimited briefs</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-7">
+            You've used your free brief. Subscribe to submit unlimited briefs and keep finding the right creators.
+          </p>
+          <Card className="mb-6">
+            <CardContent className="pt-6 pb-6">
+              <p className="text-3xl font-extrabold tracking-tight">$99 <span className="text-sm font-medium text-muted-foreground">/month</span></p>
+              <p className="text-xs text-muted-foreground mt-1">Unlimited briefs · Unlimited creator matches</p>
+            </CardContent>
+          </Card>
+          <Button
+            className="w-full bg-gold hover:bg-gold/90 text-white font-bold mb-3"
+            onClick={() => alert('Paddle checkout coming soon. For now, contact hello@truleado.com to subscribe.')}
           >
             Subscribe — $99/month
-          </button>
-          <button onClick={() => router.push('/advertiser/dashboard')} style={{ background:'transparent', border:'none', fontSize:13, color:'var(--text-3)', cursor:'pointer', fontFamily:'inherit' }}>Go back to dashboard</button>
+          </Button>
+          <Button variant="ghost" className="text-muted-foreground" onClick={() => router.push('/advertiser/dashboard')}>
+            Go back to dashboard
+          </Button>
         </div>
-      </div>
+      </DashboardShell>
     )
   }
 
+  // ── Chat (from-scratch build) ───────────────────────────────
   async function startChat() {
     setPhase('loading')
-    const newKey = `trbrf_${crypto.randomUUID()}`
-    localStorage.setItem(SESSION_KEY_LS, newKey)
-    setSessionKey(newKey)
+    const key = ensureSessionKey()
     await fetch('/api/advertiser/brief-chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'init', session_key: newKey, advertiser_id: advertiser.id }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'init', session_key: key, advertiser_id: advertiser.id }),
     })
     setPhase('chat')
     addSarah(`Let's build your brief! First — what's the brand name and what are you promoting?`)
     setStep('brand')
-  }
-
-  async function handleFileUpload(file: File) {
-    setUploadedFile(file)
-    setUploading(true)
-    setPhase('upload')
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('advertiser_id', advertiser.id)
-    const res = await fetch('/api/advertiser/parse-brief', { method: 'POST', body: formData })
-    const data = await res.json()
-    setUploading(false)
-    if (data.extracted) {
-      setReviewData(data.extracted)
-      setSessionData(data.extracted)
-      setPhase('review')
-    } else {
-      // Fallback to chat
-      setPhase('chat')
-      addSarah(`I had trouble reading that brief — let me ask you a few questions instead. What's the brand name and what are you promoting?`)
-      setStep('brand')
-    }
-  }
-
-  async function submitBrief(data: Record<string, any>) {
-    setPhase('submitting')
-    const res = await fetch('/api/advertiser/submit-brief', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ advertiser_id: advertiser.id, ...data }),
-    })
-    const result = await res.json()
-    if (result.brief_id) {
-      router.push(`/advertiser/briefs/${result.brief_id}`)
-    }
+    setTimeout(() => inputRef.current?.focus(), 100)
   }
 
   function addSarah(text: string) { setMessages(prev => [...prev, { role: 'sarah', text }]) }
-  function addUser(text: string) { setMessages(prev => [...prev, { role: 'user', text }]) }
+  function addUser(text: string)  { setMessages(prev => [...prev, { role: 'user', text }]) }
 
   async function sendMessage(text: string) {
     if (!text.trim() || isThinking) return
@@ -116,156 +133,276 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
     setIsThinking(true)
     try {
       const res = await fetch('/api/advertiser/brief-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'message', session_key: sessionKey, step, user_message: text, data: sessionData, advertiser_id: advertiser.id }),
       })
       const data = await res.json()
       if (data.extracted) setSessionData((prev: any) => ({ ...prev, ...data.extracted }))
       if (data.step) setStep(data.step)
-      addSarah(data.sarah_reply)
+      addSarah(data.sarah_reply || 'Got it!')
       if (data.phase === 'review') { setReviewData(data.session_data); setPhase('review') }
     } catch { addSarah("Sorry, I had a hiccup — can you say that again? 😅") }
     finally { setIsThinking(false); setTimeout(() => inputRef.current?.focus(), 100) }
   }
 
-  if (phase === 'choose') {
-    return (
-      <div style={{ minHeight:'100vh', background:'var(--surface)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter, sans-serif', padding:24 }}>
-        <div style={{ maxWidth:560, width:'100%' }}>
-          <div style={{ textAlign:'center', marginBottom:32 }}>
-            <div style={{ width:48, height:48, borderRadius:'50%', background:'var(--gold-bg)', border:'2px solid var(--gold-border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, margin:'0 auto 16px' }}>✨</div>
-            <h2 style={{ fontSize:22, fontWeight:800, letterSpacing:'-0.5px', marginBottom:8 }}>Create a brief</h2>
-            <p style={{ fontSize:14, color:'var(--text-2)' }}>How would you like to get started?</p>
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:14 }}>
-            <button onClick={startChat} style={{ background:'var(--white)', border:'2px solid var(--border)', borderRadius:16, padding:'28px 20px', cursor:'pointer', fontFamily:'inherit', textAlign:'left', transition:'border-color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--gold)')} onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
-              <div style={{ fontSize:28, marginBottom:12 }}>💬</div>
-              <p style={{ fontSize:15, fontWeight:700, marginBottom:6 }}>Build with Sarah</p>
-              <p style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.5 }}>Answer a few questions and Sarah will put together your brief.</p>
-            </button>
-            <button onClick={() => fileRef.current?.click()} style={{ background:'var(--white)', border:'2px solid var(--border)', borderRadius:16, padding:'28px 20px', cursor:'pointer', fontFamily:'inherit', textAlign:'left', transition:'border-color 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--gold)')} onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
-              <div style={{ fontSize:28, marginBottom:12 }}>📄</div>
-              <p style={{ fontSize:15, fontWeight:700, marginBottom:6 }}>Upload your brief</p>
-              <p style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.5 }}>Already have a brief? Upload it and Sarah will extract everything.</p>
-            </button>
-          </div>
-          <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.txt" style={{ display:'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f) }} />
-        </div>
-      </div>
-    )
+  // ── Upload ──────────────────────────────────────────
+  async function handleFileUpload(file: File) {
+    ensureSessionKey()
+    setUploadedFile(file)
+    setPhase('upload')
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('advertiser_id', advertiser.id)
+    try {
+      const res = await fetch('/api/advertiser/parse-brief', { method: 'POST', body: formData })
+      const data = await res.json()
+
+      if (data.notice === 'legacy_doc_unsupported') {
+        setPhase('chat')
+        addSarah("Older .doc files are tricky for me to read reliably — could you re-export it as a PDF or .docx next time? For now, let's build it together. What's the brand name and what are you promoting?")
+        setStep('brand')
+        return
+      }
+
+      const usable = data.extracted && data.extracted.confidence !== 'low' && hasBriefContent(data.extracted)
+
+      if (usable) {
+        setReviewData(data.extracted)
+        setSessionData(data.extracted)
+        setPhase('review')
+      } else {
+        setPhase('chat')
+        addSarah("I had trouble reading that brief properly — could be the format or scan quality. Let's build it together instead. What's the brand name and what are you promoting?")
+        setStep('brand')
+      }
+    } catch {
+      setPhase('chat')
+      addSarah("Something went wrong reading that file. What's the brand name and what are you promoting?")
+      setStep('brand')
+    }
   }
 
-  if (phase === 'upload') {
-    return (
-      <div style={{ minHeight:'100vh', background:'var(--surface)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter, sans-serif' }}>
-        <div style={{ textAlign:'center', color:'var(--text-2)' }}>
-          <div style={{ width:40, height:40, border:'3px solid var(--border)', borderTopColor:'var(--gold)', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 16px' }} />
-          <p style={{ fontSize:14, fontWeight:500 }}>Reading your brief…</p>
-          <p style={{ fontSize:12, color:'var(--text-3)', marginTop:6 }}>{uploadedFile?.name}</p>
-        </div>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
-    )
+  // ── Inline correction on the review screen ───────────────────
+  // Replaces the old "Edit with Sarah" button, which reset all the way back
+  // to the brand-name question and lost everything already extracted.
+  async function applyEdit() {
+    if (!editText.trim() || !reviewData) return
+    setEditLoading(true)
+    setEditNote(null)
+    try {
+      const key = ensureSessionKey()
+      const res = await fetch('/api/advertiser/brief-chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'edit', session_key: key, user_message: editText, data: reviewData }),
+      })
+      const data = await res.json()
+      if (data.error) { setEditNote("Couldn't apply that change — try rephrasing."); return }
+      const updated = data.extracted || reviewData
+      setReviewData(updated)
+      setSessionData(updated)
+      setEditNote(data.sarah_reply || 'Updated.')
+      setEditText(''); setEditing(false)
+    } catch { setEditNote("Couldn't apply that change — try again.") }
+    finally { setEditLoading(false) }
   }
 
-  if (phase === 'review' && reviewData) {
-    const fields = [
-      ['Brand', reviewData.brand_name],
-      ['Product', reviewData.product_description],
-      ['Platforms', reviewData.platforms?.join(', ')],
-      ['Content', reviewData.content_types?.join(', ')],
-      ['Creators needed', reviewData.creators_needed],
-      ['Budget per creator', reviewData.budget_flexible ? 'Flexible' : reviewData.budget_per_creator_eur ? `€${Math.round(reviewData.budget_per_creator_eur/100)}` : '—'],
-      ['Target audience', [reviewData.target_age_range, reviewData.target_gender, reviewData.target_countries?.join(', ')].filter(Boolean).join(' · ')],
-      ['Go-live date', reviewData.go_live_date],
-      ['Niche', reviewData.niche_fit],
-      ['Tone notes', reviewData.tone_notes],
-    ]
-    return (
-      <div style={{ minHeight:'100vh', background:'var(--surface)', fontFamily:'Inter, sans-serif', padding:24 }}>
-        <div style={{ maxWidth:600, margin:'0 auto', paddingTop:32 }}>
-          <h2 style={{ fontSize:20, fontWeight:800, marginBottom:6 }}>Does this look right?</h2>
-          <p style={{ fontSize:13, color:'var(--text-2)', marginBottom:24 }}>Here's what I extracted from your brief. Review and submit.</p>
-          <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:14, padding:'4px 20px', marginBottom:20 }}>
-            {fields.filter(([,v]) => v).map(([label, value]) => (
-              <div key={String(label)} style={{ display:'flex', justifyContent:'space-between', padding:'11px 0', borderBottom:'1px solid var(--border)' }}>
-                <span style={{ fontSize:12, color:'var(--text-2)', fontWeight:500 }}>{label}</span>
-                <span style={{ fontSize:13, fontWeight:500, textAlign:'right', maxWidth:'60%' }}>{String(value)}</span>
-              </div>
-            ))}
-          </div>
-          <div style={{ display:'flex', gap:10 }}>
-            <button onClick={() => { setPhase('chat'); setStep('brand'); addSarah("Let me ask you a few questions to fill in any gaps.") }} style={{ flex:1, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, padding:'12px', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--text)' }}>
-              Edit with Sarah
-            </button>
-            <button onClick={() => submitBrief(reviewData)} style={{ flex:2, background:'var(--gold)', color:'#fff', border:'none', borderRadius:10, padding:'12px', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
-              Submit brief →
-            </button>
-          </div>
-        </div>
-      </div>
-    )
+  // ── Submit ─────────────────────────────────────────────
+  async function submitBrief(data: Record<string, any>) {
+    setPhase('submitting')
+    setSubmitError(null)
+    try {
+      const res = await fetch('/api/advertiser/submit-brief', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ advertiser_id: advertiser.id, ...data }),
+      })
+      const result = await res.json()
+      if (!res.ok || !result.brief_id) {
+        setSubmitError(result.error || 'Something went wrong submitting your brief. Please try again.')
+        setPhase('review')
+        return
+      }
+      router.push(`/advertiser/briefs/${result.brief_id}`)
+    } catch {
+      setSubmitError('Something went wrong submitting your brief. Please try again.')
+      setPhase('review')
+    }
   }
 
-  if (phase === 'submitting') {
-    return (
-      <div style={{ minHeight:'100vh', background:'var(--surface)', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter, sans-serif' }}>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ width:40, height:40, border:'3px solid var(--border)', borderTopColor:'var(--gold)', borderRadius:'50%', animation:'spin 0.8s linear infinite', margin:'0 auto 16px' }} />
-          <p style={{ fontSize:14, color:'var(--text-2)', fontWeight:500 }}>Submitting your brief…</p>
-        </div>
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>
-    )
-  }
-
-  // Chat phase
   return (
-    <div style={{ minHeight:'100vh', background:'var(--surface)', display:'flex', flexDirection:'column', fontFamily:'Inter, sans-serif' }}>
-      <div style={{ padding:'14px 20px', background:'var(--white)', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:10 }}>
-        <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--gold-bg)', border:'2px solid var(--gold-border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14 }}>✨</div>
-        <div>
-          <div style={{ fontSize:13, fontWeight:600 }}>Sarah Chen</div>
-          <div style={{ fontSize:11, color:'var(--text-3)' }}>Building your brief</div>
+    <DashboardShell role="advertiser">
+      {phase === 'choose' && (
+        <div className="max-w-lg mx-auto py-8">
+          <div className="text-center mb-8">
+            <div className="w-12 h-12 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center mx-auto mb-4 text-xl">✨</div>
+            <h1 className="text-xl font-extrabold tracking-tight mb-1">Create a brief</h1>
+            <p className="text-sm text-muted-foreground">How would you like to get started?</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3.5">
+            <button
+              onClick={startChat}
+              className="bg-card border-2 border-border rounded-2xl p-6 text-left hover:border-gold transition-colors cursor-pointer"
+            >
+              <MessageCircle size={24} className="text-gold mb-3" />
+              <p className="text-sm font-bold mb-1.5">Build with Sarah</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">Answer a few questions and Sarah will put together your brief.</p>
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="bg-card border-2 border-border rounded-2xl p-6 text-left hover:border-gold transition-colors cursor-pointer"
+            >
+              <FileText size={24} className="text-gold mb-3" />
+              <p className="text-sm font-bold mb-1.5">Upload your brief</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">Already have a brief? Upload it and Sarah will extract everything.</p>
+            </button>
+          </div>
+          <input ref={fileRef} type="file" accept=".pdf,.docx,.txt" className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f) }} />
         </div>
-      </div>
-      <div style={{ flex:1, maxWidth:640, width:'100%', margin:'0 auto', display:'flex', flexDirection:'column' }}>
-        <div style={{ flex:1, padding:'24px 16px', display:'flex', flexDirection:'column', gap:16, overflowY:'auto' }}>
-          {messages.map((msg, i) => (
-            <div key={i} style={{ display:'flex', flexDirection:'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <div style={{ maxWidth:'80%', padding:'12px 16px', fontSize:14, lineHeight:1.6, whiteSpace:'pre-wrap',
-                borderRadius: msg.role === 'sarah' ? '4px 18px 18px 18px' : '18px 4px 18px 18px',
-                background: msg.role === 'sarah' ? 'var(--white)' : 'var(--gold)',
-                color: msg.role === 'sarah' ? 'var(--text)' : '#fff',
-                border: msg.role === 'sarah' ? '1px solid var(--border)' : 'none',
-              }}>{msg.text}</div>
-            </div>
-          ))}
-          {isThinking && (
-            <div style={{ display:'flex' }}>
-              <div style={{ padding:'12px 16px', borderRadius:'4px 18px 18px 18px', background:'var(--white)', border:'1px solid var(--border)', display:'flex', gap:4, alignItems:'center' }}>
-                {[0,1,2].map(i => <span key={i} style={{ width:6, height:6, borderRadius:'50%', background:'var(--text-3)', display:'inline-block', animation:`bounce 1.2s ${i*0.2}s infinite` }} />)}
+      )}
+
+      {phase === 'loading' && (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 size={22} className="animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {phase === 'upload' && (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <Loader2 size={28} className="animate-spin text-gold mb-4" />
+          <p className="text-sm font-medium">Reading your brief…</p>
+          {uploadedFile && <p className="text-xs text-muted-foreground mt-1.5">{uploadedFile.name}</p>}
+        </div>
+      )}
+
+      {phase === 'review' && reviewData && (
+        <div className="max-w-xl mx-auto py-6">
+          <h2 className="text-lg font-extrabold tracking-tight mb-1">Does this look right?</h2>
+          <p className="text-sm text-muted-foreground mb-5">Review your brief, then submit when you're ready.</p>
+
+          {submitError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle size={14} />
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          )}
+
+          <Card className="mb-4">
+            <CardContent className="p-0">
+              <div className="divide-y divide-border">
+                {REVIEW_FIELDS.map(({ label, format }) => {
+                  const value = format(reviewData)
+                  if (!value) return null
+                  return (
+                    <div key={label} className="flex justify-between gap-4 px-5 py-3">
+                      <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
+                      <span className="text-sm font-medium text-right">{value}</span>
+                    </div>
+                  )
+                })}
               </div>
+            </CardContent>
+          </Card>
+
+          {editNote && <p className="text-xs text-muted-foreground mb-3 px-1">✨ {editNote}</p>}
+
+          {editing ? (
+            <div className="flex gap-2 mb-4">
+              <input
+                autoFocus
+                value={editText}
+                onChange={e => setEditText(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') applyEdit() }}
+                placeholder='e.g. "the budget should be flexible"'
+                disabled={editLoading}
+                className="flex-1 h-10 px-4 rounded-full border border-border bg-muted text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+              />
+              <Button size="sm" className="bg-gold hover:bg-gold/90 text-white" onClick={applyEdit} disabled={editLoading || !editText.trim()}>
+                {editLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setEditText('') }} disabled={editLoading}>
+                <X size={14} />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2.5">
+              <Button variant="outline" className="flex-1 gap-1.5" onClick={() => setEditing(true)}>
+                <Pencil size={13} /> Edit with Sarah
+              </Button>
+              <Button className="flex-[2] bg-gold hover:bg-gold/90 text-white font-bold" onClick={() => submitBrief(reviewData)}>
+                Submit brief →
+              </Button>
             </div>
           )}
-          <div ref={bottomRef} />
         </div>
-        <div style={{ padding:'12px 16px', borderTop:'1px solid var(--border)', background:'var(--white)', display:'flex', gap:8 }}>
-          <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
-            placeholder="Type your answer…" disabled={isThinking} autoFocus
-            style={{ flex:1, padding:'10px 14px', borderRadius:24, border:'1px solid var(--border)', background:'var(--surface)', fontSize:14, color:'var(--text)', outline:'none', fontFamily:'inherit' }}
-          />
-          <button onClick={() => sendMessage(input)} disabled={!input.trim() || isThinking}
-            style={{ width:40, height:40, borderRadius:'50%', background: input.trim() ? 'var(--gold)' : 'var(--border)', border:'none', cursor: input.trim() ? 'pointer' : 'default', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M14 8L2 2l2.5 6L2 14l12-6z" fill={input.trim() ? '#fff' : 'var(--text-3)'} /></svg>
-          </button>
+      )}
+
+      {phase === 'submitting' && (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <Loader2 size={28} className="animate-spin text-gold mb-4" />
+          <p className="text-sm text-muted-foreground font-medium">Submitting your brief…</p>
         </div>
-      </div>
-      <style>{`@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}`}</style>
-    </div>
+      )}
+
+      {phase === 'chat' && (
+        <div className="max-w-xl mx-auto flex flex-col" style={{ height: 'calc(100vh - 220px)' }}>
+          <div className="flex items-center gap-2.5 px-1 pb-4 border-b border-border mb-4">
+            <div className="w-8 h-8 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-sm">✨</div>
+            <div>
+              <p className="text-sm font-semibold">Sarah Chen</p>
+              <p className="text-[11px] text-muted-foreground">Building your brief</p>
+            </div>
+          </div>
+
+          <div className="flex-1 flex flex-col gap-3.5 overflow-y-auto pb-4 min-h-0">
+            {messages.map((msg, i) => (
+              <div key={i} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+                <div className={cn(
+                  'max-w-[80%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap',
+                  msg.role === 'sarah'
+                    ? 'bg-card border border-border shadow-sm rounded-[4px_18px_18px_18px]'
+                    : 'bg-gold text-white rounded-[18px_4px_18px_18px]'
+                )}>
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+            {isThinking && (
+              <div className="flex">
+                <div className="bg-card border border-border shadow-sm rounded-[4px_18px_18px_18px] px-4 py-3 flex gap-1 items-center">
+                  {[0,1,2].map(i => (
+                    <span key={i} className="w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block"
+                      style={{ animation: `dot-bounce 1.2s ${i * 0.2}s infinite` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="flex gap-2 pt-3 border-t border-border">
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
+              placeholder="Type your answer…"
+              disabled={isThinking}
+              autoFocus
+              className="flex-1 h-10 px-4 rounded-full border border-border bg-muted text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
+            />
+            <button
+              onClick={() => sendMessage(input)}
+              disabled={!input.trim() || isThinking}
+              className={cn(
+                'w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors',
+                input.trim() && !isThinking ? 'bg-gold text-white' : 'bg-border text-muted-foreground'
+              )}
+            >
+              <Send size={15} />
+            </button>
+          </div>
+        </div>
+      )}
+    </DashboardShell>
   )
 }
