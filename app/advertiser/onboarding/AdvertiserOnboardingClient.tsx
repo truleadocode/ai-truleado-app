@@ -368,7 +368,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
                   <p className="text-sm font-bold mb-1">Build with Sarah</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">I'll ask you a few questions and put your brief together.</p>
                 </button>
-                <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.txt" className="hidden"
+                <input ref={fileRef} type="file" accept=".pdf,.docx,.txt" className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f) }} />
               </div>
             )}
