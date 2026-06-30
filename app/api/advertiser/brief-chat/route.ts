@@ -58,6 +58,14 @@ const STEPS: Record<string, { question: string; extractPrompt: string; extractSc
   },
 }
 
+const FULL_BRIEF_SCHEMA = `{"brand_name":"string","product_description":"string","platforms":["string"],"content_types":["string"],"creators_needed":"number","budget_per_creator_eur":"number|null","budget_flexible":"boolean","target_age_range":"string","target_gender":"string","target_countries":["string"],"go_live_date":"string|null","niche_fit":"string","tone_notes":"string","dos":"string","donts":"string"}`
+
+const BRIEF_FIELDS = [
+  'brand_name','product_description','platforms','target_age_range','target_gender',
+  'target_countries','content_types','creators_needed','budget_per_creator_eur',
+  'budget_flexible','go_live_date','niche_fit','tone_notes','dos','donts',
+]
+
 async function callGemini(system: string, user: string) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction: system })
@@ -83,6 +91,52 @@ export async function POST(request: NextRequest) {
       )
     if (error) console.error('Brief session init error:', error)
     return NextResponse.json({ ok: true })
+  }
+
+  // ── EDIT: free-text amendment to an already-built brief ────────────
+  // Used when the user reviews a summary (from upload or chat) and says
+  // "no" — instead of restarting the linear STEPS machine from scratch
+  // (which ignores already-extracted fields), this takes the FULL
+  // current data plus a free-text description of the change and asks
+  // Gemini to return the full brief with only the relevant field(s)
+  // updated. Everything else passes through untouched.
+  if (action === 'edit') {
+    if (!session_key || !user_message) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    }
+
+    const prompt = `Current brief data: ${JSON.stringify(data || {})}
+
+The user wants to change something about this brief. They said: "${user_message}"
+
+Update ONLY the field(s) they're referring to — copy every other field exactly as it appears in the current data above, don't drop or null out anything they didn't mention. Make your best interpretation; don't ask a follow-up question.
+
+Full brief schema (all fields nullable unless noted):
+${FULL_BRIEF_SCHEMA}
+
+Reply: 1 short warm sentence confirming specifically what you changed.
+
+Return ONLY JSON: {"updated":<full brief object, current data merged with the requested change>,"reply":"string"}`
+
+    let result: any
+    try { result = await callGemini(SARAH_SYSTEM, prompt) }
+    catch (e) { return NextResponse.json({ error: 'AI error', detail: String(e) }, { status: 500 }) }
+
+    const updated = { ...(data || {}), ...(result.updated || {}) }
+
+    const updates: Record<string, any> = { current_step: 'confirm', last_seen_at: new Date().toISOString() }
+    for (const key of BRIEF_FIELDS) {
+      if (updated[key] !== undefined) updates[key] = updated[key]
+    }
+    await service.from('brief_sessions').upsert({ session_key, ...updates }, { onConflict: 'session_key' })
+
+    return NextResponse.json({
+      phase: 'review',
+      step: 'confirm',
+      extracted: updated,
+      sarah_reply: result.reply,
+      session_data: updated,
+    })
   }
 
   // ── MESSAGE ───────────────────────────────────────────────────────
