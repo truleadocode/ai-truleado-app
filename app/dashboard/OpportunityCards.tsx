@@ -29,6 +29,12 @@ const PLATFORM_ICONS: Record<string, string> = {
   instagram: '📸', tiktok: '🎵', youtube: '▶️', pinterest: '📌', twitter: '🐦', linkedin: '💼',
 }
 
+const HOW_IT_WORKS = [
+  ['Brands submit a campaign brief', 'Sarah reviews it against creators in our network.'],
+  ["She reaches out if you're a fit", "You'll see the opportunity right here, with budget and deliverables."],
+  ['You decide', 'Say yes to what works for you — brands reach out directly to collaborate.'],
+] as const
+
 function budgetLabel(opp: Opportunity) {
   const b = opp.briefs
   if (!b) return null
@@ -56,12 +62,29 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
 
   if (opportunities.length === 0) {
     return (
-      <div className="text-center py-24">
-        <div className="text-4xl mb-4">💌</div>
+      <div className="max-w-lg mx-auto text-center py-10">
+        <div className="w-14 h-14 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center mx-auto mb-5">
+          <Sparkles size={22} className="text-gold" />
+        </div>
         <h3 className="font-bold text-lg mb-2">No opportunities yet</h3>
-        <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
-          We'll reach out when a brand campaign is a great fit for your audience. Check back soon!
+        <p className="text-sm text-muted-foreground leading-relaxed mb-8">
+          We'll reach out the moment a brand campaign is a great fit for your audience.
         </p>
+
+        <div className="text-left bg-card border border-border rounded-2xl p-5 space-y-4">
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">How it works</p>
+          {HOW_IT_WORKS.map(([title, desc], i) => (
+            <div key={title} className="flex gap-3">
+              <div className="w-6 h-6 rounded-full bg-accent border border-gold-border text-gold text-xs font-bold flex items-center justify-center shrink-0">
+                {i + 1}
+              </div>
+              <div>
+                <p className="text-sm font-semibold">{title}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -81,7 +104,6 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
 
               return (
                 <Card key={opp.id} className="border-border">
-                  {/* Sarah avatar + message header */}
                   <CardContent className="pt-5 pb-3">
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-9 h-9 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-sm shrink-0">✨</div>
@@ -91,14 +113,12 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
                       </div>
                     </div>
 
-                    {/* Sarah's outreach message */}
                     {opp.outreach_message && (
                       <div className="bg-muted rounded-xl px-4 py-3 mb-4 text-sm text-foreground leading-relaxed">
                         {opp.outreach_message}
                       </div>
                     )}
 
-                    {/* Campaign chips */}
                     <div className="flex flex-wrap gap-1.5">
                       {(b.platforms || []).map((p: string) => (
                         <Badge key={p} variant="secondary" className="text-[10px] gap-1 font-semibold capitalize">

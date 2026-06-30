@@ -1,74 +1,103 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { cn } from '@/lib/utils'
+import Link from 'next/link'
 import SignOutButton from './SignOutButton'
+import SidebarNav, { type NavItem } from './SidebarNav'
+import { FileText, Zap, Briefcase, MessageSquare, Bell, User as UserIcon } from 'lucide-react'
 
-function TruleadoLogo({ small }: { small?: boolean }) {
+function TruleadoLogo() {
   return (
     <Link href="/" className="flex items-center gap-2 no-underline">
-      <div className={cn('bg-gold flex items-center justify-center shrink-0', small ? 'w-6 h-6 rounded-[5px]' : 'w-7 h-7 rounded-[6px]')}>
-        <svg width={small ? 11 : 13} height={small ? 11 : 13} viewBox="0 0 16 16" fill="none">
+      <div className="w-7 h-7 rounded-[6px] bg-gold flex items-center justify-center shrink-0">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
           <path d="M3 13L8 3L13 13" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M5 10h6"         stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
+          <path d="M5 10h6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
         </svg>
       </div>
-      <span className={cn('font-extrabold tracking-tight text-foreground', small ? 'text-sm' : 'text-base')}>
-        Truleado
-      </span>
+      <span className="text-base font-extrabold tracking-tight text-foreground">Truleado</span>
     </Link>
   )
 }
 
 interface Props {
   children: React.ReactNode
-  role: 'advertiser' | 'influencer'
+  /** Used by pages that call DashboardShell directly with no influencer record (advertiser side). */
+  role?: 'advertiser' | 'influencer'
+  /** Used by app/dashboard/layout.tsx, which already has the influencer row and unread counts. */
+  influencer?: { id: string; first_name?: string | null; last_name?: string | null; avatar_url?: string | null } | null
+  unreadMessages?: number
+  unreadNotifs?: number
+  activeGigs?: number
 }
 
-export default async function DashboardShell({ children, role }: Props) {
+export default async function DashboardShell({
+  children, role, influencer, unreadMessages = 0, unreadNotifs = 0, activeGigs = 0,
+}: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const navItems = role === 'advertiser'
+  // influencer being passed at all (even without an explicit role) means
+  // this call came from the influencer-side layout, not an advertiser page.
+  const effectiveRole: 'advertiser' | 'influencer' = influencer ? 'influencer' : (role || 'advertiser')
+
+  const navItems: NavItem[] = effectiveRole === 'advertiser'
     ? [
-        { href: '/advertiser/dashboard',    label: 'Briefs' },
-        { href: '/advertiser/briefs/new',   label: 'New brief' },
+        { href: '/advertiser/dashboard',  label: 'Briefs',    icon: FileText },
+        { href: '/advertiser/briefs/new', label: 'New brief', icon: Zap },
       ]
     : [
-        { href: '/dashboard', label: 'Opportunities' },
+        { href: '/dashboard',               label: 'Opportunities', icon: Zap },
+        { href: '/dashboard/gigs',          label: 'Gigs',          icon: Briefcase, badge: activeGigs },
+        { href: '/dashboard/messages',      label: 'Messages',      icon: MessageSquare, badge: unreadMessages },
+        { href: '/dashboard/notifications', label: 'Notifications', icon: Bell, badge: unreadNotifs },
+        { href: '/dashboard/profile',       label: 'Profile',       icon: UserIcon },
       ]
 
+  const displayName = influencer?.first_name
+    ? `${influencer.first_name}${influencer.last_name ? ' ' + influencer.last_name : ''}`
+    : (user.email || 'Account')
+
+  const initial = (influencer?.first_name?.[0] || user.email?.[0] || '?').toUpperCase()
+
   return (
-    <div className="min-h-screen bg-muted font-sans">
-      {/* ── Top nav ─────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-card border-b border-border">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center gap-6">
+    <div className="min-h-screen bg-muted font-sans flex">
+      {/* ── Sidebar (desktop) ───────────────────────────── */}
+      <aside className="hidden sm:flex w-60 shrink-0 flex-col bg-card border-r border-border h-screen sticky top-0">
+        <div className="h-14 flex items-center px-4 border-b border-border">
           <TruleadoLogo />
+        </div>
 
-          <nav className="flex items-center gap-1 ml-2">
-            {navItems.map(({ href, label }) => (
-              <Link
-                key={href}
-                href={href}
-                className="px-3 py-1.5 rounded-md text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors no-underline"
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+        <SidebarNav items={navItems} />
 
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden sm:block text-xs text-muted-foreground">{user.email}</span>
+        <div className="px-3 py-3 border-t border-border flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-accent border border-gold-border flex items-center justify-center text-xs font-bold text-gold shrink-0">
+            {initial}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold truncate">{displayName}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+          </div>
+          <SignOutButton compact />
+        </div>
+      </aside>
+
+      {/* ── Main column ───────────────────────────────── */}
+      <div className="flex-1 min-w-0">
+        {/* Mobile top bar — sidebar hidden below sm, replaced by a horizontal
+            scrollable nav row so the same sections stay reachable. */}
+        <header className="sm:hidden sticky top-0 z-40 bg-card border-b border-border">
+          <div className="h-14 flex items-center justify-between px-4">
+            <TruleadoLogo />
             <SignOutButton />
           </div>
-        </div>
-      </header>
+          <SidebarNav items={navItems} variant="horizontal" />
+        </header>
 
-      {/* ── Page content ────────────────────────────────── */}
-      <main className="max-w-5xl mx-auto px-5 py-8">
-        {children}
-      </main>
+        <main className="max-w-5xl mx-auto px-6 py-8">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }

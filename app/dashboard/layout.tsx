@@ -15,7 +15,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .single()
 
   if (!influencer) redirect('/')
-  if (!influencer.onboarding_complete) redirect('/onboarding')
+  // Was redirecting to /onboarding, which doesn't exist as a route in this
+  // app — the real onboarding entry point is /influencer.
+  if (!influencer.onboarding_complete) redirect('/influencer')
 
   const { data: gigRows } = await supabase
     .from('gigs')

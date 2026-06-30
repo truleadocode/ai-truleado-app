@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import DashboardShell from '@/components/DashboardShell'
 import OpportunityCards from './OpportunityCards'
 
 export const dynamic = 'force-dynamic'
@@ -32,9 +31,11 @@ export default async function InfluencerDashboardPage() {
     .eq('status', 'outreached')
     .order('created_at', { ascending: false })
 
+  // No <DashboardShell> here — app/dashboard/layout.tsx already wraps every
+  // page under /dashboard/* with one. Wrapping again produced two nested
+  // headers, which is what was showing up on screen.
   return (
-    <DashboardShell role="influencer">
-      {/* Welcome */}
+    <>
       <div className="mb-8">
         <h1 className="text-2xl font-extrabold tracking-tight">
           Hey, {influencer.first_name} 👋
@@ -44,11 +45,10 @@ export default async function InfluencerDashboardPage() {
         </p>
       </div>
 
-      {/* Opportunities */}
       <OpportunityCards
         opportunities={opportunities || []}
         influencerId={influencer.id}
       />
-    </DashboardShell>
+    </>
   )
 }
