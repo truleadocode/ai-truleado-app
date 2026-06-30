@@ -143,7 +143,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
       addSarah(data.sarah_reply || 'Got it!')
       if (data.phase === 'review') {
         setBriefData(data.session_data || briefData)
-        addSarah(`That's everything I need! Here's a quick summary:\n\n${buildSummary(data.session_data || briefData)}\n\nType "yes" to submit, or tell me what to change.`)
+        addSarah(`That's everything I need! Here's a quick summary:\n\n${buildSummary(data.session_data || briefData)}\n\nType "yes" to submit, or tell me what you'd like to change.`)
         setStep('brief_confirm')
       }
     } catch { addSarah("Sorry, I had a hiccup — can you say that again? 😅") }
@@ -182,7 +182,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
           })
         } catch (e) { console.error('Failed to persist parsed brief:', e) }
 
-        addSarah(`Here's what I found:\n\n${summary}\n\nDoes this look right? Type "yes" to submit.`)
+        addSarah(`Here's what I found:\n\n${summary}\n\nDoes this look right? Type "yes" to submit, or tell me what you'd like to change.`)
         setStep('brief_confirm')
       } else {
         addSarah("I had trouble reading that file properly — could be the format or scan quality. Let's do this together instead. What's the brand name and what are you promoting?")
@@ -208,32 +208,62 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
     return lines.join('\n')
   }
 
-  async function handleBriefConfirm(text: string) {
-    addUser(text); setInput('')
-    if (['yes','looks good','correct','submit','yep','ok','sure'].includes(text.trim().toLowerCase())) {
-      addSarah("Perfect! Create your account below to submit your brief and see your creator shortlist when it's ready.")
-      setPhase('auth')
-    } else {
-      addSarah('No problem — just tell me what to change (e.g. "the budget should be flexible" or "swap Pinterest for Instagram") and I\'ll update it.')
-      setStep('brief_edit')
-    }
-  }
-
-  async function sendEditMessage(text: string) {
-    addUser(text); setInput(''); setIsThinking(true)
+  // Calls the 'edit' action and renders the response. Does NOT add the
+  // user's message to the chat itself — callers are responsible for that,
+  // since handleBriefConfirm already adds the original message before
+  // deciding whether it doubles as an edit instruction.
+  async function applyBriefEdit(instruction: string) {
+    setIsThinking(true)
     try {
       const res = await fetch('/api/advertiser/brief-chat', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'edit', session_key: sessionKey, user_message: text, data: briefData }),
+        body: JSON.stringify({ action: 'edit', session_key: sessionKey, user_message: instruction, data: briefData }),
       })
       const data = await res.json()
-      if (data.error) { addSarah(`Something went wrong: ${data.error}`); return }
+      if (data.error) { addSarah(`Something went wrong: ${data.error}`); setStep('brief_edit'); return }
       const updated = data.session_data || data.extracted || briefData
       setBriefData(updated)
       addSarah(`${data.sarah_reply || 'Updated!'}\n\nHere's the updated brief:\n\n${buildSummary(updated)}\n\nDoes this look right? Type "yes" to submit, or tell me what else to change.`)
       setStep('brief_confirm')
-    } catch { addSarah("Sorry, I had a hiccup — try describing the change again?") }
-    finally { setIsThinking(false); setTimeout(() => inputRef.current?.focus(), 100) }
+    } catch {
+      addSarah("Sorry, I had a hiccup — try describing the change again?")
+      setStep('brief_edit')
+    } finally { setIsThinking(false); setTimeout(() => inputRef.current?.focus(), 100) }
+  }
+
+  async function handleBriefConfirm(text: string) {
+    const trimmed = text.trim().toLowerCase()
+    const isYes = ['yes','looks good','correct','submit','yep','ok','sure','yeah'].includes(trimmed)
+
+    addUser(text); setInput('')
+
+    if (isYes) {
+      addSarah("Perfect! Create your account below to submit your brief and see your creator shortlist when it's ready.")
+      setPhase('auth')
+      return
+    }
+
+    // A bare "no"/"nope" with nothing else attached — we genuinely don't
+    // know what to fix yet, so ask.
+    const bareNo = /^(no|nope|nah)[\s,.\-:]*$/i
+    if (bareNo.test(trimmed)) {
+      addSarah('No problem — just tell me what to change (e.g. "the budget should be flexible" or "swap Pinterest for Instagram") and I\'ll update it.')
+      setStep('brief_edit')
+      return
+    }
+
+    // Anything else already contains the actual change — e.g. "no, change
+    // creators to 50" or even just "change creators to 50" with no "no" at
+    // all. Strip a leading bare no/nope (if present) and apply the rest
+    // directly instead of making the user repeat themselves in a follow-up
+    // message.
+    const instruction = text.replace(/^(no|nope|nah)[\s,.\-:]*/i, '').trim() || text
+    await applyBriefEdit(instruction)
+  }
+
+  async function sendEditMessage(text: string) {
+    addUser(text); setInput('')
+    await applyBriefEdit(text)
   }
 
   function signInWithGoogle() {
