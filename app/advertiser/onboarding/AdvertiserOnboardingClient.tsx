@@ -168,6 +168,20 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
 
       if (data.extracted && data.extracted.confidence !== 'low' && summary.trim()) {
         setBriefData(data.extracted)
+
+        // Persist immediately. parse-brief only returns data to the client —
+        // it never touches the database — so without this write, the brief
+        // lives only in React state and is lost the moment the user signs
+        // up, since finalize-auth reads brief_sessions from the DB, not
+        // anything held in the browser. Await it so a fast "yes" right
+        // after can't race ahead of the save.
+        try {
+          await fetch('/api/advertiser/brief-chat', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'save', session_key: sessionKey, data: data.extracted }),
+          })
+        } catch (e) { console.error('Failed to persist parsed brief:', e) }
+
         addSarah(`Here's what I found:\n\n${summary}\n\nDoes this look right? Type "yes" to submit.`)
         setStep('brief_confirm')
       } else {
