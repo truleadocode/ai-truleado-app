@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
-import { Loader2, MessageCircle, FileText, Send, Lock, Pencil, AlertCircle, Check, X } from 'lucide-react'
+import { Loader2, MessageCircle, FileText, Send, Lock, Pencil, AlertCircle, Check, X, Save } from 'lucide-react'
 
 const SESSION_KEY_LS = 'truleado_brief_session_key'
 
@@ -47,6 +47,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [reviewData, setReviewData] = useState<Record<string, any> | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [savingDraft, setSavingDraft] = useState(false)
 
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState('')
@@ -182,7 +183,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
     }
   }
 
-  // ── Inline correction on the review screen ───────────────────
+  // ── Inline correction on the review screen ────────────────────────
   // Replaces the old "Edit with Sarah" button, which reset all the way back
   // to the brand-name question and lost everything already extracted.
   async function applyEdit() {
@@ -204,6 +205,34 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
       setEditText(''); setEditing(false)
     } catch { setEditNote("Couldn't apply that change — try again.") }
     finally { setEditLoading(false) }
+  }
+
+  // ── Save as draft ───────────────────────────────────
+  // A lower-commitment alternative to Submit: persists the brief with
+  // status='draft' so it shows up on the dashboard, but doesn't trigger
+  // matching or count against the free-brief allowance — the briefs table
+  // already defaults to status='draft' and page.tsx already excludes drafts
+  // from the subscription gate, this just exposes that path in the UI.
+  async function saveDraft() {
+    if (!reviewData) return
+    setSavingDraft(true)
+    setSubmitError(null)
+    try {
+      const res = await fetch('/api/advertiser/submit-brief', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ advertiser_id: advertiser.id, status: 'draft', ...reviewData }),
+      })
+      const result = await res.json()
+      if (!res.ok || !result.brief_id) {
+        setSubmitError(result.error || 'Could not save your draft. Please try again.')
+        return
+      }
+      router.push('/advertiser/dashboard')
+    } catch {
+      setSubmitError('Could not save your draft. Please try again.')
+    } finally {
+      setSavingDraft(false)
+    }
   }
 
   // ── Submit ─────────────────────────────────────────────
@@ -277,7 +306,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
       {phase === 'review' && reviewData && (
         <div className="max-w-xl mx-auto py-6">
           <h2 className="text-lg font-extrabold tracking-tight mb-1">Does this look right?</h2>
-          <p className="text-sm text-muted-foreground mb-5">Review your brief, then submit when you're ready.</p>
+          <p className="text-sm text-muted-foreground mb-5">Review your brief, save it for later, or submit when you're ready.</p>
 
           {submitError && (
             <Alert variant="destructive" className="mb-4">
@@ -324,11 +353,15 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
               </Button>
             </div>
           ) : (
-            <div className="flex gap-2.5">
-              <Button variant="outline" className="flex-1 gap-1.5" onClick={() => setEditing(true)}>
+            <div className="flex flex-wrap gap-2.5">
+              <Button variant="outline" className="gap-1.5" onClick={() => setEditing(true)}>
                 <Pencil size={13} /> Edit with Sarah
               </Button>
-              <Button className="flex-[2] bg-gold hover:bg-gold/90 text-white font-bold" onClick={() => submitBrief(reviewData)}>
+              <Button variant="outline" className="gap-1.5" onClick={saveDraft} disabled={savingDraft}>
+                {savingDraft ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                {savingDraft ? 'Saving…' : 'Save brief'}
+              </Button>
+              <Button className="flex-1 min-w-[140px] bg-gold hover:bg-gold/90 text-white font-bold" onClick={() => submitBrief(reviewData)}>
                 Submit brief →
               </Button>
             </div>
