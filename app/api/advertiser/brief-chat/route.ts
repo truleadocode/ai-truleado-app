@@ -93,6 +93,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // ── SAVE: persist already-extracted data without an LLM round trip ──
+  // Used right after "Upload my brief" parses a file. parse-brief only
+  // returns extracted JSON to the client — it never touches the DB — so
+  // without this, the upload path's data lived only in React state and
+  // vanished the moment the user signed up, since finalize-auth reads
+  // brief_sessions from the database, not anything the client holds.
+  if (action === 'save') {
+    if (!session_key || !data) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    }
+    const updates: Record<string, any> = { current_step: 'confirm', last_seen_at: new Date().toISOString() }
+    for (const key of BRIEF_FIELDS) {
+      if (data[key] !== undefined && data[key] !== null) updates[key] = data[key]
+    }
+    const { error } = await service.from('brief_sessions').upsert({ session_key, ...updates }, { onConflict: 'session_key' })
+    if (error) {
+      console.error('Brief session save error:', error)
+      return NextResponse.json({ error: String(error) }, { status: 500 })
+    }
+    return NextResponse.json({ ok: true })
+  }
+
   // ── EDIT: free-text amendment to an already-built brief ────────────
   // Used when the user reviews a summary (from upload or chat) and says
   // "no" — instead of restarting the linear STEPS machine from scratch
