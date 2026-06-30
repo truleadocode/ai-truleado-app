@@ -32,37 +32,6 @@
     --input:  0 0% 92%;
     --ring:   41 53% 50%;
     --radius: 0.625rem;
-
-    /* ── Legacy aliases for pages not yet migrated to shadcn/Tailwind ──
-       app/dashboard/{gigs,messages,notifications,profile} predate this
-       refactor and reference these directly as complete color values
-       (e.g. background: var(--gold)), not as bare HSL triplets the way
-       the tokens above are consumed via Tailwind's hsl(var(--x)) pattern.
-       Restoring them here fixes those pages without rewriting them.
-       NOTE: --border is intentionally NOT aliased — the token above is
-       already a bare triplet for Tailwind, and a complete-color version
-       would conflict. Borders specifically on those four pages won't
-       render right until they're migrated; everything else will. */
-    --white:  #ffffff;
-    --surface: #F7F7F5;
-    --text:    #121212;
-    --text-2:  #6B6B6B;
-    --text-3:  #9B9B9B;
-    --radius-lg: 16px;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-
-    --gold:        #C49A3C;
-    --gold-bg:     #FDF8EE;
-    --gold-border: #EBD99A;
-    --green:        #2D9D6E;
-    --green-bg:     #F0FAF5;
-    --green-border: #A8DFC5;
-    --red:        #D94F3D;
-    --red-bg:     #FEF3F2;
-    --red-border: #F5C0BB;
-    --blue:        #2563EB;
-    --blue-bg:     #EFF4FF;
-    --blue-border: #BFCCF8;
   }
 
   * { @apply border-border; }

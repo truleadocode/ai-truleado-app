@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
 function formatEur(cents: number) {
   return `€${(cents / 100).toLocaleString('en-EU')}`
@@ -14,14 +15,14 @@ const STATUS_TABS = [
 
 function statusBadge(status: string) {
   switch (status) {
-    case 'offered':     return { label: 'New offer',      style: { background: 'var(--gold-bg)',  color: 'var(--gold)',  border: '1px solid var(--gold-border)'  } }
-    case 'interested':  return { label: 'Interested',     style: { background: 'var(--blue-bg)',  color: 'var(--blue)',  border: '1px solid var(--blue-border)'  } }
+    case 'offered':     return { label: 'New offer',      className: 'bg-gold-bg text-gold border border-gold-border' }
+    case 'interested':  return { label: 'Interested',     className: 'bg-blue-bg text-blue border border-blue-border' }
     case 'confirmed':
-    case 'in_progress': return { label: 'In progress',    style: { background: 'var(--green-bg)', color: 'var(--green)', border: '1px solid var(--green-border)' } }
-    case 'complete':    return { label: 'Complete',        style: { background: 'var(--green-bg)', color: 'var(--green)', border: '1px solid var(--green-border)' } }
-    case 'passed':      return { label: 'Passed',          style: { background: 'var(--surface)',  color: 'var(--text-2)',border: '1px solid var(--border)'       } }
-    case 'rejected':    return { label: 'Not interested',  style: { background: 'var(--red-bg)',   color: 'var(--red)',   border: '1px solid var(--red-border)'   } }
-    default:            return { label: status,            style: { background: 'var(--surface)',  color: 'var(--text-2)',border: '1px solid var(--border)'       } }
+    case 'in_progress': return { label: 'In progress',    className: 'bg-green-bg text-green border border-green-border' }
+    case 'complete':    return { label: 'Complete',        className: 'bg-green-bg text-green border border-green-border' }
+    case 'passed':      return { label: 'Passed',          className: 'bg-muted text-muted-foreground border border-border' }
+    case 'rejected':    return { label: 'Not interested',  className: 'bg-red-bg text-red border border-red-border' }
+    default:            return { label: status,            className: 'bg-muted text-muted-foreground border border-border' }
   }
 }
 
@@ -44,25 +45,24 @@ export default async function GigsPage({ searchParams }: { searchParams: { tab?:
     .order('created_at', { ascending: false })
 
   return (
-    <div style={{ padding: '24px 28px 48px' }}>
+    <div className="px-7 pt-6 pb-12">
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid var(--border)', marginBottom: 20 }}>
+      <div className="flex gap-0 border-b border-border mb-5">
         {STATUS_TABS.map(t => (
-          <Link key={t.key} href={`/dashboard/gigs?tab=${t.key}`} style={{
-            padding: '10px 16px', fontSize: 13,
-            fontWeight: activeTab === t.key ? 600 : 500,
-            color: activeTab === t.key ? 'var(--gold)' : 'var(--text-2)',
-            borderBottom: activeTab === t.key ? '2px solid var(--gold)' : '2px solid transparent',
-            marginBottom: -1, textDecoration: 'none', transition: 'color 0.15s',
-          }}>{t.label}</Link>
+          <Link key={t.key} href={`/dashboard/gigs?tab=${t.key}`} className={cn(
+            'px-4 py-2.5 text-[13px] -mb-px no-underline transition-colors',
+            activeTab === t.key
+              ? 'font-semibold text-gold border-b-2 border-gold'
+              : 'font-medium text-muted-foreground border-b-2 border-transparent',
+          )}>{t.label}</Link>
         ))}
       </div>
 
       {(!gigs || gigs.length === 0) && (
-        <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', padding: '48px 24px', textAlign: 'center', boxShadow: 'var(--shadow-sm)' }}>
-          <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, color: 'var(--text)' }}>No {tab.label.toLowerCase()} gigs</p>
-          <p style={{ fontSize: 13, color: 'var(--text-2)' }}>
+        <div className="bg-card border border-border rounded-2xl px-6 py-12 text-center shadow-sm">
+          <p className="text-[15px] font-semibold mb-1.5 text-foreground">No {tab.label.toLowerCase()} gigs</p>
+          <p className="text-[13px] text-muted-foreground">
             {activeTab === 'active' ? 'Sarah will reach out when a campaign matches your profile.' :
              activeTab === 'complete' ? 'Completed gigs will appear here.' :
              'Gigs you passed on will appear here.'}
@@ -74,39 +74,36 @@ export default async function GigsPage({ searchParams }: { searchParams: { tab?:
         const badge = statusBadge(gig.status)
         const isComplete = gig.status === 'complete' || gig.status === 'passed' || gig.status === 'rejected'
         return (
-          <Link key={gig.id} href={`/gigs/${gig.id}`} style={{
-            display: 'block', background: 'var(--white)', border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-lg)', padding: '16px 18px', marginBottom: 10,
-            textDecoration: 'none', color: 'var(--text)', boxShadow: 'var(--shadow-sm)',
-            opacity: isComplete ? 0.65 : 1,
-            transition: 'border-color 0.15s, box-shadow 0.15s',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--surface)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+          <Link key={gig.id} href={`/gigs/${gig.id}`} className={cn(
+            'block bg-card border border-border rounded-2xl px-[18px] py-4 mb-2.5 no-underline text-foreground shadow-sm transition-[border-color,box-shadow]',
+            isComplete ? 'opacity-65' : 'opacity-100',
+          )}>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-[10px] bg-muted border border-border flex items-center justify-center text-lg shrink-0">
                 {gig.brand_revealed ? '🌿' : '🔒'}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 3 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, letterSpacing: '-0.1px' }}>{gig.brand_revealed ? gig.brand_name : gig.brand_category}</p>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 20, flexShrink: 0, ...badge.style }}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 mb-[3px]">
+                  <p className="text-sm font-semibold tracking-[-0.1px]">{gig.brand_revealed ? gig.brand_name : gig.brand_category}</p>
+                  <span className={cn('inline-flex items-center gap-[5px] text-[11px] font-semibold px-2.5 py-1 rounded-[20px] shrink-0', badge.className)}>
                     {['offered','interested','confirmed','in_progress'].includes(gig.status) && (
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', animation: 'blink 1.4s infinite', display: 'inline-block' }} />
+                      <span className="w-[5px] h-[5px] rounded-full bg-current inline-block animate-pulse" />
                     )}
                     {badge.label}
                   </span>
                 </div>
-                <p style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 10 }}>{gig.platform} · {gig.deliverables_summary}</p>
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                <p className="text-xs text-muted-foreground mb-2.5">{gig.platform} · {gig.deliverables_summary}</p>
+                <div className="flex gap-4 flex-wrap">
                   {gig.budget_eur && (
-                    <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Budget <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{formatEur(gig.budget_eur)}</strong></span>
+                    <span className="text-xs text-muted-foreground">Budget <strong className="text-foreground font-semibold">{formatEur(gig.budget_eur)}</strong></span>
                   )}
                   {gig.respond_by && activeTab === 'active' && (
-                    <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Respond by <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{new Date(gig.respond_by).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}</strong></span>
+                    <span className="text-xs text-muted-foreground">Respond by <strong className="text-foreground font-semibold">{new Date(gig.respond_by).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}</strong></span>
                   )}
                   {gig.content_due_at && (
-                    <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Content due <strong style={{ color: 'var(--text)', fontWeight: 600 }}>{new Date(gig.content_due_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}</strong></span>
+                    <span className="text-xs text-muted-foreground">Content due <strong className="text-foreground font-semibold">{new Date(gig.content_due_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}</strong></span>
                   )}
-                  <span style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 'auto' }}>{new Date(gig.created_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  <span className="text-xs text-muted-foreground/60 ml-auto">{new Date(gig.created_at).toLocaleDateString('en-GB', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                 </div>
               </div>
             </div>

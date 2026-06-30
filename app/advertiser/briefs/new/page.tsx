@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BriefCreationClient from './BriefCreationClient'
+import DashboardShell from '@/components/DashboardShell'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,5 +17,9 @@ export default async function NewBriefPage() {
   const { count } = await supabase.from('briefs').select('id', { count: 'exact', head: true }).eq('advertiser_id', advertiser.id).neq('status', 'draft')
   const needsSubscription = !advertiser.subscribed && (count || 0) >= 1
 
-  return <BriefCreationClient advertiser={advertiser} needsSubscription={needsSubscription} />
+  return (
+    <DashboardShell role="advertiser">
+      <BriefCreationClient advertiser={advertiser} needsSubscription={needsSubscription} />
+    </DashboardShell>
+  )
 }

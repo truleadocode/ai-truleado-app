@@ -44,7 +44,9 @@ export default async function BriefDetailPage({ params }: { params: { id: string
 
   return (
     <DashboardShell role="advertiser">
-      <BriefDetailClient brief={brief} initialMatches={matches || []} />
+      {/* Supabase infers the to-one `influencers` relation as an array; at
+          runtime it's a single object, matching BriefDetailClient's Match type. */}
+      <BriefDetailClient brief={brief} initialMatches={(matches || []) as any} />
     </DashboardShell>
   )
 }

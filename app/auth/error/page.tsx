@@ -1,17 +1,15 @@
 export default function AuthError() {
   return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center',
-      justifyContent: 'center', background: 'var(--surface)'
-    }}>
-      <div style={{ textAlign: 'center', padding: '0 24px' }}>
-        <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 10 }}>Sign in failed</h1>
-        <p style={{ color: 'var(--text-2)', marginBottom: 24 }}>Something went wrong during authentication.</p>
-        <a href="/" style={{
-          display: 'inline-block', background: 'var(--gold)', color: '#fff',
-          fontWeight: 700, fontSize: 14, padding: '10px 24px', borderRadius: 8,
-          textDecoration: 'none'
-        }}>Try again</a>
+    <div className="min-h-screen flex items-center justify-center bg-muted">
+      <div className="text-center px-6">
+        <h1 className="text-xl font-extrabold mb-2.5">Sign in failed</h1>
+        <p className="text-muted-foreground mb-6">Something went wrong during authentication.</p>
+        <a
+          href="/"
+          className="inline-block bg-gold text-white font-bold text-sm px-6 py-2.5 rounded-lg no-underline"
+        >
+          Try again
+        </a>
       </div>
     </div>
   )

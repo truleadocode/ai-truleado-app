@@ -7,7 +7,8 @@ import { createClient } from '@/lib/supabase/client'
 import ScreenshotGuide from '@/components/ScreenshotGuide'
 import LanguageSelector from '@/components/LanguageSelector'
 import ParseProgressCard from '@/components/ParseProgressCard'
-import type { ParseStatus } from '@/hooks/useParseProgress'
+import type { ParseStatus } from '@/components/ParseProgressCard'
+import { cn } from '@/lib/utils'
 
 const UPLOAD_HINTS: Record<string, string[]> = {
   instagram: [
@@ -286,21 +287,31 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
     setArr(arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val])
   }
 
-  const chip = (label: string, active: boolean, onClick: () => void, color = 'var(--gold)', activeBg = 'var(--gold-bg)', border = 'var(--gold-border)') => (
-    <button key={label} onClick={onClick} style={{
-      padding:'5px 12px', borderRadius:20, fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-      background: active ? activeBg : 'var(--surface)',
-      color: active ? color : 'var(--text-2)',
-      border: `1px solid ${active ? border : 'var(--border)'}`,
-      transition:'all 0.15s',
-    }}>{label}</button>
-  )
-
-  const inputStyle = {
-    width:'100%', background:'var(--surface)', border:'1px solid var(--border)',
-    borderRadius:8, padding:'10px 12px', fontSize:13, color:'var(--text)',
-    fontFamily:'inherit', outline:'none', boxSizing:'border-box' as const,
+  const CHIP_VARIANTS: Record<'gold'|'green'|'red', { text: string; bg: string; border: string }> = {
+    gold:  { text: 'text-gold',  bg: 'bg-gold-bg',  border: 'border-gold-border' },
+    green: { text: 'text-green', bg: 'bg-green-bg', border: 'border-green-border' },
+    red:   { text: 'text-red',   bg: 'bg-red-bg',   border: 'border-red-border' },
   }
+
+  const chip = (label: string, active: boolean, onClick: () => void, variant: 'gold'|'green'|'red' = 'gold') => {
+    const v = CHIP_VARIANTS[variant]
+    return (
+      <button
+        key={label}
+        onClick={onClick}
+        className={cn(
+          'px-3 py-[5px] rounded-[20px] text-xs font-semibold cursor-pointer border transition-all',
+          active ? cn(v.bg, v.text, v.border) : 'bg-muted text-muted-foreground border-border',
+        )}
+      >
+        {label}
+      </button>
+    )
+  }
+
+  const inputClass = 'w-full bg-muted border border-border rounded-lg px-3 py-2.5 text-[13px] text-foreground outline-none box-border'
+
+  const labelClass = 'text-[11px] font-semibold text-muted-foreground block mb-[5px]'
 
   const sectionTabs = [
     { key:'info', label:'Basic info' },
@@ -311,102 +322,103 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   ]
 
   return (
-    <div style={{ padding:'24px 28px 40px', maxWidth:660 }}>
-      <div style={{ display:'flex', alignItems:'center', gap:16, marginBottom:20 }}>
-        <Link href="/dashboard/profile" style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:'var(--text-2)', textDecoration:'none' }}>
+    <div className="px-7 pt-6 pb-10 max-w-[660px]">
+      <div className="flex items-center gap-4 mb-5">
+        <Link href="/dashboard/profile" className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground no-underline">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 2L4 7l5 5"/></svg>
           Profile
         </Link>
-        <h2 style={{ fontSize:16, fontWeight:700 }}>Edit profile</h2>
+        <h2 className="text-base font-bold">Edit profile</h2>
       </div>
 
       {/* AI Summary — always visible */}
-      <div style={{ background:'var(--white)', border:'1px solid var(--gold-border)', borderRadius:12, padding:'14px 18px', marginBottom:20 }}>
-        <p style={{ fontSize:11, fontWeight:700, color:'var(--gold)', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:aiSummary ? 8 : 4 }}>AI Summary</p>
+      <div className="bg-card border border-gold-border rounded-xl px-[18px] py-3.5 mb-5">
+        <p className={cn('text-[11px] font-bold text-gold tracking-[0.08em] uppercase', aiSummary ? 'mb-2' : 'mb-1')}>AI Summary</p>
         {isAnyProcessing ? (
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            <div style={{ width:14, height:14, border:'2px solid var(--gold)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite', flexShrink:0 }} />
-            <p style={{ fontSize:13, color:'var(--text-2)' }}>Updating your profile summary…</p>
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 border-2 border-gold border-t-transparent rounded-full flex-shrink-0 animate-spin" />
+            <p className="text-[13px] text-muted-foreground">Updating your profile summary…</p>
           </div>
         ) : aiSummary ? (
           <>
-            {aiParsedAt && <p style={{ fontSize:11, color:'var(--text-3)', marginBottom:6 }}>Updated {timeAgo(aiParsedAt)}</p>}
-            <p style={{ fontSize:13, lineHeight:1.6, color:'var(--text-2)' }}>{aiSummary}</p>
+            {aiParsedAt && <p className="text-[11px] text-muted-foreground/60 mb-1.5">Updated {timeAgo(aiParsedAt)}</p>}
+            <p className="text-[13px] leading-[1.6] text-muted-foreground">{aiSummary}</p>
           </>
         ) : (
-          <p style={{ fontSize:12, color:'var(--text-2)', fontStyle:'italic' }}>Upload screenshots below to generate your AI summary automatically.</p>
+          <p className="text-xs text-muted-foreground italic">Upload screenshots below to generate your AI summary automatically.</p>
         )}
       </div>
 
-      <div style={{ display:'flex', gap:1, borderBottom:'1px solid var(--border)', marginBottom:20, overflowX:'auto' }}>
+      <div className="flex gap-px border-b border-border mb-5 overflow-x-auto">
         {sectionTabs.map(t => (
-          <button key={t.key} onClick={() => setSection(t.key as any)} style={{
-            padding:'8px 16px', background:'transparent', border:'none',
-            borderBottom: section === t.key ? '2px solid var(--gold)' : '2px solid transparent',
-            color: section === t.key ? 'var(--text)' : 'var(--text-2)',
-            fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap',
-          }}>{t.label}</button>
+          <button
+            key={t.key}
+            onClick={() => setSection(t.key as any)}
+            className={cn(
+              'px-4 py-2 bg-transparent border-none text-[13px] font-semibold cursor-pointer whitespace-nowrap',
+              section === t.key ? 'border-b-2 border-gold text-foreground' : 'border-b-2 border-transparent text-muted-foreground',
+            )}
+          >
+            {t.label}
+          </button>
         ))}
       </div>
 
       {/* Basic info */}
       {section === 'info' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+        <div className="flex flex-col gap-3.5">
           {/* Avatar upload */}
-          <div style={{ display:'flex', alignItems:'center', gap:16, paddingBottom:14, borderBottom:'1px solid var(--border)', marginBottom:4 }}>
-            <div style={{ position:'relative', flexShrink:0 }}>
+          <div className="flex items-center gap-4 pb-3.5 border-b border-border mb-1">
+            <div className="relative flex-shrink-0">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" style={{ width:72, height:72, borderRadius:'50%', objectFit:'cover', border:'2px solid var(--border)' }} />
+                <img src={avatarUrl} alt="Avatar" className="w-[72px] h-[72px] rounded-full object-cover border-2 border-border" />
               ) : (
-                <div style={{ width:72, height:72, borderRadius:'50%', background:'var(--gold)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:800, color:'#fff' }}>
+                <div className="w-[72px] h-[72px] rounded-full bg-gold flex items-center justify-center text-2xl font-extrabold text-white">
                   {firstName?.[0]}{lastName?.[0]}
                 </div>
               )}
               {avatarUploading && (
-                <div style={{ position:'absolute', inset:0, borderRadius:'50%', background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <div style={{ width:20, height:20, border:'2px solid #fff', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+                <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
               )}
             </div>
             <div>
-              <input ref={avatarInputRef} type="file" accept="image/*" style={{ display:'none' }}
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f) }} />
-              <button onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading} style={{
-                background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8,
-                padding:'8px 14px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', color:'var(--text)',
-              }}>
+              <button onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading} className="bg-muted border border-border rounded-lg px-3.5 py-2 text-xs font-bold cursor-pointer text-foreground">
                 {avatarUploading ? 'Uploading…' : 'Upload photo'}
               </button>
-              <p style={{ fontSize:11, color:'var(--text-2)', marginTop:5 }}>JPG, PNG or WebP · max 5MB</p>
+              <p className="text-[11px] text-muted-foreground mt-[5px]">JPG, PNG or WebP · max 5MB</p>
             </div>
           </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>First name</label>
-              <input style={inputStyle} value={firstName} onChange={e => setFirstName(e.target.value)} />
+              <label className={labelClass}>First name</label>
+              <input className={inputClass} value={firstName} onChange={e => setFirstName(e.target.value)} />
             </div>
             <div>
-              <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Last name</label>
-              <input style={inputStyle} value={lastName} onChange={e => setLastName(e.target.value)} />
-            </div>
-          </div>
-          <div>
-            <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Phone</label>
-            <input style={inputStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555 000 0000" />
-          </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <div>
-              <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>City</label>
-              <input style={inputStyle} value={city} onChange={e => setCity(e.target.value)} />
-            </div>
-            <div>
-              <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Country</label>
-              <input style={inputStyle} value={country} onChange={e => setCountry(e.target.value)} />
+              <label className={labelClass}>Last name</label>
+              <input className={inputClass} value={lastName} onChange={e => setLastName(e.target.value)} />
             </div>
           </div>
           <div>
-            <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Languages</label>
+            <label className={labelClass}>Phone</label>
+            <input className={inputClass} value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555 000 0000" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>City</label>
+              <input className={inputClass} value={city} onChange={e => setCity(e.target.value)} />
+            </div>
+            <div>
+              <label className={labelClass}>Country</label>
+              <input className={inputClass} value={country} onChange={e => setCountry(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Languages</label>
             <LanguageSelector value={languages} onChange={setLanguages} />
           </div>
         </div>
@@ -414,41 +426,42 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
 
       {/* Content profile */}
       {section === 'content' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+        <div className="flex flex-col gap-[18px]">
           <div>
-            <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:8 }}>Primary niche</label>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            <label className="text-[11px] font-semibold text-muted-foreground block mb-2">Primary niche</label>
+            <div className="flex gap-1.5 flex-wrap">
               {NICHES.map(n => chip(n, primaryNiche === n, () => setPrimaryNiche(n)))}
             </div>
           </div>
           <div>
-            <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:8 }}>Secondary niches</label>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            <label className="text-[11px] font-semibold text-muted-foreground block mb-2">Secondary niches</label>
+            <div className="flex gap-1.5 flex-wrap">
               {NICHES.filter(n => n !== primaryNiche).map(n => chip(n, secondaryNiches.includes(n), () => toggle(secondaryNiches, setSecondaryNiches, n)))}
             </div>
           </div>
           <div>
-            <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:8 }}>Content style</label>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            <label className="text-[11px] font-semibold text-muted-foreground block mb-2">Content style</label>
+            <div className="flex gap-1.5 flex-wrap">
               {STYLES.map(s => chip(s, contentStyle === s, () => setContentStyle(s)))}
             </div>
           </div>
           <div>
-            <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:8 }}>Formats</label>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+            <label className="text-[11px] font-semibold text-muted-foreground block mb-2">Formats</label>
+            <div className="flex gap-1.5 flex-wrap">
               {FORMATS.map(f => chip(f, formats.includes(f), () => toggle(formats, setFormats, f)))}
             </div>
           </div>
           <div>
-            <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:8 }}>How often do you post?</label>
-            <select value={postingFrequency} onChange={e => setPostingFrequency(e.target.value)} style={{
-              width:'100%', background:'var(--surface)', border:'1px solid var(--border)',
-              borderRadius:8, padding:'10px 12px', fontSize:13, color:'var(--text)',
-              fontFamily:'inherit', outline:'none', cursor:'pointer', appearance:'none',
-              backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 4.5L11 1' stroke='%23E8E3DA' strokeWidth='1.5' fill='none' strokeLinecap='round' strokeLinejoin='round' opacity='.35'/%3E%3C/svg%3E")`,
-              backgroundRepeat:'no-repeat', backgroundPosition:'right 12px center',
-              paddingRight:36,
-            }}>
+            <label className="text-[11px] font-semibold text-muted-foreground block mb-2">How often do you post?</label>
+            <select
+              value={postingFrequency}
+              onChange={e => setPostingFrequency(e.target.value)}
+              className="w-full bg-muted border border-border rounded-lg px-3 py-2.5 text-[13px] text-foreground outline-none cursor-pointer appearance-none bg-no-repeat pr-9"
+              style={{
+                backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7'%3E%3Cpath d='M1 1l5 4.5L11 1' stroke='%23E8E3DA' strokeWidth='1.5' fill='none' strokeLinecap='round' strokeLinejoin='round' opacity='.35'/%3E%3C/svg%3E")`,
+                backgroundPosition:'right 12px center',
+              }}
+            >
               <option value="">Select posting frequency…</option>
               <option>Daily</option>
               <option>4–6x per week</option>
@@ -458,31 +471,31 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             </select>
           </div>
           <div>
-            <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', display:'block', marginBottom:5 }}>Bio</label>
-            <textarea style={{ ...inputStyle, minHeight:90, resize:'vertical', lineHeight:1.5 }} value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell brands a bit about you and your content..." />
+            <label className={labelClass}>Bio</label>
+            <textarea className={cn(inputClass, 'min-h-[90px] resize-y leading-[1.5]')} value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell brands a bit about you and your content..." />
           </div>
         </div>
       )}
 
       {/* Brand prefs */}
       {section === 'brands' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+        <div className="flex flex-col gap-5">
           <div>
-            <p style={{ fontSize:13, fontWeight:700, marginBottom:4 }}>Brand categories I love ❤️</p>
-            <p style={{ fontSize:12, color:'var(--text-2)', marginBottom:10 }}>Categories you enjoy working with</p>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:6 }}>
-              {CATEGORIES.filter(c => !brandNever.includes(c)).map(c => chip(c, brandLoves.includes(c), () => { toggle(brandLoves, setBrandLoves, c); setBrandNever(prev => prev.filter(x => x !== c)) }, 'var(--green)', 'var(--green-bg)', 'var(--green-border)'))}
+            <p className="text-[13px] font-bold mb-1">Brand categories I love ❤️</p>
+            <p className="text-xs text-muted-foreground mb-2.5">Categories you enjoy working with</p>
+            <div className="flex gap-1.5 flex-wrap mb-1.5">
+              {CATEGORIES.filter(c => !brandNever.includes(c)).map(c => chip(c, brandLoves.includes(c), () => { toggle(brandLoves, setBrandLoves, c); setBrandNever(prev => prev.filter(x => x !== c)) }, 'green'))}
             </div>
-            <p style={{ fontSize:11, color:'var(--text-3)', marginBottom:10 }}>Selected categories won't appear in the never list.</p>
-            <textarea style={{ ...inputStyle, minHeight:60, resize:'vertical' }} value={brandLovesCustom} onChange={e => setBrandLovesCustom(e.target.value)} placeholder="Add your own (e.g. sustainable brands, indie brands...)" />
+            <p className="text-[11px] text-muted-foreground/60 mb-2.5">Selected categories won't appear in the never list.</p>
+            <textarea className={cn(inputClass, 'min-h-[60px] resize-y')} value={brandLovesCustom} onChange={e => setBrandLovesCustom(e.target.value)} placeholder="Add your own (e.g. sustainable brands, indie brands...)" />
           </div>
           <div>
-            <p style={{ fontSize:13, fontWeight:700, marginBottom:4 }}>Categories I never work with 🚫</p>
-            <p style={{ fontSize:12, color:'var(--text-2)', marginBottom:10 }}>Hard stops — Sarah will never match you with these</p>
-            <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:10 }}>
-              {CATEGORIES.filter(c => !brandLoves.includes(c)).map(c => chip(c, brandNever.includes(c), () => { toggle(brandNever, setBrandNever, c); setBrandLoves(prev => prev.filter(x => x !== c)) }, 'var(--red)', 'var(--red-bg)', 'var(--red-border)'))}
+            <p className="text-[13px] font-bold mb-1">Categories I never work with 🚫</p>
+            <p className="text-xs text-muted-foreground mb-2.5">Hard stops — Sarah will never match you with these</p>
+            <div className="flex gap-1.5 flex-wrap mb-2.5">
+              {CATEGORIES.filter(c => !brandLoves.includes(c)).map(c => chip(c, brandNever.includes(c), () => { toggle(brandNever, setBrandNever, c); setBrandLoves(prev => prev.filter(x => x !== c)) }, 'red'))}
             </div>
-            <textarea style={{ ...inputStyle, minHeight:60, resize:'vertical' }} value={brandNeverCustom} onChange={e => setBrandNeverCustom(e.target.value)} placeholder="Add your own (e.g. tobacco, gambling, fast fashion...)" />
+            <textarea className={cn(inputClass, 'min-h-[60px] resize-y')} value={brandNeverCustom} onChange={e => setBrandNeverCustom(e.target.value)} placeholder="Add your own (e.g. tobacco, gambling, fast fashion...)" />
           </div>
         </div>
       )}
@@ -500,17 +513,17 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
               : [['Post','post']]
 
             return (
-              <div key={platform} style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'16px 18px', marginBottom:12 }}>
-                <p style={{ fontSize:14, fontWeight:700, marginBottom:14, textTransform:'capitalize' }}>{platform}</p>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+              <div key={platform} className="bg-card border border-border rounded-xl px-[18px] py-4 mb-3">
+                <p className="text-sm font-bold mb-3.5 capitalize">{platform}</p>
+                <div className="grid grid-cols-2 gap-2.5">
                   {FIELDS.map(([label, ct]) => {
                     const key = `${platform}__${ct}`
                     return (
                       <div key={ct}>
-                        <label style={{ fontSize:11, color:'var(--text-2)', display:'block', marginBottom:4 }}>{label} (€)</label>
-                        <div style={{ position:'relative' }}>
-                          <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:13, color:'var(--text-2)' }}>€</span>
-                          <input style={{ ...inputStyle, paddingLeft:22 }}
+                        <label className="text-[11px] text-muted-foreground block mb-1">{label} (€)</label>
+                        <div className="relative">
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">€</span>
+                          <input className={cn(inputClass, 'pl-[22px]')}
                             value={rateState[key] || ''}
                             onChange={e => setRateState(prev => ({ ...prev, [key]: e.target.value }))}
                             placeholder="0" type="number" min="0" />
@@ -523,19 +536,19 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             )
           })}
 
-          <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'16px 18px', marginTop:4 }}>
+          <div className="bg-card border border-border rounded-xl px-[18px] py-4 mt-1">
             {([
               ['Gifting OK', gifting, setGifting],
               ['Rev-share OK', revShare, setRevShare],
               ['Exclusivity OK', exclusivity, setExclusivity],
             ] as [string, boolean, (v: boolean) => void][]).map(([label, val, set]) => (
-              <div key={label} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0', borderBottom:'1px solid var(--border)' }}>
-                <p style={{ fontSize:13, fontWeight:500 }}>{label}</p>
-                <button onClick={() => set(!val)} style={{
-                  width:38, height:21, borderRadius:11, border:'none', cursor:'pointer',
-                  background: val ? 'var(--green)' : 'var(--border)', position:'relative', transition:'background 0.25s',
-                }}>
-                  <span style={{ position:'absolute', width:15, height:15, borderRadius:'50%', background:'#fff', top:3, left:3, transform: val ? 'translateX(17px)' : 'none', transition:'transform 0.25s' }} />
+              <div key={label} className="flex items-center justify-between py-2.5 border-b border-border">
+                <p className="text-[13px] font-medium">{label}</p>
+                <button
+                  onClick={() => set(!val)}
+                  className={cn('w-[38px] h-[21px] rounded-[11px] border-none cursor-pointer relative transition-colors duration-[250ms]', val ? 'bg-green' : 'bg-border')}
+                >
+                  <span className="absolute w-[15px] h-[15px] rounded-full bg-white top-[3px] left-[3px] transition-transform duration-[250ms]" style={{ transform: val ? 'translateX(17px)' : 'none' }} />
                 </button>
               </div>
             ))}
@@ -547,19 +560,19 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
       {section === 'platforms' && (
         <div>
           {/* How it works info box */}
-          <div style={{ background:'var(--gold-bg)', borderLeft:'3px solid var(--gold)', borderRadius:10, padding:'14px 16px', marginBottom:16 }}>
-            <p style={{ fontSize:13, fontWeight:600, color:'var(--text)', marginBottom:8 }}>How this works</p>
-            <p style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.6, marginBottom:8 }}>
+          <div className="bg-gold-bg border-l-[3px] border-gold rounded-[10px] px-4 py-3.5 mb-4">
+            <p className="text-[13px] font-semibold text-foreground mb-2">How this works</p>
+            <p className="text-[13px] text-muted-foreground leading-[1.6] mb-2">
               Upload screenshots of your analytics from each platform. Our AI reads them and builds your profile automatically — the more screenshots you upload, the more accurate your matches will be.
             </p>
-            <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:4 }}>
+            <ul className="list-none p-0 flex flex-col gap-1">
               {[
                 'Upload from multiple screens for best results',
                 'Upload new screenshots anytime to refresh stats',
                 'Changes only affect future matches, not active gigs',
               ].map((t, i) => (
-                <li key={i} style={{ fontSize:12, color:'var(--text-2)', display:'flex', gap:6 }}>
-                  <span style={{ color:'var(--gold)', flexShrink:0 }}>·</span>{t}
+                <li key={i} className="text-xs text-muted-foreground flex gap-1.5">
+                  <span className="text-gold flex-shrink-0">·</span>{t}
                 </li>
               ))}
             </ul>
@@ -568,9 +581,9 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
           {/* Notification banner — kept for non-platform-card level feedback */}
 
           {platforms.length === 0 && (
-            <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'32px 24px', textAlign:'center' }}>
-              <p style={{ fontSize:14, fontWeight:600, marginBottom:6 }}>No platforms yet</p>
-              <p style={{ fontSize:13, color:'var(--text-2)' }}>Add platforms during onboarding or contact Sarah to update.</p>
+            <div className="bg-card border border-border rounded-xl px-6 py-8 text-center">
+              <p className="text-sm font-semibold mb-1.5">No platforms yet</p>
+              <p className="text-[13px] text-muted-foreground">Add platforms during onboarding or contact Sarah to update.</p>
             </div>
           )}
 
@@ -589,34 +602,34 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             const parsedLabel = liveStatus === 'complete'
               ? `Parsed ✓ · Last updated ${p.last_parsed_at ? new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' }) : ''}`
               : 'No screenshots uploaded yet'
-            const parsedBadge = liveStatus === 'complete'
-              ? { bg: 'var(--green-bg)', color: 'var(--green)', border: 'var(--green-border)' }
-              : { bg: 'var(--surface)', color: 'var(--text-2)', border: 'var(--border)' }
+            const parsedBadgeClass = liveStatus === 'complete'
+              ? 'bg-green-bg text-green border-green-border'
+              : 'bg-muted text-muted-foreground border-border'
 
             return (
-              <div key={p.id} style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'14px 18px', marginBottom:10 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:10 }}>
-                  <p style={{ fontSize:14, fontWeight:700, textTransform:'capitalize', flex:1 }}>{p.platform}</p>
+              <div key={p.id} className="bg-card border border-border rounded-xl px-[18px] py-3.5 mb-2.5">
+                <div className="flex items-center gap-2.5 mb-2.5">
+                  <p className="text-sm font-bold capitalize flex-1">{p.platform}</p>
                   {!showProgress && (
-                    <span style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:11, fontWeight:600, padding:'4px 10px', borderRadius:20, background:parsedBadge.bg, color:parsedBadge.color, border:`1px solid ${parsedBadge.border}` }}>
+                    <span className={cn('inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-[20px] border', parsedBadgeClass)}>
                       {parsedLabel}
                     </span>
                   )}
                 </div>
 
                 {/* Handle edit row */}
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12, paddingBottom:12, borderBottom:'1px solid var(--border)' }}>
-                  <label style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', flexShrink:0 }}>Handle</label>
+                <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border">
+                  <label className="text-[11px] font-semibold text-muted-foreground flex-shrink-0">Handle</label>
                   <input
                     value={handleEdits[p.id] ?? ''}
                     onChange={e => setHandleEdits(prev => ({ ...prev, [p.id]: e.target.value }))}
                     placeholder="@yourhandle"
-                    style={{ flex:1, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, padding:'6px 10px', fontSize:13, color:'var(--text)', fontFamily:'inherit', outline:'none' }}
+                    className="flex-1 bg-muted border border-border rounded-md px-2.5 py-1.5 text-[13px] text-foreground outline-none"
                   />
                   <button
                     onClick={() => updateHandle(p.id)}
                     disabled={savingHandle === p.id}
-                    style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, padding:'6px 12px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit', color:'var(--text)', flexShrink:0, whiteSpace:'nowrap' }}
+                    className="bg-muted border border-border rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer text-foreground flex-shrink-0 whitespace-nowrap"
                   >
                     {savingHandle === p.id ? 'Saving…' : savedHandle === p.id ? 'Saved ✓' : 'Update'}
                   </button>
@@ -624,18 +637,18 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
 
                 {/* Screenshot thumbnails */}
                 {platformScreenshots.length > 0 && (
-                  <div style={{ marginBottom:12 }}>
-                    <p style={{ fontSize:11, fontWeight:600, color:'var(--text-2)', marginBottom:7 }}>
+                  <div className="mb-3">
+                    <p className="text-[11px] font-semibold text-muted-foreground mb-[7px]">
                       Uploaded screenshots ({platformScreenshots.length})
                     </p>
-                    <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                    <div className="flex gap-1.5 flex-wrap">
                       {platformScreenshots.map((s: any) => (
-                        <div key={s.id} style={{ width:70, height:70, borderRadius:8, overflow:'hidden', border:'1px solid var(--border)', flexShrink:0, background:'var(--surface)' }}>
+                        <div key={s.id} className="w-[70px] h-[70px] rounded-lg overflow-hidden border border-border flex-shrink-0 bg-muted">
                           {s.signedUrl ? (
-                            <img src={s.signedUrl} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                            <img src={s.signedUrl} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="var(--text-2)" strokeWidth="1.2"/><circle cx="6.5" cy="7.5" r="1.5" fill="var(--text-2)"/><path d="M2 12l4-4 3 3 2-2 5 5" stroke="var(--text-2)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                            <div className="w-full h-full flex items-center justify-center">
+                              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" className="text-muted-foreground" strokeWidth="1.2"/><circle cx="6.5" cy="7.5" r="1.5" fill="currentColor" className="text-muted-foreground"/><path d="M2 12l4-4 3 3 2-2 5 5" stroke="currentColor" className="text-muted-foreground" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                             </div>
                           )}
                         </div>
@@ -647,7 +660,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                 {/* Upload zone */}
                 <input
                   ref={el => { fileInputRefs.current[p.id] = el }}
-                  type="file" multiple accept="image/*" style={{ display:'none' }}
+                  type="file" multiple accept="image/*" className="hidden"
                   onChange={e => {
                     const files = Array.from(e.target.files || [])
                     if (files.length) uploadAndParseScreenshots(p.id, p.platform, files)
@@ -655,7 +668,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                 />
 
                 {showProgress ? (
-                  <div style={{ marginBottom: 10 }}>
+                  <div className="mb-2.5">
                     <ParseProgressCard
                       status={parseStatus}
                       onSettled={() => {
@@ -669,27 +682,22 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                 ) : (
                   <div
                     onClick={() => !isUploading && fileInputRefs.current[p.id]?.click()}
-                    style={{
-                      border:'2px dashed var(--border)',
-                      borderRadius:10, padding:'14px', textAlign:'center',
-                      cursor: 'pointer',
-                      transition:'border-color 0.15s', marginBottom:10,
-                    }}
+                    className="border-2 border-dashed border-border rounded-[10px] p-3.5 text-center cursor-pointer transition-colors mb-2.5"
                   >
-                    <p style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>
+                    <p className="text-[13px] font-semibold mb-0.5">
                       {platformScreenshots.length > 0 ? 'Upload new screenshots' : 'Upload screenshots'}
                     </p>
-                    <p style={{ fontSize:11, color:'var(--text-2)' }}>Click to select · multiple files OK · JPG or PNG</p>
+                    <p className="text-[11px] text-muted-foreground">Click to select · multiple files OK · JPG or PNG</p>
                   </div>
                 )}
 
                 {UPLOAD_HINTS[p.platform.toLowerCase()] && (
-                  <div style={{ marginBottom:10 }}>
-                    <p style={{ fontSize:12, color:'var(--text-2)', marginBottom:5 }}>For the best match, upload screenshots of:</p>
-                    <ul style={{ listStyle:'none', padding:0, display:'flex', flexDirection:'column', gap:3 }}>
+                  <div className="mb-2.5">
+                    <p className="text-xs text-muted-foreground mb-[5px]">For the best match, upload screenshots of:</p>
+                    <ul className="list-none p-0 flex flex-col gap-[3px]">
                       {UPLOAD_HINTS[p.platform.toLowerCase()].map((hint: string, i: number) => (
-                        <li key={i} style={{ fontSize:12, color:'var(--text-2)', display:'flex', gap:6 }}>
-                          <span style={{ color:'var(--gold)', flexShrink:0 }}>·</span>{hint}
+                        <li key={i} className="text-xs text-muted-foreground flex gap-1.5">
+                          <span className="text-gold flex-shrink-0">·</span>{hint}
                         </li>
                       ))}
                     </ul>
@@ -702,13 +710,13 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
 
           {/* Add another platform */}
           {availablePlatforms.length > 0 && (
-            <div style={{ border:'2px dashed var(--border)', borderRadius:12, padding:'16px 18px' }}>
-              <p style={{ fontSize:13, fontWeight:600, marginBottom:12, color:'var(--text)' }}>Add another platform</p>
-              <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+            <div className="border-2 border-dashed border-border rounded-xl px-[18px] py-4">
+              <p className="text-[13px] font-semibold mb-3 text-foreground">Add another platform</p>
+              <div className="flex gap-2 items-center flex-wrap">
                 <select
                   value={newPlatform}
                   onChange={e => setNewPlatform(e.target.value)}
-                  style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, padding:'7px 10px', fontSize:13, color:'var(--text)', fontFamily:'inherit', outline:'none', cursor:'pointer' }}
+                  className="bg-muted border border-border rounded-md px-2.5 py-[7px] text-[13px] text-foreground outline-none cursor-pointer"
                 >
                   {availablePlatforms.map(p => (
                     <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
@@ -718,12 +726,12 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                   value={newHandle}
                   onChange={e => setNewHandle(e.target.value)}
                   placeholder="@yourhandle"
-                  style={{ flex:1, minWidth:140, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:6, padding:'7px 10px', fontSize:13, color:'var(--text)', fontFamily:'inherit', outline:'none' }}
+                  className="flex-1 min-w-[140px] bg-muted border border-border rounded-md px-2.5 py-[7px] text-[13px] text-foreground outline-none"
                 />
                 <button
                   onClick={addPlatform}
                   disabled={addingPlatform || !newPlatform}
-                  style={{ background:'var(--gold)', color:'#fff', border:'none', borderRadius:6, padding:'7px 14px', fontSize:12, fontWeight:600, cursor: addingPlatform ? 'not-allowed' : 'pointer', fontFamily:'inherit', opacity: addingPlatform ? 0.7 : 1, flexShrink:0 }}
+                  className={cn('bg-gold text-white border-none rounded-md px-3.5 py-[7px] text-xs font-semibold flex-shrink-0', addingPlatform ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100')}
                 >
                   {addingPlatform ? 'Adding…' : 'Add platform'}
                 </button>
@@ -734,19 +742,16 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
       )}
 
       {section !== 'platforms' && (
-        <div style={{ marginTop:24 }}>
-          <button onClick={saveSection} disabled={saving} style={{
-            background: saved ? 'var(--green)' : 'var(--gold)', color:'#fff',
-            border:'none', borderRadius:9, padding:'12px 28px', fontSize:14, fontWeight:700,
-            cursor: saving ? 'not-allowed' : 'pointer', fontFamily:'inherit', transition:'background 0.3s',
-            opacity: saving ? 0.7 : 1,
-          }}>
+        <div className="mt-6">
+          <button
+            onClick={saveSection}
+            disabled={saving}
+            className={cn('text-white border-none rounded-[9px] px-7 py-3 text-sm font-bold transition-colors', saved ? 'bg-green' : 'bg-gold', saving ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100')}
+          >
             {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save changes'}
           </button>
         </div>
       )}
-
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   )
 }

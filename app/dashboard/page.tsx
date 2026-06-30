@@ -45,8 +45,10 @@ export default async function InfluencerDashboardPage() {
         </p>
       </div>
 
+      {/* Supabase infers the to-one `briefs` relation as an array; at runtime
+          it's a single object, matching OpportunityCards' Opportunity type. */}
       <OpportunityCards
-        opportunities={opportunities || []}
+        opportunities={(opportunities || []) as any}
         influencerId={influencer.id}
       />
     </>

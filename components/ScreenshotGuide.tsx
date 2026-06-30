@@ -45,55 +45,37 @@ export default function ScreenshotGuide({ platform }: { platform: string }) {
   if (!guide) return null
 
   return (
-    <div style={{ marginBottom: 10 }}>
+    <div className="mb-2.5">
       <button
         onClick={() => setOpen(o => !o)}
-        style={{
-          background: 'none', border: 'none', padding: 0, cursor: 'pointer',
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-          fontSize: 12, fontWeight: 700, color: 'var(--gold)', fontFamily: 'inherit',
-        }}
+        className="inline-flex cursor-pointer items-center gap-[5px] border-none bg-none p-0 font-inherit text-xs font-bold text-gold"
       >
         <svg
           width="10" height="10" viewBox="0 0 10 10" fill="none"
-          style={{ transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'none', flexShrink: 0 }}
+          className="shrink-0 transition-transform duration-200"
+          style={{ transform: open ? 'rotate(90deg)' : 'none' }}
         >
-          <path d="M3 2l4 3-4 3" stroke="var(--gold)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
         {open ? 'Hide guide' : 'What to screenshot →'}
       </button>
 
       {open && (
-        <div style={{
-          marginTop: 8,
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 10,
-          padding: '14px 16px',
-        }}>
+        <div className="mt-2 rounded-[10px] border border-border bg-muted px-4 py-3.5">
           {guide.note && (
-            <div style={{
-              display: 'flex', gap: 8, alignItems: 'flex-start',
-              background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
-              borderRadius: 7, padding: '9px 11px', marginBottom: 12,
-            }}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
-                <circle cx="7" cy="7" r="6" stroke="var(--gold)" strokeWidth="1.3"/>
-                <path d="M7 6v3.5M7 4.5v.5" stroke="var(--gold)" strokeWidth="1.3" strokeLinecap="round"/>
+            <div className="mb-3 flex items-start gap-2 rounded-[7px] border border-gold-border bg-gold-bg px-[11px] py-[9px]">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="mt-px shrink-0 text-gold">
+                <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3"/>
+                <path d="M7 6v3.5M7 4.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               </svg>
-              <p style={{ fontSize: 12, color: 'var(--gold)', lineHeight: 1.5 }}>{guide.note}</p>
+              <p className="text-xs leading-normal text-gold">{guide.note}</p>
             </div>
           )}
-          <ol style={{ paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <ol className="flex list-none flex-col gap-2 pl-0">
             {guide.steps.map((step, i) => (
-              <li key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <span style={{
-                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                  background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 800, color: 'var(--gold)', marginTop: 1,
-                }}>{i + 1}</span>
-                <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{step}</p>
+              <li key={i} className="flex items-start gap-2.5">
+                <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gold-border bg-gold-bg text-[10px] font-extrabold text-gold">{i + 1}</span>
+                <p className="text-[13px] leading-normal text-muted-foreground">{step}</p>
               </li>
             ))}
           </ol>

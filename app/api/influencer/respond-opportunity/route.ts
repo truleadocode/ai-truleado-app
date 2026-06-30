@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy init so the build's page-data collection doesn't construct Resend
+// (which throws) before RESEND_API_KEY is available at request time.
+let _resend: Resend | null = null
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 export async function POST(request: NextRequest) {
   const { match_id, influencer_id, response } = await request.json()
@@ -51,7 +57,7 @@ export async function POST(request: NextRequest) {
       const advertiser = brief.advertiser as any
       if (advertiser?.email) {
         try {
-          await resend.emails.send({
+          await getResend().emails.send({
             from: 'Sarah from Truleado <onboarding@resend.dev>',
             to: advertiser.email,
             subject: `A creator is interested in your brief`,

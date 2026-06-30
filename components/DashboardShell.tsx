@@ -43,15 +43,15 @@ export default async function DashboardShell({
 
   const navItems: NavItem[] = effectiveRole === 'advertiser'
     ? [
-        { href: '/advertiser/dashboard',  label: 'Briefs',    icon: FileText },
-        { href: '/advertiser/briefs/new', label: 'New brief', icon: Zap },
+        { href: '/advertiser/dashboard',  label: 'Briefs',    icon: <FileText size={16} />, iconSm: <FileText size={13} /> },
+        { href: '/advertiser/briefs/new', label: 'New brief', icon: <Zap size={16} />,      iconSm: <Zap size={13} /> },
       ]
     : [
-        { href: '/dashboard',               label: 'Opportunities', icon: Zap },
-        { href: '/dashboard/gigs',          label: 'Gigs',          icon: Briefcase, badge: activeGigs },
-        { href: '/dashboard/messages',      label: 'Messages',      icon: MessageSquare, badge: unreadMessages },
-        { href: '/dashboard/notifications', label: 'Notifications', icon: Bell, badge: unreadNotifs },
-        { href: '/dashboard/profile',       label: 'Profile',       icon: UserIcon },
+        { href: '/dashboard',               label: 'Opportunities', icon: <Zap size={16} />,          iconSm: <Zap size={13} /> },
+        { href: '/dashboard/gigs',          label: 'Gigs',          icon: <Briefcase size={16} />,    iconSm: <Briefcase size={13} />,    badge: activeGigs },
+        { href: '/dashboard/messages',      label: 'Messages',      icon: <MessageSquare size={16} />, iconSm: <MessageSquare size={13} />, badge: unreadMessages },
+        { href: '/dashboard/notifications', label: 'Notifications', icon: <Bell size={16} />,         iconSm: <Bell size={13} />,         badge: unreadNotifs },
+        { href: '/dashboard/profile',       label: 'Profile',       icon: <UserIcon size={16} />,     iconSm: <UserIcon size={13} /> },
       ]
 
   const displayName = influencer?.first_name

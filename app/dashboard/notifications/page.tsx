@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
+import { cn } from '@/lib/utils'
 
 function notifIcon(type: string) {
   switch (type) {
@@ -36,36 +37,37 @@ export default async function NotificationsPage() {
     .eq('read', false)
 
   return (
-    <div style={{ padding:'24px 28px 40px', maxWidth:600 }}>
-      <h2 style={{ fontSize:16, fontWeight:700, marginBottom:20 }}>Notifications</h2>
+    <div className="px-7 pt-6 pb-10 max-w-[600px]">
+      <h2 className="text-base font-bold mb-5">Notifications</h2>
 
       {(!notifs || notifs.length === 0) && (
-        <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'48px 24px', textAlign:'center' }}>
-          <p style={{ fontSize:20, marginBottom:10 }}>🔔</p>
-          <p style={{ fontSize:14, fontWeight:600, marginBottom:6 }}>No notifications yet</p>
-          <p style={{ fontSize:13, color:'var(--text-2)' }}>You'll be notified when Sarah sends you an offer or update.</p>
+        <div className="bg-card border border-border rounded-xl px-6 py-12 text-center">
+          <p className="text-xl mb-2.5">🔔</p>
+          <p className="text-sm font-semibold mb-1.5">No notifications yet</p>
+          <p className="text-[13px] text-muted-foreground">You'll be notified when Sarah sends you an offer or update.</p>
         </div>
       )}
 
-      {(notifs || []).map((n, i) => (
-        <div key={n.id} style={{
-          display:'flex', gap:12, padding:'14px 18px',
-          background:'var(--white)', border:`1px solid ${n.read ? 'var(--border)' : 'var(--gold-border)'}`,
-          borderRadius:12, marginBottom:8,
-          opacity: n.read ? 0.75 : 1,
-        }}>
-          <div style={{ width:38, height:38, borderRadius:10, background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0 }}>
+      {(notifs || []).map((n) => (
+        <div
+          key={n.id}
+          className={cn(
+            'flex gap-3 px-[18px] py-3.5 bg-card border rounded-xl mb-2',
+            n.read ? 'border-border opacity-75' : 'border-gold-border opacity-100'
+          )}
+        >
+          <div className="w-[38px] h-[38px] rounded-[10px] bg-muted border border-border flex items-center justify-center text-lg flex-shrink-0">
             {notifIcon(n.type)}
           </div>
-          <div style={{ flex:1 }}>
-            <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:8, marginBottom:3 }}>
-              <p style={{ fontSize:13, fontWeight:700 }}>{n.title}</p>
-              <div style={{ display:'flex', gap:6, alignItems:'center', flexShrink:0 }}>
-                {!n.read && <div style={{ width:7, height:7, borderRadius:'50%', background:'var(--gold)' }} />}
-                <p style={{ fontSize:11, color:'var(--text-2)' }}>{new Date(n.created_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
+          <div className="flex-1">
+            <div className="flex items-start justify-between gap-2 mb-[3px]">
+              <p className="text-[13px] font-bold">{n.title}</p>
+              <div className="flex gap-1.5 items-center flex-shrink-0">
+                {!n.read && <div className="w-[7px] h-[7px] rounded-full bg-gold" />}
+                <p className="text-[11px] text-muted-foreground">{new Date(n.created_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
               </div>
             </div>
-            <p style={{ fontSize:13, color:'var(--text-2)', lineHeight:1.5 }}>{n.body}</p>
+            <p className="text-[13px] text-muted-foreground leading-normal">{n.body}</p>
           </div>
         </div>
       ))}

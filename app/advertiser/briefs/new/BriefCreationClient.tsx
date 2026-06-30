@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import DashboardShell from '@/components/DashboardShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -82,7 +81,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
   // ── Paddle subscription gate ───────────────────────────────
   if (needsSubscription) {
     return (
-      <DashboardShell role="advertiser">
+      <>
         <div className="max-w-md mx-auto text-center py-12">
           <div className="w-14 h-14 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center mx-auto mb-5">
             <Lock size={22} className="text-gold" />
@@ -107,7 +106,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
             Go back to dashboard
           </Button>
         </div>
-      </DashboardShell>
+      </>
     )
   }
 
@@ -261,7 +260,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
   }
 
   return (
-    <DashboardShell role="advertiser">
+    <>
       {phase === 'choose' && (
         <div className="max-w-lg mx-auto py-8">
           <div className="text-center mb-8">
@@ -439,6 +438,6 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
           </div>
         </div>
       )}
-    </DashboardShell>
+    </>
   )
 }

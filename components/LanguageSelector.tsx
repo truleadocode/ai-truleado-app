@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { cn } from '@/lib/utils'
 
 const ALL_LANGUAGES = [
   'English','German','French','Spanish','Italian','Dutch','Portuguese','Polish',
@@ -70,7 +71,7 @@ export default function LanguageSelector({ value, onChange, placeholder = 'Searc
   const atMax = value.length >= max
 
   return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
+    <div ref={containerRef} className="relative">
       <input
         ref={inputRef}
         value={query}
@@ -79,48 +80,19 @@ export default function LanguageSelector({ value, onChange, placeholder = 'Searc
         onKeyDown={handleKeyDown}
         placeholder={atMax ? `Max ${max} languages selected` : placeholder}
         disabled={atMax}
-        style={{
-          width: '100%',
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 8,
-          padding: '10px 12px',
-          fontSize: 13,
-          color: 'var(--text)',
-          fontFamily: 'inherit',
-          outline: 'none',
-          boxSizing: 'border-box',
-          opacity: atMax ? 0.6 : 1,
-          cursor: atMax ? 'not-allowed' : 'text',
-        }}
+        className={cn(
+          'w-full box-border rounded-lg border border-border bg-muted px-3 py-2.5 text-[13px] text-foreground font-[inherit] outline-none',
+          atMax ? 'opacity-60 cursor-not-allowed' : 'cursor-text'
+        )}
       />
 
       {open && !atMax && (filtered.length > 0 || showAddCustom) && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 4px)',
-          left: 0,
-          right: 0,
-          background: 'var(--white)',
-          border: '1px solid var(--border)',
-          borderRadius: 8,
-          boxShadow: 'var(--shadow)',
-          maxHeight: 200,
-          overflowY: 'auto',
-          zIndex: 50,
-        }}>
+        <div className="absolute top-[calc(100%+4px)] left-0 right-0 max-h-[200px] overflow-y-auto rounded-lg border border-border bg-card shadow-md z-50">
           {filtered.map(lang => (
             <div
               key={lang}
               onMouseDown={e => { e.preventDefault(); add(lang) }}
-              style={{
-                padding: '8px 12px',
-                fontSize: 13,
-                color: 'var(--text)',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              className="px-3 py-2 text-[13px] text-foreground cursor-pointer hover:bg-muted"
             >
               {lang}
             </div>
@@ -128,16 +100,10 @@ export default function LanguageSelector({ value, onChange, placeholder = 'Searc
           {showAddCustom && (
             <div
               onMouseDown={e => { e.preventDefault(); add(query.trim()) }}
-              style={{
-                padding: '8px 12px',
-                fontSize: 13,
-                color: 'var(--gold)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                borderTop: filtered.length > 0 ? '1px solid var(--border)' : 'none',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--gold-bg)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              className={cn(
+                'px-3 py-2 text-[13px] text-gold font-semibold cursor-pointer hover:bg-gold-bg',
+                filtered.length > 0 && 'border-t border-border'
+              )}
             >
               Add &ldquo;{query.trim()}&rdquo;
             </div>
@@ -146,17 +112,13 @@ export default function LanguageSelector({ value, onChange, placeholder = 'Searc
       )}
 
       {value.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+        <div className="flex flex-wrap gap-1.5 mt-2">
           {value.map(lang => (
-            <span key={lang} style={{
-              display: 'inline-flex', alignItems: 'center', gap: 5,
-              fontSize: 12, padding: '4px 10px', borderRadius: 20,
-              background: 'var(--gold-bg)', color: 'var(--gold)', border: '1px solid var(--gold-border)',
-            }}>
+            <span key={lang} className="inline-flex items-center gap-[5px] text-xs px-2.5 py-1 rounded-full bg-gold-bg text-gold border border-gold-border">
               {lang}
               <button
                 onClick={() => remove(lang)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold)', fontSize: 14, lineHeight: 1, padding: 0, display: 'flex', alignItems: 'center' }}
+                className="flex items-center bg-none border-none cursor-pointer text-gold text-sm leading-none p-0"
               >×</button>
             </span>
           ))}
@@ -164,7 +126,7 @@ export default function LanguageSelector({ value, onChange, placeholder = 'Searc
       )}
 
       {atMax && (
-        <p style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>Maximum {max} languages reached</p>
+        <p className="text-[11px] text-muted-foreground/60 mt-1.5">Maximum {max} languages reached</p>
       )}
     </div>
   )

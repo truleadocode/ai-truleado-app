@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
 /* ─── helpers ─── */
 function fmt(v: number | null | undefined) {
@@ -17,55 +18,47 @@ function memberSince(iso: string) {
 }
 
 const SECTION = (label: string) => (
-  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.09em', textTransform: 'uppercase', marginBottom: 14 }}>{label}</p>
+  <p className="text-[11px] font-bold text-muted-foreground tracking-[0.09em] uppercase mb-3.5">{label}</p>
 )
 
 const CARD = ({ children, accent }: { children: React.ReactNode; accent?: boolean }) => (
-  <div style={{
-    background: 'var(--white)',
-    border: `1px solid ${accent ? 'var(--gold-border)' : 'var(--border)'}`,
-    borderRadius: 14,
-    padding: '18px 20px',
-    marginBottom: 12,
-  }}>{children}</div>
+  <div className={cn('bg-card border rounded-[14px] px-5 py-[18px] mb-3', accent ? 'border-gold-border' : 'border-border')}>{children}</div>
 )
 
 const PILL = ({ children, color = 'fg' }: { children: React.ReactNode; color?: 'gold' | 'green' | 'red' | 'muted' | 'fg' }) => {
-  const styles: Record<string, React.CSSProperties> = {
-    gold:  { background: 'var(--gold-bg)',  color: 'var(--gold)',   border: '1px solid var(--gold-border)' },
-    green: { background: 'var(--green2)', color: 'var(--green)', border: '1px solid var(--green3)' },
-    red:   { background: 'var(--red2)',  color: 'var(--red)',   border: '1px solid var(--red3)' },
-    muted: { background: 'var(--surface)', color: 'var(--text-2)', border: '1px solid var(--border)' },
-    fg:    { background: 'var(--surface)',   color: 'var(--text)',    border: '1px solid var(--border)' },
+  const styles: Record<string, string> = {
+    gold:  'bg-gold-bg text-gold border-gold-border',
+    green: 'bg-green-bg text-green border-green-border',
+    red:   'bg-red-bg text-red border-red-border',
+    muted: 'bg-muted text-muted-foreground border-border',
+    fg:    'bg-muted text-foreground border-border',
   }
   return (
-    <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 11px', borderRadius: 20, display: 'inline-block', ...styles[color] }}>
+    <span className={cn('text-xs font-semibold px-[11px] py-[3px] rounded-[20px] inline-block border', styles[color])}>
       {children}
     </span>
   )
 }
 
 const STAT = ({ label, value }: { label: string; value: string }) => (
-  <div style={{ background: 'var(--surface)', borderRadius: 9, padding: '9px 11px' }}>
-    <p style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 4, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{label}</p>
-    <p style={{ fontSize: 14, fontWeight: 800 }}>{value}</p>
+  <div className="bg-muted rounded-[9px] px-[11px] py-[9px]">
+    <p className="text-[10px] text-muted-foreground mb-1 font-semibold tracking-[0.05em] uppercase">{label}</p>
+    <p className="text-sm font-extrabold">{value}</p>
   </div>
 )
 
 const FIELD = ({ label, value }: { label: string; value: string }) => (
   <div>
-    <p style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 4, fontWeight: 600 }}>{label}</p>
-    <p style={{ fontSize: 13, fontWeight: 600, color: value === '—' ? 'var(--text-2)' : 'var(--text)' }}>{value}</p>
+    <p className="text-[11px] text-muted-foreground mb-1 font-semibold">{label}</p>
+    <p className={cn('text-[13px] font-semibold', value === '—' ? 'text-muted-foreground' : 'text-foreground')}>{value}</p>
   </div>
 )
 
 const TOGGLE = ({ label, on }: { label: string; on: boolean }) => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
-    <p style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 500 }}>{label}</p>
-    <div style={{
-      width: 36, height: 20, borderRadius: 10, background: on ? 'var(--green)' : 'var(--border)', position: 'relative', flexShrink: 0,
-    }}>
-      <span style={{ position: 'absolute', width: 14, height: 14, borderRadius: '50%', background: '#fff', top: 3, left: on ? 19 : 3, transition: 'left 0.2s' }} />
+  <div className="flex items-center justify-between py-2.5 border-b border-border">
+    <p className="text-[13px] text-muted-foreground font-medium">{label}</p>
+    <div className={cn('w-9 h-5 rounded-[10px] relative flex-shrink-0', on ? 'bg-green' : 'bg-border')}>
+      <span className={cn('absolute w-3.5 h-3.5 rounded-full bg-white top-[3px] transition-[left] duration-200', on ? 'left-[19px]' : 'left-[3px]')} />
     </div>
   </div>
 )
@@ -121,61 +114,59 @@ export default async function ViewProfilePage() {
   const location = [inf.city, inf.country].filter(Boolean).join(', ') || null
 
   return (
-    <div style={{ padding: '0 0 60px' }}>
+    <div className="pb-[60px]">
       {/* Top bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 28px 0', marginBottom: 24 }}>
-        <Link href="/dashboard/profile" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: 'var(--text-2)', textDecoration: 'none' }}>
+      <div className="flex items-center justify-between px-7 pt-5 mb-6">
+        <Link href="/dashboard/profile" className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground no-underline">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 2L4 7l5 5"/></svg>
           Back to profile
         </Link>
-        <Link href="/profile/edit" style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: 'var(--gold)', padding: '8px 16px', borderRadius: 8, textDecoration: 'none' }}>
+        <Link href="/profile/edit" className="text-xs font-bold text-white bg-gold px-4 py-2 rounded-lg no-underline">
           Edit profile
         </Link>
       </div>
 
       {/* Hero */}
-      <div style={{ background: 'var(--white)', borderBottom: '1px solid var(--border)', padding: '24px 28px 28px', marginBottom: 28 }}>
-        <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', maxWidth: 1000 }}>
+      <div className="bg-card border-b border-border px-7 pt-6 pb-7 mb-7">
+        <div className="flex gap-5 items-start max-w-[1000px]">
           {/* Avatar */}
-          <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div className="relative flex-shrink-0">
             {inf.avatar_url ? (
-              <img src={inf.avatar_url} alt="Avatar" style={{ width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', display: 'block' }} />
+              <img src={inf.avatar_url} alt="Avatar" className="w-[88px] h-[88px] rounded-full object-cover border-2 border-border block" />
             ) : (
-              <div style={{ width: 88, height: 88, borderRadius: '50%', background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, fontWeight: 800, color: '#fff' }}>
+              <div className="w-[88px] h-[88px] rounded-full bg-gold flex items-center justify-center text-[28px] font-extrabold text-white">
                 {(inf.first_name?.[0] || '') + (inf.last_name?.[0] || '')}
               </div>
             )}
             {inf.status === 'active' && (
-              <span style={{ position: 'absolute', bottom: 4, right: 4, width: 14, height: 14, borderRadius: '50%', background: 'var(--green)', border: '2px solid var(--white)' }} />
+              <span className="absolute bottom-1 right-1 w-3.5 h-3.5 rounded-full bg-green border-2 border-card" />
             )}
           </div>
 
           {/* Info */}
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+          <div className="flex-1">
+            <div className="flex items-start justify-between gap-3 mb-2">
               <div>
-                <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: -0.5, marginBottom: 5 }}>{fullName}</h1>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 12, color: 'var(--text-2)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <h1 className="text-2xl font-extrabold tracking-[-0.5px] mb-[5px]">{fullName}</h1>
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
                     <svg width="11" height="13" viewBox="0 0 11 13" fill="none"><path d="M5.5 0C3.015 0 1 2.015 1 4.5c0 3.375 4.5 8.5 4.5 8.5s4.5-5.125 4.5-8.5C10 2.015 7.985 0 5.5 0zm0 6.125a1.625 1.625 0 1 1 0-3.25 1.625 1.625 0 0 1 0 3.25z" fill="currentColor"/></svg>
-                    {location || <span style={{ fontStyle: 'italic' }}>Location not set</span>}
+                    {location || <span className="italic">Location not set</span>}
                   </span>
-                  <span style={{ fontSize: 12, color: 'var(--text-2)', opacity: 0.4 }}>·</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Member since {memberSince(inf.created_at)}</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-2)', opacity: 0.4 }}>·</span>
-                  <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{inf.posting_frequency || '—'}</span>
+                  <span className="text-xs text-muted-foreground opacity-40">·</span>
+                  <span className="text-xs text-muted-foreground">Member since {memberSince(inf.created_at)}</span>
+                  <span className="text-xs text-muted-foreground opacity-40">·</span>
+                  <span className="text-xs text-muted-foreground">{inf.posting_frequency || '—'}</span>
                 </div>
               </div>
-              <span style={{
-                fontSize: 12, fontWeight: 700, padding: '4px 12px', borderRadius: 20, flexShrink: 0,
-                background: inf.status === 'active' ? 'var(--green2)' : 'var(--surface)',
-                color: inf.status === 'active' ? 'var(--green)' : 'var(--text-2)',
-                border: `1px solid ${inf.status === 'active' ? 'var(--green3)' : 'var(--border)'}`,
-              }}>{inf.status || 'unknown'}</span>
+              <span className={cn(
+                'text-xs font-bold px-3 py-1 rounded-[20px] flex-shrink-0 border',
+                inf.status === 'active' ? 'bg-green-bg text-green border-green-border' : 'bg-muted text-muted-foreground border-border',
+              )}>{inf.status || 'unknown'}</span>
             </div>
 
             {/* Niche badges */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            <div className="flex flex-wrap gap-1.5 mb-2.5">
               {primaryNiche
                 ? <PILL color="gold">{primaryNiche}</PILL>
                 : <PILL color="muted">No niche set</PILL>}
@@ -183,7 +174,7 @@ export default async function ViewProfilePage() {
             </div>
 
             {/* Languages */}
-            <p style={{ fontSize: 12, color: 'var(--text-2)' }}>
+            <p className="text-xs text-muted-foreground">
               {inf.languages?.length ? `Languages: ${inf.languages.join(', ')}` : 'Languages: —'}
             </p>
           </div>
@@ -191,7 +182,7 @@ export default async function ViewProfilePage() {
       </div>
 
       {/* Two-column grid */}
-      <div style={{ padding: '0 28px', display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 16, maxWidth: 1060, alignItems: 'start' }}>
+      <div className="px-7 grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-4 max-w-[1060px] items-start">
 
         {/* ── LEFT COLUMN ── */}
         <div>
@@ -199,15 +190,15 @@ export default async function ViewProfilePage() {
           <CARD accent>
             {SECTION('AI Summary')}
             {inf.ai_summary ? (
-              <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--text-2)' }}>{inf.ai_summary}</p>
+              <p className="text-[13px] leading-[1.7] text-muted-foreground">{inf.ai_summary}</p>
             ) : (
-              <p style={{ fontSize: 13, lineHeight: 1.7, color: 'var(--text-2)', fontStyle: 'italic' }}>
+              <p className="text-[13px] leading-[1.7] text-muted-foreground italic">
                 Your AI summary will appear here after you upload and parse screenshots.
               </p>
             )}
             {inf.ai_summary_verified && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 10, fontSize: 11, color: 'var(--green)', fontWeight: 600 }}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5.5" stroke="var(--green)"/><path d="M3.5 6l2 2 3-3" stroke="var(--green)" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <div className="inline-flex items-center gap-[5px] mt-2.5 text-[11px] text-green font-semibold">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5.5" stroke="currentColor"/><path d="M3.5 6l2 2 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 Verified by Truleado
               </div>
             )}
@@ -217,9 +208,9 @@ export default async function ViewProfilePage() {
           <CARD>
             {SECTION('Bio')}
             {inf.bio ? (
-              <p style={{ fontSize: 13, lineHeight: 1.75, color: 'var(--text-2)' }}>{inf.bio}</p>
+              <p className="text-[13px] leading-[1.75] text-muted-foreground">{inf.bio}</p>
             ) : (
-              <p style={{ fontSize: 13, color: 'var(--text-2)', fontStyle: 'italic' }}>—</p>
+              <p className="text-[13px] text-muted-foreground italic">—</p>
             )}
           </CARD>
 
@@ -227,24 +218,22 @@ export default async function ViewProfilePage() {
           {platformList.length === 0 ? (
             <CARD>
               {SECTION('Platforms')}
-              <p style={{ fontSize: 13, color: 'var(--text-2)', fontStyle: 'italic', textAlign: 'center', padding: '16px 0' }}>No platforms added yet</p>
+              <p className="text-[13px] text-muted-foreground italic text-center py-4">No platforms added yet</p>
             </CARD>
           ) : (
             platformList.map(p => {
               const isParsed = p.parse_status === 'complete'
               return (
                 <CARD key={p.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                    <p style={{ fontSize: 15, fontWeight: 800, textTransform: 'capitalize', flex: 1 }}>{p.platform}</p>
-                    <span style={{ fontSize: 12, color: 'var(--text-2)' }}>@{p.handle || '—'}</span>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 20,
-                      background: isParsed ? 'var(--green2)' : 'var(--surface)',
-                      color: isParsed ? 'var(--green)' : 'var(--text-2)',
-                      border: `1px solid ${isParsed ? 'var(--green3)' : 'var(--border)'}`,
-                    }}>{isParsed ? 'Parsed ✓' : 'Stats pending'}</span>
+                  <div className="flex items-center gap-2 mb-3.5">
+                    <p className="text-[15px] font-extrabold capitalize flex-1">{p.platform}</p>
+                    <span className="text-xs text-muted-foreground">@{p.handle || '—'}</span>
+                    <span className={cn(
+                      'text-[11px] font-semibold px-[9px] py-0.5 rounded-[20px] border',
+                      isParsed ? 'bg-green-bg text-green border-green-border' : 'bg-muted text-muted-foreground border-border',
+                    )}>{isParsed ? 'Parsed ✓' : 'Stats pending'}</span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                  <div className="grid grid-cols-4 gap-2">
                     <STAT label="Followers" value={fmt(p.followers)} />
                     <STAT label="Engagement" value={p.engagement_rate ? `${p.engagement_rate}%` : '—'} />
                     <STAT label="Avg likes" value={fmt(p.avg_likes)} />
@@ -262,16 +251,16 @@ export default async function ViewProfilePage() {
           {/* Content profile */}
           <CARD>
             {SECTION('Content profile')}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 20px', marginBottom: 16 }}>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-3.5 mb-4">
               <FIELD label="Primary niche" value={primaryNiche || '—'} />
               <FIELD label="Content style" value={inf.content_style || '—'} />
               <FIELD label="Posting frequency" value={inf.posting_frequency || '—'} />
               <FIELD label="Past partnerships" value={inf.past_partnerships || '—'} />
             </div>
 
-            <div style={{ marginBottom: 12 }}>
-              <p style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, marginBottom: 8 }}>Secondary niches</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <div className="mb-3">
+              <p className="text-[11px] text-muted-foreground font-semibold mb-2">Secondary niches</p>
+              <div className="flex flex-wrap gap-1.5">
                 {allSecondary.length
                   ? allSecondary.map((n: string) => <PILL key={n} color="fg">{n}</PILL>)
                   : <PILL color="muted">Not set</PILL>}
@@ -279,8 +268,8 @@ export default async function ViewProfilePage() {
             </div>
 
             <div>
-              <p style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, marginBottom: 8 }}>Content formats</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <p className="text-[11px] text-muted-foreground font-semibold mb-2">Content formats</p>
+              <div className="flex flex-wrap gap-1.5">
                 {allFormats.length
                   ? allFormats.map((f: string) => <PILL key={f} color="fg">{f}</PILL>)
                   : <PILL color="muted">Not set</PILL>}
@@ -295,22 +284,23 @@ export default async function ViewProfilePage() {
           <CARD>
             {SECTION('Rate card')}
             {rateList.length === 0 ? (
-              <p style={{ fontSize: 13, color: 'var(--text-2)', fontStyle: 'italic' }}>No rates set yet</p>
+              <p className="text-[13px] text-muted-foreground italic">No rates set yet</p>
             ) : (
               <>
                 {Array.from(new Set(rateList.map(r => r.platform))).map((platform, idx, arr) => {
                   const ctypes = CONTENT_TYPES[platform] || ['post']
                   const platformRates = rateList.filter(r => r.platform === platform)
+                  const notLast = idx < arr.length - 1
                   return (
-                    <div key={platform} style={{ marginBottom: idx < arr.length - 1 ? 18 : 0, paddingBottom: idx < arr.length - 1 ? 18 : 0, borderBottom: idx < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                      <p style={{ fontSize: 13, fontWeight: 700, textTransform: 'capitalize', marginBottom: 10 }}>{platform}</p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <div key={platform} className={cn(notLast && 'mb-[18px] pb-[18px] border-b border-border')}>
+                      <p className="text-[13px] font-bold capitalize mb-2.5">{platform}</p>
+                      <div className="flex flex-wrap gap-2">
                         {ctypes.map(ct => {
                           const row = platformRates.find(r => r.content_type === ct)
                           return (
-                            <div key={ct} style={{ background: 'var(--surface)', borderRadius: 9, padding: '10px 14px', textAlign: 'center', minWidth: 72 }}>
-                              <p style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 5, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{CT_LABEL[ct]}</p>
-                              <p style={{ fontSize: 16, fontWeight: 800, color: row ? 'var(--gold)' : 'var(--text-2)' }}>{row ? eur(row.rate_eur) : '—'}</p>
+                            <div key={ct} className="bg-muted rounded-[9px] px-3.5 py-2.5 text-center min-w-[72px]">
+                              <p className="text-[10px] text-muted-foreground mb-[5px] font-semibold uppercase tracking-[0.05em]">{CT_LABEL[ct]}</p>
+                              <p className={cn('text-base font-extrabold', row ? 'text-gold' : 'text-muted-foreground')}>{row ? eur(row.rate_eur) : '—'}</p>
                             </div>
                           )
                         })}
@@ -318,7 +308,7 @@ export default async function ViewProfilePage() {
                     </div>
                   )
                 })}
-                <div style={{ borderTop: '1px solid var(--border)', marginTop: 14, paddingTop: 4 }}>
+                <div className="border-t border-border mt-3.5 pt-1">
                   <TOGGLE label="Open to gifting" on={!!inf.open_to_gifting} />
                   <TOGGLE label="Open to rev-share" on={!!inf.open_to_rev_share} />
                   <TOGGLE label="Open to exclusivity" on={!!inf.open_to_exclusivity} />
@@ -330,26 +320,26 @@ export default async function ViewProfilePage() {
           {/* Brand preferences */}
           <CARD>
             {SECTION('Brand preferences')}
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, marginBottom: 8 }}>Love working with</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <div className="mb-4">
+              <p className="text-[11px] text-muted-foreground font-semibold mb-2">Love working with</p>
+              <div className="flex flex-wrap gap-1.5">
                 {allBrandLoves.length
                   ? allBrandLoves.map((c: string) => <PILL key={c} color="green">{c}</PILL>)
                   : <PILL color="muted">Not set</PILL>}
               </div>
               {inf.brand_loves_custom && (
-                <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 8, fontStyle: 'italic' }}>{inf.brand_loves_custom}</p>
+                <p className="text-xs text-muted-foreground mt-2 italic">{inf.brand_loves_custom}</p>
               )}
             </div>
             <div>
-              <p style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, marginBottom: 8 }}>Never work with</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <p className="text-[11px] text-muted-foreground font-semibold mb-2">Never work with</p>
+              <div className="flex flex-wrap gap-1.5">
                 {allBrandNever.length
                   ? allBrandNever.map((c: string) => <PILL key={c} color="red">{c}</PILL>)
                   : <PILL color="muted">Not set</PILL>}
               </div>
               {inf.brand_never_custom && (
-                <p style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 8, fontStyle: 'italic' }}>{inf.brand_never_custom}</p>
+                <p className="text-xs text-muted-foreground mt-2 italic">{inf.brand_never_custom}</p>
               )}
             </div>
           </CARD>
@@ -357,37 +347,37 @@ export default async function ViewProfilePage() {
           {/* At a glance */}
           <CARD>
             {SECTION('At a glance')}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="flex flex-col gap-3">
               <div>
-                <p style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, marginBottom: 4 }}>Total reach</p>
-                <p style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5, color: totalReach ? 'var(--text)' : 'var(--text-2)' }}>
+                <p className="text-[11px] text-muted-foreground font-semibold mb-1">Total reach</p>
+                <p className={cn('text-[22px] font-extrabold tracking-[-0.5px]', totalReach ? 'text-foreground' : 'text-muted-foreground')}>
                   {totalReach ? fmt(totalReach) : '—'}
                 </p>
               </div>
 
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-                <p style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600, marginBottom: 8 }}>Platforms</p>
+              <div className="border-t border-border pt-3">
+                <p className="text-[11px] text-muted-foreground font-semibold mb-2">Platforms</p>
                 {platformList.length ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div className="flex flex-col gap-1.5">
                     {platformList.map(p => (
-                      <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>{p.platform}</span>
-                        <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{p.followers ? fmt(p.followers) + ' followers' : '—'}</span>
+                      <div key={p.id} className="flex items-center justify-between">
+                        <span className="text-[13px] font-semibold capitalize">{p.platform}</span>
+                        <span className="text-[13px] text-muted-foreground">{p.followers ? fmt(p.followers) + ' followers' : '—'}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p style={{ fontSize: 13, color: 'var(--text-2)', fontStyle: 'italic' }}>—</p>
+                  <p className="text-[13px] text-muted-foreground italic">—</p>
                 )}
               </div>
 
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 16px' }}>
+              <div className="border-t border-border pt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
                 <FIELD label="Location" value={location || '—'} />
                 <FIELD label="Languages" value={inf.languages?.length ? inf.languages.join(', ') : '—'} />
                 <FIELD label="Status" value={inf.status || '—'} />
                 <div>
-                  <p style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 4, fontWeight: 600 }}>AI summary</p>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: inf.ai_summary_verified ? 'var(--green)' : 'var(--text-2)' }}>
+                  <p className="text-[11px] text-muted-foreground mb-1 font-semibold">AI summary</p>
+                  <p className={cn('text-[13px] font-semibold', inf.ai_summary_verified ? 'text-green' : 'text-muted-foreground')}>
                     {inf.ai_summary_verified ? 'Verified ✓' : inf.ai_summary ? 'Generated' : 'Not yet'}
                   </p>
                 </div>

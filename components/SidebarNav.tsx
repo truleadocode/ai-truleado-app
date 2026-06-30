@@ -2,9 +2,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 
-export interface NavItem { href: string; label: string; icon: LucideIcon; badge?: number }
+export interface NavItem { href: string; label: string; icon: ReactNode; iconSm?: ReactNode; badge?: number }
 
 interface Props {
   items: NavItem[]
@@ -17,7 +17,7 @@ export default function SidebarNav({ items, variant = 'vertical' }: Props) {
   if (variant === 'horizontal') {
     return (
       <nav className="flex items-center gap-1 px-4 pb-2 overflow-x-auto">
-        {items.map(({ href, label, icon: Icon, badge }) => {
+        {items.map(({ href, label, iconSm, icon, badge }) => {
           const active = pathname === href
           return (
             <Link
@@ -28,7 +28,7 @@ export default function SidebarNav({ items, variant = 'vertical' }: Props) {
                 active ? 'bg-accent text-gold' : 'text-muted-foreground hover:bg-muted'
               )}
             >
-              <Icon size={13} /> {label}
+              {iconSm ?? icon} {label}
               {!!badge && (
                 <span className="ml-0.5 text-[9px] font-bold bg-gold text-white rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-1">
                   {badge > 9 ? '9+' : badge}
@@ -43,7 +43,7 @@ export default function SidebarNav({ items, variant = 'vertical' }: Props) {
 
   return (
     <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-      {items.map(({ href, label, icon: Icon, badge }) => {
+      {items.map(({ href, label, icon, badge }) => {
         const active = pathname === href
         return (
           <Link
@@ -56,7 +56,7 @@ export default function SidebarNav({ items, variant = 'vertical' }: Props) {
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
             )}
           >
-            <Icon size={16} className="shrink-0" />
+            <span className="shrink-0">{icon}</span>
             <span className="flex-1 truncate">{label}</span>
             {!!badge && (
               <span className="text-[10px] font-bold bg-gold text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">

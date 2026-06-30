@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
 type Gig = {
   id: string
@@ -35,12 +36,12 @@ function formatEur(cents: number) {
 
 function statusInfo(status: string) {
   switch (status) {
-    case 'offered':     return { label: 'Offer received',   color:'var(--gold)',   bg:'var(--gold-bg)',          border:'var(--gold-border)' }
-    case 'interested':  return { label: 'Interest sent',    color:'var(--blue)',  bg:'rgba(96,165,250,0.1)', border:'rgba(96,165,250,0.25)' }
-    case 'confirmed':   return { label: 'Confirmed',        color:'var(--green)', bg:'rgba(74,222,128,0.1)', border:'rgba(74,222,128,0.25)' }
-    case 'in_progress': return { label: 'In progress',      color:'var(--green)', bg:'rgba(74,222,128,0.1)', border:'rgba(74,222,128,0.25)' }
-    case 'complete':    return { label: 'Completed',        color:'var(--green)', bg:'rgba(74,222,128,0.1)', border:'rgba(74,222,128,0.25)' }
-    default:            return { label: status, color:'var(--text-2)', bg:'var(--surface)', border:'var(--border)' }
+    case 'offered':     return { label: 'Offer received', className: 'bg-gold-bg text-gold border-gold-border' }
+    case 'interested':  return { label: 'Interest sent',  className: 'bg-blue-bg text-blue border-blue-border' }
+    case 'confirmed':   return { label: 'Confirmed',      className: 'bg-green-bg text-green border-green-border' }
+    case 'in_progress': return { label: 'In progress',    className: 'bg-green-bg text-green border-green-border' }
+    case 'complete':    return { label: 'Completed',      className: 'bg-green-bg text-green border-green-border' }
+    default:            return { label: status,           className: 'bg-muted text-muted-foreground border-border' }
   }
 }
 
@@ -135,9 +136,8 @@ export default function GigDetailPage() {
 
   if (!gig) {
     return (
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh' }}>
-        <div style={{ width:32, height:32, border:'3px solid var(--border)', borderTopColor:'var(--gold)', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
-        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-8 h-8 border-[3px] border-border border-t-gold rounded-full animate-spin" />
       </div>
     )
   }
@@ -154,67 +154,67 @@ export default function GigDetailPage() {
   }
 
   return (
-    <div style={{ padding:'24px 28px 40px', maxWidth:700 }}>
+    <div className="px-7 pt-6 pb-10 max-w-[700px]">
       {/* Back */}
-      <Link href="/dashboard/gigs" style={{ display:'inline-flex', alignItems:'center', gap:6, fontSize:12, fontWeight:600, color:'var(--text-2)', textDecoration:'none', marginBottom:20 }}>
+      <Link href="/dashboard/gigs" className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground no-underline mb-5">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 2L4 7l5 5"/></svg>
         Back to gigs
       </Link>
 
       {/* Header card */}
-      <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'20px', marginBottom:16 }}>
-        <div style={{ display:'flex', alignItems:'flex-start', gap:12, marginBottom:16 }}>
-          <div style={{ width:48, height:48, borderRadius:12, background:'var(--surface)', border:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:22, flexShrink:0 }}>
+      <div className="bg-card border border-border rounded-xl p-5 mb-4">
+        <div className="flex items-start gap-3 mb-4">
+          <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center text-[22px] flex-shrink-0">
             {gig.brand_revealed ? '🌿' : '🔒'}
           </div>
-          <div style={{ flex:1 }}>
-            <h2 style={{ fontSize:17, fontWeight:800, marginBottom:3 }}>
+          <div className="flex-1">
+            <h2 className="text-[17px] font-extrabold mb-[3px]">
               {gig.brand_revealed ? gig.brand_name : `${gig.brand_category} campaign`}
             </h2>
-            <p style={{ fontSize:13, color:'var(--text-2)' }}>{gig.platform} · {gig.deliverables_summary}</p>
-            {!gig.brand_revealed && <p style={{ fontSize:11, color:'var(--text-2)', marginTop:4 }}>Brand name revealed once you confirm the deal.</p>}
+            <p className="text-[13px] text-muted-foreground">{gig.platform} · {gig.deliverables_summary}</p>
+            {!gig.brand_revealed && <p className="text-[11px] text-muted-foreground mt-1">Brand name revealed once you confirm the deal.</p>}
           </div>
-          <span style={{ display:'inline-flex', alignItems:'center', gap:5, fontSize:11, fontWeight:700, padding:'4px 10px', borderRadius:20, background:st.bg, color:st.color, border:`1px solid ${st.border}`, flexShrink:0 }}>
-            <span style={{ width:5, height:5, borderRadius:'50%', background:'currentColor', display:'inline-block' }} />
+          <span className={cn('inline-flex items-center gap-[5px] text-[11px] font-bold px-2.5 py-1 rounded-[20px] border flex-shrink-0', st.className)}>
+            <span className="w-[5px] h-[5px] rounded-full bg-current inline-block" />
             {st.label}
           </span>
         </div>
 
         {/* Key info */}
-        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+        <div className="flex gap-2.5 flex-wrap">
           {gig.budget_eur && (
-            <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 14px', textAlign:'center' }}>
-              <p style={{ fontSize:10, color:'var(--text-2)', marginBottom:2 }}>Budget</p>
-              <p style={{ fontSize:15, fontWeight:800, color:'var(--gold)' }}>{formatEur(gig.budget_eur)}</p>
+            <div className="bg-muted border border-border rounded-lg px-3.5 py-2 text-center">
+              <p className="text-[10px] text-muted-foreground mb-0.5">Budget</p>
+              <p className="text-[15px] font-extrabold text-gold">{formatEur(gig.budget_eur)}</p>
             </div>
           )}
           {gig.respond_by && gig.status === 'offered' && (
-            <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 14px', textAlign:'center' }}>
-              <p style={{ fontSize:10, color:'var(--text-2)', marginBottom:2 }}>Respond by</p>
-              <p style={{ fontSize:13, fontWeight:700 }}>{new Date(gig.respond_by).toLocaleDateString('en-GB', { weekday:'short', month:'short', day:'numeric' })}</p>
+            <div className="bg-muted border border-border rounded-lg px-3.5 py-2 text-center">
+              <p className="text-[10px] text-muted-foreground mb-0.5">Respond by</p>
+              <p className="text-[13px] font-bold">{new Date(gig.respond_by).toLocaleDateString('en-GB', { weekday:'short', month:'short', day:'numeric' })}</p>
             </div>
           )}
           {gig.content_due_at && (
-            <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 14px', textAlign:'center' }}>
-              <p style={{ fontSize:10, color:'var(--text-2)', marginBottom:2 }}>Content due</p>
-              <p style={{ fontSize:13, fontWeight:700 }}>{new Date(gig.content_due_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
+            <div className="bg-muted border border-border rounded-lg px-3.5 py-2 text-center">
+              <p className="text-[10px] text-muted-foreground mb-0.5">Content due</p>
+              <p className="text-[13px] font-bold">{new Date(gig.content_due_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
             </div>
           )}
           {gig.go_live_at && (
-            <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 14px', textAlign:'center' }}>
-              <p style={{ fontSize:10, color:'var(--text-2)', marginBottom:2 }}>Goes live</p>
-              <p style={{ fontSize:13, fontWeight:700 }}>{new Date(gig.go_live_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
+            <div className="bg-muted border border-border rounded-lg px-3.5 py-2 text-center">
+              <p className="text-[10px] text-muted-foreground mb-0.5">Goes live</p>
+              <p className="text-[13px] font-bold">{new Date(gig.go_live_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
             </div>
           )}
         </div>
 
         {/* Offer actions */}
         {gig.status === 'offered' && (
-          <div style={{ display:'flex', gap:8, marginTop:16, paddingTop:16, borderTop:'1px solid var(--border)' }}>
-            <button onClick={expressInterest} disabled={updatingStatus} style={{ flex:1, background:'var(--gold)', color:'#fff', border:'none', borderRadius:9, padding:'11px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+          <div className="flex gap-2 mt-4 pt-4 border-t border-border">
+            <button onClick={expressInterest} disabled={updatingStatus} className="flex-1 bg-gold text-white border-none rounded-[9px] py-[11px] text-[13px] font-bold cursor-pointer font-[inherit]">
               I&apos;m interested
             </button>
-            <button onClick={passGig} disabled={updatingStatus} style={{ flex:1, background:'var(--red2,rgba(248,113,113,0.1))', color:'var(--red)', border:'1px solid rgba(248,113,113,0.2)', borderRadius:9, padding:'11px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            <button onClick={passGig} disabled={updatingStatus} className="flex-1 bg-red-bg text-red border border-red-border rounded-[9px] py-[11px] text-[13px] font-bold cursor-pointer font-[inherit]">
               Not interested
             </button>
           </div>
@@ -222,13 +222,12 @@ export default function GigDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display:'flex', gap:1, borderBottom:'1px solid var(--border)', marginBottom:16 }}>
+      <div className="flex gap-px border-b border-border mb-4">
         {['brief','chat'].map(t => (
-          <button key={t} onClick={() => setTab(t as any)} style={{
-            padding:'8px 18px', background:'transparent', border:'none', borderBottom: tab === t ? '2px solid var(--gold)' : '2px solid transparent',
-            color: tab === t ? 'var(--text)' : 'var(--text-2)', fontSize:13, fontWeight:600, cursor:'pointer', fontFamily:'inherit',
-            textTransform:'capitalize', transition:'color 0.15s',
-          }}>
+          <button key={t} onClick={() => setTab(t as any)} className={cn(
+            'px-[18px] py-2 bg-transparent border-none border-b-2 text-[13px] font-semibold cursor-pointer font-[inherit] capitalize transition-colors',
+            tab === t ? 'border-gold text-foreground' : 'border-transparent text-muted-foreground',
+          )}>
             {t === 'chat' ? `Chat (${messages.length})` : 'Brief'}
           </button>
         ))}
@@ -238,35 +237,36 @@ export default function GigDetailPage() {
       {tab === 'brief' && (
         <div>
           {gig.offer_notes && (
-            <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'16px 18px', marginBottom:12 }}>
-              <p style={{ fontSize:11, fontWeight:700, color:'var(--text-2)', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:10 }}>Brief from Sarah</p>
-              <p style={{ fontSize:13, lineHeight:1.65, color:'var(--text-2)' }}>{gig.offer_notes}</p>
+            <div className="bg-card border border-border rounded-xl px-[18px] py-4 mb-3">
+              <p className="text-[11px] font-bold text-muted-foreground tracking-[0.08em] uppercase mb-2.5">Brief from Sarah</p>
+              <p className="text-[13px] leading-[1.65] text-muted-foreground">{gig.offer_notes}</p>
             </div>
           )}
 
           {/* Deliverables checklist */}
           {checklist.length > 0 && (
-            <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'16px 18px' }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:12 }}>
-                <p style={{ fontSize:11, fontWeight:700, color:'var(--text-2)', letterSpacing:'0.08em', textTransform:'uppercase' }}>Deliverables</p>
-                <span style={{ fontSize:12, color:'var(--text-2)' }}>{doneCount}/{checklist.length} done</span>
+            <div className="bg-card border border-border rounded-xl px-[18px] py-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] font-bold text-muted-foreground tracking-[0.08em] uppercase">Deliverables</p>
+                <span className="text-xs text-muted-foreground">{doneCount}/{checklist.length} done</span>
               </div>
-              <div style={{ height:4, background:'var(--border)', borderRadius:4, marginBottom:14, overflow:'hidden' }}>
-                <div style={{ height:'100%', background:'var(--gold)', borderRadius:4, width:`${(doneCount/checklist.length)*100}%`, transition:'width 0.3s' }} />
+              <div className="h-1 bg-border rounded mb-3.5 overflow-hidden">
+                <div className="h-full bg-gold rounded transition-[width] duration-300" style={{ width:`${(doneCount/checklist.length)*100}%` }} />
               </div>
               {checklist.map((item: any, i: number) => (
-                <div key={i} onClick={() => toggleDeliverable(i)} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'10px 0', borderBottom: i < checklist.length - 1 ? '1px solid var(--border)' : 'none', cursor:'pointer' }}>
-                  <div style={{
-                    width:18, height:18, borderRadius:5, border: item.done ? 'none' : '1.5px solid var(--border)',
-                    background: item.done ? 'var(--green)' : 'transparent',
-                    display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:1,
-                    transition:'all 0.2s',
-                  }}>
-                    {item.done && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-4" stroke="#090E1A" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                <div key={i} onClick={() => toggleDeliverable(i)} className={cn(
+                  'flex items-start gap-2.5 py-2.5 cursor-pointer',
+                  i < checklist.length - 1 ? 'border-b border-border' : '',
+                )}>
+                  <div className={cn(
+                    'w-[18px] h-[18px] rounded-[5px] flex items-center justify-center flex-shrink-0 mt-px transition-all',
+                    item.done ? 'border-none bg-green' : 'border-[1.5px] border-border bg-transparent',
+                  )}>
+                    {item.done && <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="text-foreground"><path d="M2 5l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                   </div>
                   <div>
-                    <p style={{ fontSize:13, fontWeight:500, textDecoration: item.done ? 'line-through' : 'none', color: item.done ? 'var(--text-2)' : 'var(--text)' }}>{item.label || item.title || item.text || JSON.stringify(item)}</p>
-                    {item.description && <p style={{ fontSize:12, color:'var(--text-2)', marginTop:2 }}>{item.description}</p>}
+                    <p className={cn('text-[13px] font-medium', item.done ? 'line-through text-muted-foreground' : 'text-foreground')}>{item.label || item.title || item.text || JSON.stringify(item)}</p>
+                    {item.description && <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>}
                   </div>
                 </div>
               ))}
@@ -274,8 +274,8 @@ export default function GigDetailPage() {
           )}
 
           {!gig.offer_notes && checklist.length === 0 && (
-            <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, padding:'32px 24px', textAlign:'center' }}>
-              <p style={{ fontSize:14, color:'var(--text-2)' }}>No brief details yet. Sarah will add more info once confirmed.</p>
+            <div className="bg-card border border-border rounded-xl px-6 py-8 text-center">
+              <p className="text-sm text-muted-foreground">No brief details yet. Sarah will add more info once confirmed.</p>
             </div>
           )}
         </div>
@@ -284,10 +284,10 @@ export default function GigDetailPage() {
       {/* Chat tab */}
       {tab === 'chat' && (
         <div>
-          <div style={{ background:'var(--white)', border:'1px solid var(--border)', borderRadius:12, overflow:'hidden' }}>
-            <div style={{ maxHeight:420, overflowY:'auto', padding:'16px', display:'flex', flexDirection:'column', gap:8 }}>
+          <div className="bg-card border border-border rounded-xl overflow-hidden">
+            <div className="max-h-[420px] overflow-y-auto p-4 flex flex-col gap-2">
               {messages.length === 0 && (
-                <p style={{ textAlign:'center', fontSize:13, color:'var(--text-2)', padding:'24px 0' }}>No messages yet</p>
+                <p className="text-center text-[13px] text-muted-foreground py-6">No messages yet</p>
               )}
               {messages.map((msg, i) => {
                 const isInfluencer = msg.sender_type === 'influencer'
@@ -295,23 +295,22 @@ export default function GigDetailPage() {
                 return (
                   <div key={msg.id}>
                     {showDate && (
-                      <div style={{ textAlign:'center', margin:'8px 0' }}>
-                        <span style={{ fontSize:11, color:'var(--text-2)', background:'var(--surface)', padding:'3px 10px', borderRadius:20 }}>{formatDay(msg.created_at)}</span>
+                      <div className="text-center my-2">
+                        <span className="text-[11px] text-muted-foreground bg-muted px-2.5 py-[3px] rounded-[20px]">{formatDay(msg.created_at)}</span>
                       </div>
                     )}
-                    <div style={{ display:'flex', flexDirection: isInfluencer ? 'row-reverse' : 'row', gap:8, alignItems:'flex-end' }}>
+                    <div className={cn('flex gap-2 items-end', isInfluencer ? 'flex-row-reverse' : 'flex-row')}>
                       {!isInfluencer && (
-                        <div style={{ width:26, height:26, borderRadius:'50%', background:'var(--gold)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:9, fontWeight:700, color:'#fff', flexShrink:0 }}>SC</div>
+                        <div className="w-[26px] h-[26px] rounded-full bg-gold flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">SC</div>
                       )}
-                      <div style={{ maxWidth:'70%' }}>
-                        <div style={{
-                          padding:'9px 13px', borderRadius: isInfluencer ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-                          background: isInfluencer ? 'var(--gold)' : 'var(--surface)',
-                          color: isInfluencer ? '#090E1A' : 'var(--text)',
-                          fontSize:13, lineHeight:1.5,
-                          border: isInfluencer ? 'none' : '1px solid var(--border)',
-                        }}>{msg.content}</div>
-                        <p style={{ fontSize:11, color:'var(--text-2)', marginTop:2, textAlign: isInfluencer ? 'right' : 'left' }}>{formatTime(msg.created_at)}</p>
+                      <div className="max-w-[70%]">
+                        <div className={cn(
+                          'px-[13px] py-[9px] text-[13px] leading-[1.5]',
+                          isInfluencer
+                            ? 'rounded-[12px_12px_4px_12px] bg-gold text-foreground border-none'
+                            : 'rounded-[12px_12px_12px_4px] bg-muted text-foreground border border-border',
+                        )}>{msg.content}</div>
+                        <p className={cn('text-[11px] text-muted-foreground mt-0.5', isInfluencer ? 'text-right' : 'text-left')}>{formatTime(msg.created_at)}</p>
                       </div>
                     </div>
                   </div>
@@ -321,27 +320,24 @@ export default function GigDetailPage() {
             </div>
 
             {/* Input */}
-            <div style={{ padding:'12px', borderTop:'1px solid var(--border)', display:'flex', gap:8 }}>
+            <div className="p-3 border-t border-border flex gap-2">
               <input
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
                 placeholder="Message Sarah..."
-                style={{ flex:1, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:8, padding:'9px 12px', fontSize:13, color:'var(--text)', fontFamily:'inherit', outline:'none' }}
+                className="flex-1 bg-muted border border-border rounded-lg px-3 py-[9px] text-[13px] text-foreground font-[inherit] outline-none"
               />
-              <button onClick={sendMessage} disabled={sending || !draft.trim()} style={{
-                background:'var(--gold)', border:'none', borderRadius:8, width:38, height:38, flexShrink:0,
-                display:'flex', alignItems:'center', justifyContent:'center', cursor: draft.trim() ? 'pointer' : 'not-allowed',
-                opacity: draft.trim() ? 1 : 0.4, transition:'opacity 0.2s',
-              }}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7L2 2l1.5 5L2 12l10-5z" fill="#090E1A"/></svg>
+              <button onClick={sendMessage} disabled={sending || !draft.trim()} className={cn(
+                'bg-gold border-none rounded-lg w-[38px] h-[38px] flex-shrink-0 flex items-center justify-center transition-opacity',
+                draft.trim() ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40',
+              )}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-foreground"><path d="M12 7L2 2l1.5 5L2 12l10-5z" fill="currentColor"/></svg>
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   )
 }
