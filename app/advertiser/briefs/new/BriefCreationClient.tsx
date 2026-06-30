@@ -208,11 +208,6 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
   }
 
   // ── Save as draft ───────────────────────────────────
-  // A lower-commitment alternative to Submit: persists the brief with
-  // status='draft' so it shows up on the dashboard, but doesn't trigger
-  // matching or count against the free-brief allowance — the briefs table
-  // already defaults to status='draft' and page.tsx already excludes drafts
-  // from the subscription gate, this just exposes that path in the UI.
   async function saveDraft() {
     if (!reviewData) return
     setSavingDraft(true)
@@ -227,6 +222,10 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
         setSubmitError(result.error || 'Could not save your draft. Please try again.')
         return
       }
+      // Invalidate Next's client router cache before navigating, so the
+      // dashboard list re-fetches instead of serving a stale cached payload
+      // from before this draft existed.
+      router.refresh()
       router.push('/advertiser/dashboard')
     } catch {
       setSubmitError('Could not save your draft. Please try again.')
@@ -250,6 +249,10 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
         setPhase('review')
         return
       }
+      // Same cache-invalidation reasoning as saveDraft — the dashboard list
+      // (and the brief detail page itself, if revisited) should never show
+      // stale data after this mutation.
+      router.refresh()
       router.push(`/advertiser/briefs/${result.brief_id}`)
     } catch {
       setSubmitError('Something went wrong submitting your brief. Please try again.')
