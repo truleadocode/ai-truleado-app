@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { CalendarDays, Sparkles, FileText } from 'lucide-react'
+import { CalendarDays, Sparkles, FileText, Check, Instagram, Youtube, Twitter, Linkedin, Music2, Pin, Share2, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Opportunity {
@@ -25,8 +25,12 @@ interface Props {
   influencerId: string
 }
 
-const PLATFORM_ICONS: Record<string, string> = {
-  instagram: '📸', tiktok: '🎵', youtube: '▶️', pinterest: '📌', twitter: '🐦', linkedin: '💼',
+// SVG icons (Lucide) rather than emoji — consistent, themeable, crisp at any size.
+const PLATFORM_ICONS: Record<string, LucideIcon> = {
+  instagram: Instagram, tiktok: Music2, youtube: Youtube, pinterest: Pin, twitter: Twitter, linkedin: Linkedin,
+}
+function platformIcon(p: string): LucideIcon {
+  return PLATFORM_ICONS[p] || Share2
 }
 
 const HOW_IT_WORKS = [
@@ -49,12 +53,18 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
   )
 
   async function respond(matchId: string, response: 'interested' | 'declined') {
+    // Optimistic update; roll back if the request fails (error-recovery).
     setStatuses(prev => ({ ...prev, [matchId]: response }))
-    await fetch('/api/influencer/respond-opportunity', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ match_id: matchId, response, influencer_id: influencerId }),
-    })
+    try {
+      const res = await fetch('/api/influencer/respond-opportunity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ match_id: matchId, response, influencer_id: influencerId }),
+      })
+      if (!res.ok) throw new Error('request failed')
+    } catch {
+      setStatuses(prev => ({ ...prev, [matchId]: 'pending' }))
+    }
   }
 
   const active  = opportunities.filter(o => statuses[o.id] === 'pending')
@@ -106,7 +116,7 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
                 <Card key={opp.id} className="border-border">
                   <CardContent className="pt-5 pb-3">
                     <div className="flex items-start gap-3 mb-4">
-                      <div className="w-9 h-9 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-sm shrink-0">✨</div>
+                      <div className="w-9 h-9 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center shrink-0"><Sparkles size={16} className="text-gold" /></div>
                       <div>
                         <p className="text-xs font-bold text-foreground">Sarah Chen · Truleado</p>
                         <p className="text-xs text-muted-foreground mt-0.5">Brand partnership opportunity</p>
@@ -120,11 +130,14 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
                     )}
 
                     <div className="flex flex-wrap gap-1.5">
-                      {(b.platforms || []).map((p: string) => (
-                        <Badge key={p} variant="secondary" className="text-[10px] gap-1 font-semibold capitalize">
-                          <span>{PLATFORM_ICONS[p] || '📱'}</span>{p}
-                        </Badge>
-                      ))}
+                      {(b.platforms || []).map((p: string) => {
+                        const Icon = platformIcon(p)
+                        return (
+                          <Badge key={p} variant="secondary" className="text-[10px] gap-1 font-semibold capitalize">
+                            <Icon size={10} />{p}
+                          </Badge>
+                        )
+                      })}
                       {(b.content_types || []).map((c: string) => (
                         <Badge key={c} variant="secondary" className="text-[10px] font-semibold capitalize">
                           {c.replace(/_/g, ' ')}
@@ -153,10 +166,10 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
                     </Button>
                     <Button
                       size="sm"
-                      className="flex-1 bg-gold hover:bg-gold/90 text-white font-bold"
+                      className="flex-1 bg-gold hover:bg-gold/90 text-white font-bold gap-1.5"
                       onClick={() => respond(opp.id, 'interested')}
                     >
-                      I'm interested ✓
+                      <Check size={14} /> I'm interested
                     </Button>
                   </CardFooter>
                 </Card>
@@ -174,10 +187,15 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
           <div className="space-y-3">
             {past.map(opp => (
               <div key={opp.id} className="bg-card border border-border rounded-xl px-4 py-3 flex items-center justify-between gap-3 opacity-60">
-                <div className="flex gap-1.5 flex-wrap">
-                  {(opp.briefs?.platforms || []).map((p: string) => (
-                    <span key={p} className="text-[10px] font-semibold text-muted-foreground capitalize">{PLATFORM_ICONS[p]} {p}</span>
-                  ))}
+                <div className="flex gap-2 flex-wrap">
+                  {(opp.briefs?.platforms || []).map((p: string) => {
+                    const Icon = platformIcon(p)
+                    return (
+                      <span key={p} className="text-[10px] font-semibold text-muted-foreground capitalize inline-flex items-center gap-1">
+                        <Icon size={10} /> {p}
+                      </span>
+                    )
+                  })}
                 </div>
                 <Badge variant={statuses[opp.id] === 'interested' ? 'success' : 'outline'} className="text-[10px] shrink-0">
                   {statuses[opp.id] === 'interested' ? 'Interested' : 'Passed'}
