@@ -200,8 +200,26 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
       addSarah("Perfect! Create your account below to submit your brief and see your creator shortlist when it's ready.")
       setPhase('auth')
     } else {
-      addSarah('No problem — what would you like to change?'); setStep('brand')
+      addSarah('No problem — just tell me what to change (e.g. "the budget should be flexible" or "swap Pinterest for Instagram") and I\'ll update it.')
+      setStep('brief_edit')
     }
+  }
+
+  async function sendEditMessage(text: string) {
+    addUser(text); setInput(''); setIsThinking(true)
+    try {
+      const res = await fetch('/api/advertiser/brief-chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'edit', session_key: sessionKey, user_message: text, data: briefData }),
+      })
+      const data = await res.json()
+      if (data.error) { addSarah(`Something went wrong: ${data.error}`); return }
+      const updated = data.session_data || data.extracted || briefData
+      setBriefData(updated)
+      addSarah(`${data.sarah_reply || 'Updated!'}\n\nHere's the updated brief:\n\n${buildSummary(updated)}\n\nDoes this look right? Type "yes" to submit, or tell me what else to change.`)
+      setStep('brief_confirm')
+    } catch { addSarah("Sorry, I had a hiccup — try describing the change again?") }
+    finally { setIsThinking(false); setTimeout(() => inputRef.current?.focus(), 100) }
   }
 
   function signInWithGoogle() {
@@ -258,6 +276,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
     if (phase === 'chat') await sendOnboardingMessage(text)
     else if (phase === 'brief_chat') {
       if (step === 'brief_confirm') await handleBriefConfirm(text)
+      else if (step === 'brief_edit') await sendEditMessage(text)
       else await sendBriefMessage(text)
     }
   }
