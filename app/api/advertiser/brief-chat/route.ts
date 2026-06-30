@@ -66,6 +66,23 @@ const BRIEF_FIELDS = [
   'budget_flexible','go_live_date','niche_fit','tone_notes','dos','donts',
 ]
 
+// Merge a proposed update onto the current brief WITHOUT letting nulls,
+// undefineds, or stray empty arrays from the model silently erase fields
+// it wasn't actually asked to touch. Gemini is told to "copy every other
+// field exactly", but JSON-schema-following models can still emit null
+// for anything they're not actively reasoning about — a naive object
+// spread would let that null clobber a perfectly good existing value.
+function mergeBriefUpdate(current: Record<string, any>, proposed: Record<string, any>) {
+  const merged = { ...current }
+  for (const key of BRIEF_FIELDS) {
+    const val = proposed[key]
+    if (val === undefined || val === null) continue
+    if (Array.isArray(val) && val.length === 0 && Array.isArray(current[key]) && current[key].length > 0) continue
+    merged[key] = val
+  }
+  return merged
+}
+
 async function callGemini(system: string, user: string) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction: system })
@@ -121,7 +138,8 @@ export async function POST(request: NextRequest) {
   // (which ignores already-extracted fields), this takes the FULL
   // current data plus a free-text description of the change and asks
   // Gemini to return the full brief with only the relevant field(s)
-  // updated. Everything else passes through untouched.
+  // updated. mergeBriefUpdate guards the merge so a null/empty value
+  // the model returns for an untouched field can never erase it.
   if (action === 'edit') {
     if (!session_key || !user_message) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
@@ -144,11 +162,11 @@ Return ONLY JSON: {"updated":<full brief object, current data merged with the re
     try { result = await callGemini(SARAH_SYSTEM, prompt) }
     catch (e) { return NextResponse.json({ error: 'AI error', detail: String(e) }, { status: 500 }) }
 
-    const updated = { ...(data || {}), ...(result.updated || {}) }
+    const updated = mergeBriefUpdate(data || {}, result.updated || {})
 
     const updates: Record<string, any> = { current_step: 'confirm', last_seen_at: new Date().toISOString() }
     for (const key of BRIEF_FIELDS) {
-      if (updated[key] !== undefined) updates[key] = updated[key]
+      if (updated[key] !== undefined && updated[key] !== null) updates[key] = updated[key]
     }
     await service.from('brief_sessions').upsert({ session_key, ...updates }, { onConflict: 'session_key' })
 

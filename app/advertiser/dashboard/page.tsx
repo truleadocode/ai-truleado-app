@@ -9,6 +9,7 @@ import { ChevronRight, Zap, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning' | 'blue' | 'outline' }> = {
+  draft:          { label: 'Draft',            variant: 'outline' },
   submitted:      { label: 'Matching',         variant: 'blue'    },
   matching:       { label: 'Matching',         variant: 'blue'    },
   shortlist_ready:{ label: 'Shortlist ready',  variant: 'success' },
@@ -43,7 +44,7 @@ export default async function AdvertiserDashboardPage() {
 
   return (
     <DashboardShell role="advertiser">
-      {/* ── Page header ─────────────────────────────────── */}
+      {/* ── Page header ───────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight">
@@ -61,7 +62,7 @@ export default async function AdvertiserDashboardPage() {
       </div>
 
       {briefList.length === 0 ? (
-        /* ── Empty state ──────────────────────────────── */
+        /* ── Empty state ─────────────────────────── */
         <div className="text-center py-24">
           <FileText size={40} className="mx-auto text-muted-foreground/30 mb-4" />
           <h3 className="font-bold text-lg mb-2">No briefs yet</h3>
@@ -73,7 +74,7 @@ export default async function AdvertiserDashboardPage() {
           </Button>
         </div>
       ) : (
-        /* ── Brief grid ────────────────────────────────── */
+        /* ── Brief grid ───────────────────────────── */
         <div className="grid sm:grid-cols-2 gap-4">
           {briefList.map(brief => {
             const matches   = (brief.brief_matches as any[]) || []
@@ -81,18 +82,19 @@ export default async function AdvertiserDashboardPage() {
             const needed    = brief.creators_needed || 1
             const pct       = Math.min(100, Math.round((confirmed / needed) * 100))
             const statusCfg = STATUS_MAP[brief.status] || STATUS_MAP.submitted
+            const isDraft   = brief.status === 'draft'
 
             return (
               <Link
                 key={brief.id}
-                href={`/advertiser/briefs/${brief.id}`}
+                href={isDraft ? '/advertiser/briefs/new' : `/advertiser/briefs/${brief.id}`}
                 className="no-underline group"
               >
                 <Card className="h-full transition-shadow hover:shadow-md border-border group-hover:border-gold/40">
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm font-bold truncate">{brief.brand_name}</CardTitle>
+                        <CardTitle className="text-sm font-bold truncate">{brief.brand_name || 'Untitled brief'}</CardTitle>
                         <CardDescription className="text-xs mt-1 line-clamp-2">{brief.product_description}</CardDescription>
                       </div>
                       <Badge variant={statusCfg.variant} className="shrink-0 text-[10px]">
@@ -109,21 +111,25 @@ export default async function AdvertiserDashboardPage() {
                       ))}
                     </div>
 
-                    {/* Confirmation bar */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[11px] text-muted-foreground">
-                        <span>Creators confirmed</span>
-                        <span className="font-bold text-foreground">{confirmed}/{needed}</span>
+                    {isDraft ? (
+                      <p className="text-[11px] text-muted-foreground">Not submitted yet — click to pick up where you left off.</p>
+                    ) : (
+                      /* Confirmation bar */
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between text-[11px] text-muted-foreground">
+                          <span>Creators confirmed</span>
+                          <span className="font-bold text-foreground">{confirmed}/{needed}</span>
+                        </div>
+                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
 
                   <CardFooter className="pt-0 pb-3">
                     <span className="ml-auto text-xs font-bold text-gold flex items-center gap-1 group-hover:gap-1.5 transition-all">
-                      View <ChevronRight size={13} />
+                      {isDraft ? 'Continue' : 'View'} <ChevronRight size={13} />
                     </span>
                   </CardFooter>
                 </Card>
