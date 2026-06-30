@@ -157,15 +157,24 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
     try {
       const res = await fetch('/api/advertiser/parse-brief', { method: 'POST', body: formData })
       const data = await res.json()
-      if (data.extracted && data.extracted.confidence !== 'low') {
+
+      if (data.notice === 'legacy_doc_unsupported') {
+        addSarah("Older .doc files are tricky for me to read reliably — could you re-export it as a PDF or .docx and try again? Or I can just ask you a few quick questions instead.")
+        setStep('brand')
+        return
+      }
+
+      const summary = data.extracted ? buildSummary(data.extracted) : ''
+
+      if (data.extracted && data.extracted.confidence !== 'low' && summary.trim()) {
         setBriefData(data.extracted)
-        addSarah(`Here's what I found:\n\n${buildSummary(data.extracted)}\n\nDoes this look right? Type "yes" to submit.`)
+        addSarah(`Here's what I found:\n\n${summary}\n\nDoes this look right? Type "yes" to submit.`)
         setStep('brief_confirm')
       } else {
-        addSarah("I had trouble reading that. Let me ask you directly — what's the brand name and what are you promoting?")
+        addSarah("I had trouble reading that file properly — could be the format or scan quality. Let's do this together instead. What's the brand name and what are you promoting?")
         setStep('brand')
       }
-    } catch { addSarah("Something went wrong. What's the brand name and what are you promoting?"); setStep('brand') }
+    } catch { addSarah("Something went wrong reading that file. What's the brand name and what are you promoting?"); setStep('brand') }
     finally { setIsThinking(false); setTimeout(() => inputRef.current?.focus(), 100) }
   }
 
