@@ -6,12 +6,20 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import ParseProgressCard, { type ParseStatus } from '@/components/ParseProgressCard'
 import { cn } from '@/lib/utils'
-import { Send } from 'lucide-react'
+import {
+  Send, Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Share2,
+  Sparkles, PartyPopper, Upload, type LucideIcon,
+} from 'lucide-react'
 
 const SESSION_KEY_LS = 'truleado_session_key'
 
-const PLATFORM_ICONS: Record<string, string> = {
-  instagram: '📸', tiktok: '🎵', youtube: '▶️', pinterest: '📌',
+const PLATFORM_ICONS: Record<string, LucideIcon> = {
+  instagram: Instagram, tiktok: Music2, youtube: Youtube, pinterest: Pin,
+  twitter: Twitter, linkedin: Linkedin,
+}
+
+function platformIcon(platform: string): LucideIcon {
+  return PLATFORM_ICONS[platform] || Share2
 }
 
 type Phase = 'loading' | 'chat' | 'auth' | 'screenshots' | 'done'
@@ -218,7 +226,7 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
     )}>
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 bg-card border-b border-border shrink-0">
-        <div className="w-8 h-8 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-sm">✨</div>
+        <div className="w-8 h-8 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-gold"><Sparkles size={16} /></div>
         <div>
           <p className="text-sm font-semibold">Sarah Chen</p>
           <p className="text-[11px] text-muted-foreground">Creator Partnerships · Truleado</p>
@@ -229,7 +237,7 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
         {phase === 'loading' && (
           <div className="flex-1 flex items-center justify-center p-10">
             <div className="text-center text-muted-foreground text-sm">
-              <div className="text-2xl mb-2">✨</div>Getting things ready…
+              <div className="flex justify-center mb-2 text-gold"><Sparkles size={24} /></div>Getting things ready…
             </div>
           </div>
         )}
@@ -302,7 +310,11 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
         {phase === 'screenshots' && (
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 min-h-0">
             <div className="bg-card border border-border rounded-2xl p-4 text-sm text-foreground leading-relaxed shadow-sm">
-              {firstName ? `Amazing, ${firstName}! 🎉` : 'Amazing! 🎉'} Last step — upload some screenshots from your platforms so brands can see your real stats.
+              <span className="inline-flex items-center gap-1.5">
+                {firstName ? `Amazing, ${firstName}!` : 'Amazing!'}
+                <PartyPopper size={16} className="text-gold shrink-0" />
+              </span>{' '}
+              Last step — upload some screenshots from your platforms so brands can see your real stats.
             </div>
 
             <div className="bg-accent border-l-4 border-gold rounded-lg px-4 py-3 text-xs text-muted-foreground leading-relaxed">
@@ -323,7 +335,7 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
                   parseStatus === 'complete' ? 'border-green-border' : 'border-border'
                 )}>
                   <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xl">{PLATFORM_ICONS[p.platform] || '📱'}</span>
+                    {(() => { const Icon = platformIcon(p.platform); return <Icon size={20} className="text-foreground shrink-0" /> })()}
                     <div>
                       <p className="text-sm font-semibold capitalize">{p.platform}</p>
                       {p.handle && <p className="text-xs text-muted-foreground">@{p.handle}</p>}
@@ -336,7 +348,7 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
                     } />
                   ) : (
                     <label className="flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-border rounded-xl cursor-pointer text-muted-foreground text-xs hover:border-gold hover:text-gold transition-colors">
-                      📤 {raw === 'complete' ? 'Upload more screenshots' : 'Upload screenshots'}
+                      <Upload size={14} className="shrink-0" /> {raw === 'complete' ? 'Upload more screenshots' : 'Upload screenshots'}
                       <input type="file" multiple accept="image/*" className="hidden"
                         onChange={e => { if (e.target.files?.length) handleScreenshotUpload(p.id, e.target.files) }} />
                     </label>

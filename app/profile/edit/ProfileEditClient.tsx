@@ -9,6 +9,7 @@ import LanguageSelector from '@/components/LanguageSelector'
 import ParseProgressCard from '@/components/ParseProgressCard'
 import type { ParseStatus } from '@/components/ParseProgressCard'
 import { cn } from '@/lib/utils'
+import { Heart, Ban, Check } from 'lucide-react'
 
 const UPLOAD_HINTS: Record<string, string[]> = {
   instagram: [
@@ -481,7 +482,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
       {section === 'brands' && (
         <div className="flex flex-col gap-5">
           <div>
-            <p className="text-[13px] font-semibold mb-1">Brand categories I love ❤️</p>
+            <p className="text-[13px] font-semibold mb-1 inline-flex items-center gap-1.5">Brand categories I love <Heart size={13} className="text-green" /></p>
             <p className="text-xs text-muted-foreground mb-2.5">Categories you enjoy working with</p>
             <div className="flex gap-1.5 flex-wrap mb-1.5">
               {CATEGORIES.filter(c => !brandNever.includes(c)).map(c => chip(c, brandLoves.includes(c), () => { toggle(brandLoves, setBrandLoves, c); setBrandNever(prev => prev.filter(x => x !== c)) }, 'green'))}
@@ -490,7 +491,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             <textarea className={cn(inputClass, 'min-h-[60px] resize-y')} value={brandLovesCustom} onChange={e => setBrandLovesCustom(e.target.value)} placeholder="Add your own (e.g. sustainable brands, indie brands...)" />
           </div>
           <div>
-            <p className="text-[13px] font-semibold mb-1">Categories I never work with 🚫</p>
+            <p className="text-[13px] font-semibold mb-1 inline-flex items-center gap-1.5">Categories I never work with <Ban size={13} className="text-red" /></p>
             <p className="text-xs text-muted-foreground mb-2.5">Hard stops — Sarah will never match you with these</p>
             <div className="flex gap-1.5 flex-wrap mb-2.5">
               {CATEGORIES.filter(c => !brandLoves.includes(c)).map(c => chip(c, brandNever.includes(c), () => { toggle(brandNever, setBrandNever, c); setBrandLoves(prev => prev.filter(x => x !== c)) }, 'red'))}
@@ -600,7 +601,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             const showProgress = parseStatus === 'processing' || parseStatus === 'complete' || parseStatus === 'failed'
 
             const parsedLabel = liveStatus === 'complete'
-              ? `Parsed ✓ · Last updated ${p.last_parsed_at ? new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' }) : ''}`
+              ? `Parsed · Last updated ${p.last_parsed_at ? new Date(p.last_parsed_at).toLocaleDateString('en-GB', { month:'short', day:'numeric', year:'numeric' }) : ''}`
               : 'No screenshots uploaded yet'
             const parsedBadgeClass = liveStatus === 'complete'
               ? 'bg-green-bg text-green border-green-border'
@@ -612,6 +613,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                   <p className="text-sm font-semibold capitalize flex-1">{p.platform}</p>
                   {!showProgress && (
                     <span className={cn('inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-[20px] border', parsedBadgeClass)}>
+                      {liveStatus === 'complete' && <Check size={12} className="flex-shrink-0" />}
                       {parsedLabel}
                     </span>
                   )}
@@ -629,9 +631,9 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                   <button
                     onClick={() => updateHandle(p.id)}
                     disabled={savingHandle === p.id}
-                    className="bg-muted border border-border rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer text-foreground flex-shrink-0 whitespace-nowrap"
+                    className="bg-muted border border-border rounded-md px-3 py-1.5 text-xs font-semibold cursor-pointer text-foreground flex-shrink-0 whitespace-nowrap inline-flex items-center gap-1"
                   >
-                    {savingHandle === p.id ? 'Saving…' : savedHandle === p.id ? 'Saved ✓' : 'Update'}
+                    {savingHandle === p.id ? 'Saving…' : savedHandle === p.id ? <><Check size={12} className="flex-shrink-0" />Saved</> : 'Update'}
                   </button>
                 </div>
 
@@ -746,9 +748,9 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
           <button
             onClick={saveSection}
             disabled={saving}
-            className={cn('text-white border-none rounded-[9px] px-7 py-3 text-sm font-semibold transition-colors', saved ? 'bg-green' : 'bg-gold', saving ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100')}
+            className={cn('text-white border-none rounded-[9px] px-7 py-3 text-sm font-semibold transition-colors inline-flex items-center gap-1.5', saved ? 'bg-green' : 'bg-gold', saving ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100')}
           >
-            {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save changes'}
+            {saving ? 'Saving…' : saved ? <><Check size={14} className="flex-shrink-0" />Saved</> : 'Save changes'}
           </button>
         </div>
       )}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
-import { Loader2, MessageCircle, FileText, Send, Lock, Pencil, AlertCircle, Check, X, Save } from 'lucide-react'
+import { Loader2, MessageCircle, FileText, Send, Lock, Pencil, AlertCircle, Check, X, Save, Sparkles, ChevronRight } from 'lucide-react'
 
 const SESSION_KEY_LS = 'truleado_brief_session_key'
 
@@ -264,7 +264,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
       {phase === 'choose' && (
         <div className="max-w-lg mx-auto py-8">
           <div className="text-center mb-8">
-            <div className="w-12 h-12 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center mx-auto mb-4 text-xl">✨</div>
+            <div className="w-12 h-12 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center mx-auto mb-4"><Sparkles size={22} className="text-gold" /></div>
             <h1 className="text-xl font-semibold tracking-tight mb-1">Create a brief</h1>
             <p className="text-sm text-muted-foreground">How would you like to get started?</p>
           </div>
@@ -334,7 +334,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
             </CardContent>
           </Card>
 
-          {editNote && <p className="text-xs text-muted-foreground mb-3 px-1">✨ {editNote}</p>}
+          {editNote && <p className="text-xs text-muted-foreground mb-3 px-1 inline-flex items-center gap-1"><Sparkles size={12} className="text-gold" /> {editNote}</p>}
 
           {editing ? (
             <div className="flex gap-2 mb-4">
@@ -363,8 +363,8 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
                 {savingDraft ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                 {savingDraft ? 'Saving…' : 'Save brief'}
               </Button>
-              <Button className="flex-1 min-w-[140px] bg-gold hover:bg-gold/90 text-white font-semibold" onClick={() => submitBrief(reviewData)}>
-                Submit brief →
+              <Button className="flex-1 min-w-[140px] bg-gold hover:bg-gold/90 text-white font-semibold gap-1" onClick={() => submitBrief(reviewData)}>
+                Submit brief <ChevronRight size={14} />
               </Button>
             </div>
           )}
@@ -381,7 +381,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
       {phase === 'chat' && (
         <div className="max-w-xl mx-auto flex flex-col" style={{ height: 'calc(100vh - 220px)' }}>
           <div className="flex items-center gap-2.5 px-1 pb-4 border-b border-border mb-4">
-            <div className="w-8 h-8 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-sm">✨</div>
+            <div className="w-8 h-8 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center"><Sparkles size={15} className="text-gold" /></div>
             <div>
               <p className="text-sm font-semibold">Sarah Chen</p>
               <p className="text-[11px] text-muted-foreground">Building your brief</p>

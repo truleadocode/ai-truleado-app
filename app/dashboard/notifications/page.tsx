@@ -2,17 +2,28 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { createServiceClient } from '@/lib/supabase/server'
 import { cn } from '@/lib/utils'
+import {
+  Briefcase,
+  CheckCircle,
+  PartyPopper,
+  BarChart3,
+  Hand,
+  MessageSquare,
+  Bell,
+  type LucideIcon,
+} from 'lucide-react'
 
-function notifIcon(type: string) {
-  switch (type) {
-    case 'new_offer':       return '💼'
-    case 'gig_confirmed':   return '✅'
-    case 'gig_complete':    return '🎉'
-    case 'profile_parsed':  return '📊'
-    case 'welcome':         return '👋'
-    case 'message':         return '💬'
-    default:                return '🔔'
-  }
+const notifIconMap: Record<string, LucideIcon> = {
+  new_offer:      Briefcase,
+  gig_confirmed:  CheckCircle,
+  gig_complete:   PartyPopper,
+  profile_parsed: BarChart3,
+  welcome:        Hand,
+  message:        MessageSquare,
+}
+
+function notifIcon(type: string): LucideIcon {
+  return notifIconMap[type] ?? Bell
 }
 
 export default async function NotificationsPage() {
@@ -42,7 +53,7 @@ export default async function NotificationsPage() {
 
       {(!notifs || notifs.length === 0) && (
         <div className="bg-card border border-border rounded-xl px-6 py-12 text-center">
-          <p className="text-xl mb-2.5">🔔</p>
+          <Bell size={30} className="mx-auto mb-2.5 text-muted-foreground" />
           <p className="text-sm font-semibold mb-1.5">No notifications yet</p>
           <p className="text-[13px] text-muted-foreground">You'll be notified when Sarah sends you an offer or update.</p>
         </div>
@@ -56,8 +67,8 @@ export default async function NotificationsPage() {
             n.read ? 'border-border opacity-75' : 'border-gold-border opacity-100'
           )}
         >
-          <div className="w-[38px] h-[38px] rounded-[10px] bg-muted border border-border flex items-center justify-center text-lg flex-shrink-0">
-            {notifIcon(n.type)}
+          <div className="w-[38px] h-[38px] rounded-[10px] bg-muted border border-border flex items-center justify-center flex-shrink-0">
+            {(() => { const Icon = notifIcon(n.type); return <Icon size={18} className="text-muted-foreground" /> })()}
           </div>
           <div className="flex-1">
             <div className="flex items-start justify-between gap-2 mb-[3px]">

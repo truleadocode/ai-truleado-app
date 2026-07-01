@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { Check } from 'lucide-react'
 
 /* ─── helpers ─── */
 function fmt(v: number | null | undefined) {
@@ -231,7 +232,7 @@ export default async function ViewProfilePage() {
                     <span className={cn(
                       'text-[11px] font-semibold px-[9px] py-0.5 rounded-[20px] border',
                       isParsed ? 'bg-green-bg text-green border-green-border' : 'bg-muted text-muted-foreground border-border',
-                    )}>{isParsed ? 'Parsed ✓' : 'Stats pending'}</span>
+                    )}>{isParsed ? <span className="inline-flex items-center gap-0.5">Parsed <Check size={12} strokeWidth={2.5} /></span> : 'Stats pending'}</span>
                   </div>
                   <div className="grid grid-cols-4 gap-2">
                     <STAT label="Followers" value={fmt(p.followers)} />
@@ -378,7 +379,7 @@ export default async function ViewProfilePage() {
                 <div>
                   <p className="text-[11px] text-muted-foreground mb-1 font-semibold">AI summary</p>
                   <p className={cn('text-[13px] font-semibold', inf.ai_summary_verified ? 'text-green' : 'text-muted-foreground')}>
-                    {inf.ai_summary_verified ? 'Verified ✓' : inf.ai_summary ? 'Generated' : 'Not yet'}
+                    {inf.ai_summary_verified ? <span className="inline-flex items-center gap-0.5">Verified <Check size={13} strokeWidth={2.5} /></span> : inf.ai_summary ? 'Generated' : 'Not yet'}
                   </p>
                 </div>
               </div>

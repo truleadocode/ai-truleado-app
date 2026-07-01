@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, XCircle, Users, TrendingUp, Star, ArrowLeft } from 'lucide-react'
+import { CheckCircle, XCircle, Users, TrendingUp, Star, ArrowLeft, Check, Clock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Match {
@@ -179,8 +179,8 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
 
       {isConfirmed && inf.email && (
         <CardFooter className="pt-0">
-          <p className="w-full text-center text-[11px] text-green font-semibold">
-            ✓ Handoff email sent · {inf.email}
+          <p className="w-full text-center text-[11px] text-green font-semibold inline-flex items-center justify-center gap-1">
+            <Check size={12} /> Handoff email sent · {inf.email}
           </p>
         </CardFooter>
       )}
@@ -254,7 +254,7 @@ export default function BriefDetailClient({ brief, initialMatches }: Props) {
       {/* ── Match cards ─────────────────────────────────── */}
       {matches.length === 0 ? (
         <div className="text-center py-16">
-          <div className="text-3xl mb-3">⏳</div>
+          <div className="flex justify-center mb-3"><Clock size={28} className="text-muted-foreground" /></div>
           <p className="text-sm font-semibold mb-1">Finding your creators…</p>
           <p className="text-xs text-muted-foreground">We're reaching out to matched creators. Check back soon.</p>
         </div>

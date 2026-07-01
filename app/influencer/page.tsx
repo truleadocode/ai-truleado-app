@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import OnboardingClient from '../onboarding/OnboardingClient'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { AlertTriangle } from 'lucide-react'
 
 export default async function InfluencerPage({ searchParams }: { searchParams: { error?: string } }) {
   const supabase = await createClient()
@@ -12,7 +13,7 @@ export default async function InfluencerPage({ searchParams }: { searchParams: {
     return (
       <div className="min-h-screen bg-muted flex items-center justify-center p-6 font-sans">
         <div className="max-w-md w-full bg-card border border-red-border rounded-2xl p-8 text-center shadow-sm">
-          <div className="text-4xl mb-5">⚠️</div>
+          <div className="flex justify-center mb-5"><AlertTriangle size={36} className="text-red" /></div>
           <h2 className="text-lg font-semibold mb-3">Account already exists</h2>
           <p className="text-sm text-muted-foreground leading-relaxed mb-6">
             This Google account is already registered as a <strong>brand / agency</strong> on Truleado.

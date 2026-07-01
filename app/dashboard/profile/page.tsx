@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Share2, Check, ChevronRight, type LucideIcon } from 'lucide-react'
 
 function formatEur(cents: number) {
   return `€${(cents / 100).toLocaleString('en-EU')}`
@@ -14,8 +15,13 @@ function fmt(v: number | null | undefined, suffix = '') {
   return `${v}${suffix}`
 }
 
-const PLATFORM_EMOJI: Record<string, string> = {
-  instagram: '📸', tiktok: '🎵', youtube: '▶️', pinterest: '📌',
+const PLATFORM_ICON: Record<string, LucideIcon> = {
+  instagram: Instagram, tiktok: Music2, youtube: Youtube, pinterest: Pin,
+  twitter: Twitter, linkedin: Linkedin,
+}
+
+function platformIcon(p: string): LucideIcon {
+  return PLATFORM_ICON[p] || Share2
 }
 
 export default async function ProfilePage() {
@@ -122,7 +128,7 @@ export default async function ProfilePage() {
                 {inf.ai_summary ? (
                   <>AI summary · {inf.ai_parsed_at ? `Updated ${Math.round((Date.now() - new Date(inf.ai_parsed_at).getTime()) / 86400000)} days ago` : 'Generated'}</>
                 ) : (
-                  <Link href="/profile/edit?tab=platforms" className="text-gold no-underline font-semibold">Upload screenshots to improve your summary →</Link>
+                  <Link href="/profile/edit?tab=platforms" className="text-gold no-underline font-semibold inline-flex items-center gap-0.5">Upload screenshots to improve your summary <ChevronRight size={14} /></Link>
                 )}
               </span>
             </div>
@@ -134,12 +140,12 @@ export default async function ProfilePage() {
               <HEADING>Social accounts</HEADING>
               {platforms!.map((p, i) => (
                 <div key={p.id} className={cn('flex items-center gap-3 py-3', i < platforms!.length - 1 ? 'border-b border-border' : '')}>
-                  <div className="w-[34px] h-[34px] rounded-lg bg-muted border border-border flex items-center justify-center text-[15px] shrink-0">
-                    {PLATFORM_EMOJI[p.platform] || '📱'}
+                  <div className="w-[34px] h-[34px] rounded-lg bg-muted border border-border flex items-center justify-center text-foreground shrink-0">
+                    {(() => { const Icon = platformIcon(p.platform); return <Icon size={16} /> })()}
                   </div>
                   <div className="flex-1">
                     <p className="text-[13px] font-semibold text-foreground">{p.platform.charAt(0).toUpperCase() + p.platform.slice(1)}</p>
-                    <span className="text-[11px] text-muted-foreground/60">@{p.handle} · {p.parse_status === 'complete' ? 'Parsed ✓' : 'Stats pending'}</span>
+                    <span className="text-[11px] text-muted-foreground/60 inline-flex items-center gap-0.5">@{p.handle} · {p.parse_status === 'complete' ? <>Parsed <Check size={12} /></> : 'Stats pending'}</span>
                   </div>
                   {p.parse_status === 'complete' && (
                     <div className="text-right">
@@ -264,8 +270,8 @@ export default async function ProfilePage() {
             <FIELD label="Member since" value={new Date(inf.created_at).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })} />
             <div className="flex items-start justify-between py-[9px] gap-4">
               <span className="text-xs text-muted-foreground shrink-0">AI summary</span>
-              <span className={cn('text-xs font-semibold', inf.ai_summary ? 'text-green' : 'text-muted-foreground/60')}>
-                {inf.ai_summary ? 'Verified ✓' : 'Not generated'}
+              <span className={cn('text-xs font-semibold inline-flex items-center gap-0.5', inf.ai_summary ? 'text-green' : 'text-muted-foreground/60')}>
+                {inf.ai_summary ? <>Verified <Check size={13} /></> : 'Not generated'}
               </span>
             </div>
           </CARD>

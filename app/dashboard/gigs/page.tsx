@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { Building2, Lock } from 'lucide-react'
 
 function formatEur(cents: number) {
   return `€${(cents / 100).toLocaleString('en-EU')}`
@@ -79,8 +80,8 @@ export default async function GigsPage({ searchParams }: { searchParams: { tab?:
             isComplete ? 'opacity-65' : 'opacity-100',
           )}>
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-[10px] bg-muted border border-border flex items-center justify-center text-lg shrink-0">
-                {gig.brand_revealed ? '🌿' : '🔒'}
+              <div className="w-10 h-10 rounded-[10px] bg-muted border border-border flex items-center justify-center shrink-0">
+                {gig.brand_revealed ? <Building2 size={20} className="text-muted-foreground" /> : <Lock size={20} className="text-muted-foreground" />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-[3px]">

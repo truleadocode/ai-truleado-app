@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { Building2, Lock } from 'lucide-react'
 
 type Gig = {
   id: string
@@ -164,8 +165,8 @@ export default function GigDetailPage() {
       {/* Header card */}
       <div className="bg-card border border-border rounded-xl p-5 mb-4">
         <div className="flex items-start gap-3 mb-4">
-          <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center text-[22px] flex-shrink-0">
-            {gig.brand_revealed ? '🌿' : '🔒'}
+          <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center flex-shrink-0">
+            {gig.brand_revealed ? <Building2 size={22} className="text-muted-foreground" /> : <Lock size={22} className="text-muted-foreground" />}
           </div>
           <div className="flex-1">
             <h2 className="text-[17px] font-semibold mb-[3px]">

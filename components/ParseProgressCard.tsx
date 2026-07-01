@@ -50,7 +50,7 @@ export default function ParseProgressCard({ status, onSettled }: Props) {
     return (
       <div className="flex items-center gap-2 py-1">
         <CheckCircle size={14} className="text-green" />
-        <span className="text-xs text-green font-semibold">Screenshots analysed ✓</span>
+        <span className="text-xs text-green font-semibold">Screenshots analysed</span>
       </div>
     )
   }

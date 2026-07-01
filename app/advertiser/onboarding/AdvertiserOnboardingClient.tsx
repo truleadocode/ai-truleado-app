@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
-import { Send } from 'lucide-react'
+import { Send, Sparkles, FileText, MessageSquare } from 'lucide-react'
 
 const SESSION_KEY_LS = 'truleado_adv_session_key'
 
@@ -334,7 +334,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
     )}>
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 bg-card border-b border-border shrink-0">
-        <div className="w-8 h-8 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-sm">✨</div>
+        <div className="w-8 h-8 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-sm"><Sparkles size={16} className="text-gold" /></div>
         <div>
           <p className="text-sm font-semibold">Sarah Chen</p>
           <p className="text-[11px] text-muted-foreground">Creator Partnerships · Truleado</p>
@@ -348,7 +348,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
         {phase === 'loading' && (
           <div className="flex-1 flex items-center justify-center p-10">
             <div className="text-center text-muted-foreground text-sm">
-              <div className="text-2xl mb-2">✨</div>Getting things ready…
+              <div className="mb-2 flex justify-center"><Sparkles size={24} className="text-gold" /></div>Getting things ready…
             </div>
           </div>
         )}
@@ -386,7 +386,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
                   onClick={() => fileRef.current?.click()}
                   className="bg-card border-2 border-border rounded-2xl p-4 text-left hover:border-gold transition-colors cursor-pointer font-sans"
                 >
-                  <div className="text-2xl mb-2">📄</div>
+                  <FileText size={22} className="text-gold mb-2" />
                   <p className="text-sm font-semibold mb-1">Upload my brief</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">Already have a brief? I'll read it and extract everything.</p>
                 </button>
@@ -394,7 +394,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
                   onClick={startBriefChat}
                   className="bg-card border-2 border-border rounded-2xl p-4 text-left hover:border-gold transition-colors cursor-pointer font-sans"
                 >
-                  <div className="text-2xl mb-2">💬</div>
+                  <MessageSquare size={22} className="text-gold mb-2" />
                   <p className="text-sm font-semibold mb-1">Build with Sarah</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">I'll ask you a few questions and put your brief together.</p>
                 </button>
