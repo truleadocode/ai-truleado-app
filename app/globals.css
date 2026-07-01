@@ -1,6 +1,5 @@
-/* Truleado type system: Fraunces (marketing display), Inter (UI/body, weights 400/500/600 only), JetBrains Mono (data/IDs/handles) */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
-
+/* Fonts are loaded via next/font in app/layout.tsx (Inter / Fraunces / JetBrains Mono)
+   and exposed as --font-sans / --font-serif / --font-mono CSS variables. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

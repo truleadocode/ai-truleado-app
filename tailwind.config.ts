@@ -76,10 +76,11 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        // Fraunces = marketing display only; Inter = all app UI; JetBrains Mono = data/IDs/handles
-        serif: ['Fraunces', 'Georgia', 'serif'],
-        sans:  ['Inter', 'system-ui', 'sans-serif'],
-        mono:  ["'JetBrains Mono'", "'Fira Code'", 'monospace'],
+        // Backed by next/font CSS variables (app/layout.tsx). Fraunces = marketing
+        // display only; Inter = all app UI; JetBrains Mono = data/IDs/handles.
+        sans:  ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'serif'],
+        mono:  ['var(--font-mono)', "'JetBrains Mono'", 'monospace'],
       },
       keyframes: {
         'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },

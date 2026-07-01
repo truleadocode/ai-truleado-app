@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Target, Camera } from 'lucide-react'
 
 export default function HomePage() {
   return (
@@ -6,11 +7,11 @@ export default function HomePage() {
 
       <div className="flex gap-4 w-full max-w-md">
         <Link href="/advertiser" className="flex-1 bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-3 hover:border-gold transition-colors group">
-          <span className="text-3xl">🎯</span>
+          <Target size={30} strokeWidth={1.5} className="text-muted-foreground group-hover:text-gold transition-colors" />
           <span className="font-semibold text-sm text-center group-hover:text-gold transition-colors">Brand / Agency</span>
         </Link>
         <Link href="/influencer" className="flex-1 bg-card border border-border rounded-2xl p-8 flex flex-col items-center gap-3 hover:border-gold transition-colors group">
-          <span className="text-3xl">📸</span>
+          <Camera size={30} strokeWidth={1.5} className="text-muted-foreground group-hover:text-gold transition-colors" />
           <span className="font-semibold text-sm text-center group-hover:text-gold transition-colors">Creator</span>
         </Link>
       </div>
