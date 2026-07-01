@@ -14,7 +14,7 @@ function TruleadoLogo() {
           <path d="M5 10h6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
         </svg>
       </div>
-      <span className="text-base font-extrabold tracking-tight text-foreground">Truleado</span>
+      <span className="text-base font-semibold tracking-tight text-foreground">Truleado</span>
     </Link>
   )
 }
@@ -71,7 +71,7 @@ export default async function DashboardShell({
         <SidebarNav items={navItems} />
 
         <div className="px-3 py-3 border-t border-border flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-accent border border-gold-border flex items-center justify-center text-xs font-bold text-gold shrink-0">
+          <div className="w-8 h-8 rounded-full bg-accent border border-gold-border flex items-center justify-center text-xs font-semibold text-gold shrink-0">
             {initial}
           </div>
           <div className="flex-1 min-w-0">

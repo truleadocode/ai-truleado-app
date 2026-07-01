@@ -347,7 +347,7 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
 
             <div className="flex flex-col gap-2 mt-1 pb-4">
               {allUploaded && (
-                <Button onClick={completeOnboarding} className="bg-gold hover:bg-gold/90 text-white font-bold">
+                <Button onClick={completeOnboarding} className="bg-gold hover:bg-gold/90 text-white font-semibold">
                   Go to my dashboard →
                 </Button>
               )}

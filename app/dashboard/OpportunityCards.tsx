@@ -76,16 +76,16 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
         <div className="w-14 h-14 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center mx-auto mb-5">
           <Sparkles size={22} className="text-gold" />
         </div>
-        <h3 className="font-bold text-lg mb-2">No opportunities yet</h3>
+        <h3 className="font-semibold text-lg mb-2">No opportunities yet</h3>
         <p className="text-sm text-muted-foreground leading-relaxed mb-8">
           We'll reach out the moment a brand campaign is a great fit for your audience.
         </p>
 
         <div className="text-left bg-card border border-border rounded-2xl p-5 space-y-4">
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wide">How it works</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">How it works</p>
           {HOW_IT_WORKS.map(([title, desc], i) => (
             <div key={title} className="flex gap-3">
-              <div className="w-6 h-6 rounded-full bg-accent border border-gold-border text-gold text-xs font-bold flex items-center justify-center shrink-0">
+              <div className="w-6 h-6 rounded-full bg-accent border border-gold-border text-gold text-xs font-semibold flex items-center justify-center shrink-0">
                 {i + 1}
               </div>
               <div>
@@ -103,7 +103,7 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
     <div className="space-y-6">
       {active.length > 0 && (
         <div>
-          <h2 className="text-base font-bold mb-4 flex items-center gap-2">
+          <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
             <Sparkles size={16} className="text-gold" />
             New opportunities
           </h2>
@@ -118,7 +118,7 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
                     <div className="flex items-start gap-3 mb-4">
                       <div className="w-9 h-9 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center shrink-0"><Sparkles size={16} className="text-gold" /></div>
                       <div>
-                        <p className="text-xs font-bold text-foreground">Sarah Chen · Truleado</p>
+                        <p className="text-xs font-semibold text-foreground">Sarah Chen · Truleado</p>
                         <p className="text-xs text-muted-foreground mt-0.5">Brand partnership opportunity</p>
                       </div>
                     </div>
@@ -166,7 +166,7 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
                     </Button>
                     <Button
                       size="sm"
-                      className="flex-1 bg-gold hover:bg-gold/90 text-white font-bold gap-1.5"
+                      className="flex-1 bg-gold hover:bg-gold/90 text-white font-semibold gap-1.5"
                       onClick={() => respond(opp.id, 'interested')}
                     >
                       <Check size={14} /> I'm interested
@@ -181,7 +181,7 @@ export default function OpportunityCards({ opportunities, influencerId }: Props)
 
       {past.length > 0 && (
         <div>
-          <h2 className="text-sm font-bold text-muted-foreground mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
             <FileText size={14} /> Past responses
           </h2>
           <div className="space-y-3">

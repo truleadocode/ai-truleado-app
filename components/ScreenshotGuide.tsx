@@ -48,7 +48,7 @@ export default function ScreenshotGuide({ platform }: { platform: string }) {
     <div className="mb-2.5">
       <button
         onClick={() => setOpen(o => !o)}
-        className="inline-flex cursor-pointer items-center gap-[5px] border-none bg-none p-0 font-inherit text-xs font-bold text-gold"
+        className="inline-flex cursor-pointer items-center gap-[5px] border-none bg-none p-0 font-inherit text-xs font-semibold text-gold"
       >
         <svg
           width="10" height="10" viewBox="0 0 10 10" fill="none"
@@ -74,7 +74,7 @@ export default function ScreenshotGuide({ platform }: { platform: string }) {
           <ol className="flex list-none flex-col gap-2 pl-0">
             {guide.steps.map((step, i) => (
               <li key={i} className="flex items-start gap-2.5">
-                <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gold-border bg-gold-bg text-[10px] font-extrabold text-gold">{i + 1}</span>
+                <span className="mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gold-border bg-gold-bg text-[10px] font-semibold text-gold">{i + 1}</span>
                 <p className="text-[13px] leading-normal text-muted-foreground">{step}</p>
               </li>
             ))}

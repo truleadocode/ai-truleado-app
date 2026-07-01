@@ -88,7 +88,7 @@ export default async function ProfilePage() {
                 {inf.avatar_url ? (
                   <img src={inf.avatar_url} alt="Avatar" className="w-[72px] h-[72px] rounded-full object-cover border-2 border-gold-border" />
                 ) : (
-                  <div className="w-[72px] h-[72px] rounded-full bg-gold-bg border-2 border-gold-border flex items-center justify-center text-[22px] font-bold text-gold">
+                  <div className="w-[72px] h-[72px] rounded-full bg-gold-bg border-2 border-gold-border flex items-center justify-center text-[22px] font-semibold text-gold">
                     {inf.first_name?.[0]}{inf.last_name?.[0]}
                   </div>
                 )}
@@ -143,7 +143,7 @@ export default async function ProfilePage() {
                   </div>
                   {p.parse_status === 'complete' && (
                     <div className="text-right">
-                      <p className="text-sm font-bold tracking-[-0.3px] text-foreground">{fmt(p.followers)}</p>
+                      <p className="text-sm font-semibold tracking-[-0.3px] text-foreground">{fmt(p.followers)}</p>
                       {p.engagement_rate && <span className="text-[11px] text-green font-semibold">{p.engagement_rate}% eng.</span>}
                     </div>
                   )}
@@ -204,7 +204,7 @@ export default async function ProfilePage() {
                     {platformRates.map((r: any) => (
                       <div key={r.id} className="flex justify-between py-[5px] text-[13px] border-b border-border">
                         <span className="text-muted-foreground">{labelMap[r.content_type] || r.content_type}</span>
-                        <span className="font-bold text-gold">{formatEur(r.rate_eur)}</span>
+                        <span className="font-semibold text-gold">{formatEur(r.rate_eur)}</span>
                       </div>
                     ))}
                   </div>
@@ -257,7 +257,7 @@ export default async function ProfilePage() {
           <CARD>
             <HEADING>At a glance</HEADING>
             <div className="border-b border-border">
-              <FIELD label="Total reach" value={<strong className="font-bold">{fmt(totalReach)}</strong>} />
+              <FIELD label="Total reach" value={<strong className="font-semibold">{fmt(totalReach)}</strong>} />
             </div>
             {(inf.city || inf.country) && <FIELD label="Location" value={`${inf.city || ''}${inf.country ? `, ${inf.country}` : ''}`} />}
             {inf.languages?.length > 0 && <FIELD label="Languages" value={inf.languages.join(' · ')} />}

@@ -86,18 +86,18 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
           <div className="w-14 h-14 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center mx-auto mb-5">
             <Lock size={22} className="text-gold" />
           </div>
-          <h2 className="text-xl font-extrabold tracking-tight mb-2">Unlock unlimited briefs</h2>
+          <h2 className="text-xl font-semibold tracking-tight mb-2">Unlock unlimited briefs</h2>
           <p className="text-sm text-muted-foreground leading-relaxed mb-7">
             You've used your free brief. Subscribe to submit unlimited briefs and keep finding the right creators.
           </p>
           <Card className="mb-6">
             <CardContent className="pt-6 pb-6">
-              <p className="text-3xl font-extrabold tracking-tight">$99 <span className="text-sm font-medium text-muted-foreground">/month</span></p>
+              <p className="text-3xl font-semibold tracking-tight">$99 <span className="text-sm font-medium text-muted-foreground">/month</span></p>
               <p className="text-xs text-muted-foreground mt-1">Unlimited briefs · Unlimited creator matches</p>
             </CardContent>
           </Card>
           <Button
-            className="w-full bg-gold hover:bg-gold/90 text-white font-bold mb-3"
+            className="w-full bg-gold hover:bg-gold/90 text-white font-semibold mb-3"
             onClick={() => alert('Paddle checkout coming soon. For now, contact hello@truleado.com to subscribe.')}
           >
             Subscribe — $99/month
@@ -265,7 +265,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
         <div className="max-w-lg mx-auto py-8">
           <div className="text-center mb-8">
             <div className="w-12 h-12 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center mx-auto mb-4 text-xl">✨</div>
-            <h1 className="text-xl font-extrabold tracking-tight mb-1">Create a brief</h1>
+            <h1 className="text-xl font-semibold tracking-tight mb-1">Create a brief</h1>
             <p className="text-sm text-muted-foreground">How would you like to get started?</p>
           </div>
           <div className="grid grid-cols-2 gap-3.5">
@@ -274,7 +274,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
               className="bg-card border-2 border-border rounded-2xl p-6 text-left hover:border-gold transition-colors cursor-pointer"
             >
               <MessageCircle size={24} className="text-gold mb-3" />
-              <p className="text-sm font-bold mb-1.5">Build with Sarah</p>
+              <p className="text-sm font-semibold mb-1.5">Build with Sarah</p>
               <p className="text-xs text-muted-foreground leading-relaxed">Answer a few questions and Sarah will put together your brief.</p>
             </button>
             <button
@@ -282,7 +282,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
               className="bg-card border-2 border-border rounded-2xl p-6 text-left hover:border-gold transition-colors cursor-pointer"
             >
               <FileText size={24} className="text-gold mb-3" />
-              <p className="text-sm font-bold mb-1.5">Upload your brief</p>
+              <p className="text-sm font-semibold mb-1.5">Upload your brief</p>
               <p className="text-xs text-muted-foreground leading-relaxed">Already have a brief? Upload it and Sarah will extract everything.</p>
             </button>
           </div>
@@ -307,7 +307,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
 
       {phase === 'review' && reviewData && (
         <div className="max-w-xl mx-auto py-6">
-          <h2 className="text-lg font-extrabold tracking-tight mb-1">Does this look right?</h2>
+          <h2 className="text-lg font-semibold tracking-tight mb-1">Does this look right?</h2>
           <p className="text-sm text-muted-foreground mb-5">Review your brief, save it for later, or submit when you're ready.</p>
 
           {submitError && (
@@ -363,7 +363,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
                 {savingDraft ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                 {savingDraft ? 'Saving…' : 'Save brief'}
               </Button>
-              <Button className="flex-1 min-w-[140px] bg-gold hover:bg-gold/90 text-white font-bold" onClick={() => submitBrief(reviewData)}>
+              <Button className="flex-1 min-w-[140px] bg-gold hover:bg-gold/90 text-white font-semibold" onClick={() => submitBrief(reviewData)}>
                 Submit brief →
               </Button>
             </div>

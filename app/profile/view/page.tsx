@@ -18,7 +18,7 @@ function memberSince(iso: string) {
 }
 
 const SECTION = (label: string) => (
-  <p className="text-[11px] font-bold text-muted-foreground tracking-[0.09em] uppercase mb-3.5">{label}</p>
+  <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.09em] uppercase mb-3.5">{label}</p>
 )
 
 const CARD = ({ children, accent }: { children: React.ReactNode; accent?: boolean }) => (
@@ -43,7 +43,7 @@ const PILL = ({ children, color = 'fg' }: { children: React.ReactNode; color?: '
 const STAT = ({ label, value }: { label: string; value: string }) => (
   <div className="bg-muted rounded-[9px] px-[11px] py-[9px]">
     <p className="text-[10px] text-muted-foreground mb-1 font-semibold tracking-[0.05em] uppercase">{label}</p>
-    <p className="text-sm font-extrabold">{value}</p>
+    <p className="text-sm font-semibold">{value}</p>
   </div>
 )
 
@@ -121,7 +121,7 @@ export default async function ViewProfilePage() {
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 2L4 7l5 5"/></svg>
           Back to profile
         </Link>
-        <Link href="/profile/edit" className="text-xs font-bold text-white bg-gold px-4 py-2 rounded-lg no-underline">
+        <Link href="/profile/edit" className="text-xs font-semibold text-white bg-gold px-4 py-2 rounded-lg no-underline">
           Edit profile
         </Link>
       </div>
@@ -134,7 +134,7 @@ export default async function ViewProfilePage() {
             {inf.avatar_url ? (
               <img src={inf.avatar_url} alt="Avatar" className="w-[88px] h-[88px] rounded-full object-cover border-2 border-border block" />
             ) : (
-              <div className="w-[88px] h-[88px] rounded-full bg-gold flex items-center justify-center text-[28px] font-extrabold text-white">
+              <div className="w-[88px] h-[88px] rounded-full bg-gold flex items-center justify-center text-[28px] font-semibold text-white">
                 {(inf.first_name?.[0] || '') + (inf.last_name?.[0] || '')}
               </div>
             )}
@@ -147,7 +147,7 @@ export default async function ViewProfilePage() {
           <div className="flex-1">
             <div className="flex items-start justify-between gap-3 mb-2">
               <div>
-                <h1 className="text-2xl font-extrabold tracking-[-0.5px] mb-[5px]">{fullName}</h1>
+                <h1 className="text-2xl font-semibold tracking-[-0.5px] mb-[5px]">{fullName}</h1>
                 <div className="flex flex-wrap gap-1.5 items-center">
                   <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
                     <svg width="11" height="13" viewBox="0 0 11 13" fill="none"><path d="M5.5 0C3.015 0 1 2.015 1 4.5c0 3.375 4.5 8.5 4.5 8.5s4.5-5.125 4.5-8.5C10 2.015 7.985 0 5.5 0zm0 6.125a1.625 1.625 0 1 1 0-3.25 1.625 1.625 0 0 1 0 3.25z" fill="currentColor"/></svg>
@@ -160,7 +160,7 @@ export default async function ViewProfilePage() {
                 </div>
               </div>
               <span className={cn(
-                'text-xs font-bold px-3 py-1 rounded-[20px] flex-shrink-0 border',
+                'text-xs font-semibold px-3 py-1 rounded-[20px] flex-shrink-0 border',
                 inf.status === 'active' ? 'bg-green-bg text-green border-green-border' : 'bg-muted text-muted-foreground border-border',
               )}>{inf.status || 'unknown'}</span>
             </div>
@@ -226,7 +226,7 @@ export default async function ViewProfilePage() {
               return (
                 <CARD key={p.id}>
                   <div className="flex items-center gap-2 mb-3.5">
-                    <p className="text-[15px] font-extrabold capitalize flex-1">{p.platform}</p>
+                    <p className="text-[15px] font-semibold capitalize flex-1">{p.platform}</p>
                     <span className="text-xs text-muted-foreground">@{p.handle || '—'}</span>
                     <span className={cn(
                       'text-[11px] font-semibold px-[9px] py-0.5 rounded-[20px] border',
@@ -293,14 +293,14 @@ export default async function ViewProfilePage() {
                   const notLast = idx < arr.length - 1
                   return (
                     <div key={platform} className={cn(notLast && 'mb-[18px] pb-[18px] border-b border-border')}>
-                      <p className="text-[13px] font-bold capitalize mb-2.5">{platform}</p>
+                      <p className="text-[13px] font-semibold capitalize mb-2.5">{platform}</p>
                       <div className="flex flex-wrap gap-2">
                         {ctypes.map(ct => {
                           const row = platformRates.find(r => r.content_type === ct)
                           return (
                             <div key={ct} className="bg-muted rounded-[9px] px-3.5 py-2.5 text-center min-w-[72px]">
                               <p className="text-[10px] text-muted-foreground mb-[5px] font-semibold uppercase tracking-[0.05em]">{CT_LABEL[ct]}</p>
-                              <p className={cn('text-base font-extrabold', row ? 'text-gold' : 'text-muted-foreground')}>{row ? eur(row.rate_eur) : '—'}</p>
+                              <p className={cn('text-base font-semibold', row ? 'text-gold' : 'text-muted-foreground')}>{row ? eur(row.rate_eur) : '—'}</p>
                             </div>
                           )
                         })}
@@ -350,7 +350,7 @@ export default async function ViewProfilePage() {
             <div className="flex flex-col gap-3">
               <div>
                 <p className="text-[11px] text-muted-foreground font-semibold mb-1">Total reach</p>
-                <p className={cn('text-[22px] font-extrabold tracking-[-0.5px]', totalReach ? 'text-foreground' : 'text-muted-foreground')}>
+                <p className={cn('text-[22px] font-semibold tracking-[-0.5px]', totalReach ? 'text-foreground' : 'text-muted-foreground')}>
                   {totalReach ? fmt(totalReach) : '—'}
                 </p>
               </div>

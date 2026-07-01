@@ -387,7 +387,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
                   className="bg-card border-2 border-border rounded-2xl p-4 text-left hover:border-gold transition-colors cursor-pointer font-sans"
                 >
                   <div className="text-2xl mb-2">📄</div>
-                  <p className="text-sm font-bold mb-1">Upload my brief</p>
+                  <p className="text-sm font-semibold mb-1">Upload my brief</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">Already have a brief? I'll read it and extract everything.</p>
                 </button>
                 <button
@@ -395,7 +395,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
                   className="bg-card border-2 border-border rounded-2xl p-4 text-left hover:border-gold transition-colors cursor-pointer font-sans"
                 >
                   <div className="text-2xl mb-2">💬</div>
-                  <p className="text-sm font-bold mb-1">Build with Sarah</p>
+                  <p className="text-sm font-semibold mb-1">Build with Sarah</p>
                   <p className="text-xs text-muted-foreground leading-relaxed">I'll ask you a few questions and put your brief together.</p>
                 </button>
                 <input ref={fileRef} type="file" accept=".pdf,.docx,.txt" className="hidden"
@@ -406,7 +406,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
             {/* Auth */}
             {phase === 'auth' && !isThinking && (
               <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-                <p className="text-base font-bold text-center mb-1">
+                <p className="text-base font-semibold text-center mb-1">
                   {authMode === 'signup' ? 'Create your account' : 'Welcome back'}
                 </p>
                 <p className="text-xs text-muted-foreground text-center mb-5 leading-relaxed">
@@ -444,7 +444,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
                   {authError && <p className="text-xs text-destructive leading-relaxed">{authError}</p>}
 
                   <Button
-                    className="w-full bg-gold hover:bg-gold/90 text-white font-bold"
+                    className="w-full bg-gold hover:bg-gold/90 text-white font-semibold"
                     onClick={handleEmailAuth} disabled={authLoading}
                   >
                     {authLoading ? 'Just a moment…' : authMode === 'signup' ? 'Create account & submit brief' : 'Log in & submit brief'}
@@ -455,7 +455,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
                   {authMode === 'signup' ? 'Already have an account?' : 'New to Truleado?'}{' '}
                   <button
                     onClick={() => { setAuthMode(authMode === 'signup' ? 'login' : 'signup'); setAuthError('') }}
-                    className="text-gold font-bold bg-transparent border-none cursor-pointer text-xs p-0 font-sans"
+                    className="text-gold font-semibold bg-transparent border-none cursor-pointer text-xs p-0 font-sans"
                   >
                     {authMode === 'signup' ? 'Log in' : 'Create an account'}
                   </button>

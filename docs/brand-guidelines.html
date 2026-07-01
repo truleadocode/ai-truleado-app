@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Truleado — Brand Guidelines</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --brand-50:#EEEDF8;--brand-100:#D9D7F0;--brand-200:#B8B5E0;
+  --brand-300:#9894CC;--brand-400:#6D69AA;--brand-500:#4D489A;
+  --brand-600:#3A3578;--brand-700:#2A2760;--brand-800:#1E1C4A;--brand-900:#16143A;
+  --accent-50:#FEF2F0;--accent-100:#FDDDD9;--accent-200:#F9B5AC;
+  --accent-300:#F48A7C;--accent-400:#EC5F4C;--accent-500:#D93D2A;
+  --accent-600:#B82E1D;--accent-700:#961F11;--accent-800:#741409;--accent-900:#4A0C04;
+  --n50:#F8F7FF;--n100:#EEEDF8;--n200:#D9D7F0;--n300:#B8B4D8;
+  --n400:#8E89BC;--n500:#635E96;--n600:#3E3A6E;--n700:#2E2A58;--n800:#1E1B44;--n900:#110F2E;
+  --sp:#F8F7FF;--sc:#FFFFFF;--sr:#FFFFFF;--ss:#EEEDF8;--ssa:#D9D7F0;
+  --tp:#110F2E;--ts:#3E3A6E;--tm:#8E89BC;--td:#B8B4D8;
+  --tb:#2A2760;--ta:#D93D2A;
+  --bd:#D9D7F0;--bs:#B8B4D8;--bb:#9894CC;--bf:#4D489A;--ba:#F48A7C;
+  --sh-sm:0 1px 3px rgba(17,15,46,.08),0 1px 2px rgba(17,15,46,.04);
+  --sh-md:0 4px 6px rgba(17,15,46,.07),0 2px 4px rgba(17,15,46,.04);
+  --sh-lg:0 10px 15px rgba(17,15,46,.08),0 4px 6px rgba(17,15,46,.04);
+  --sh-xl:0 20px 25px rgba(17,15,46,.10),0 8px 10px rgba(17,15,46,.04);
+  --fd:'Fraunces',Georgia,serif;--fb:'Inter',-apple-system,sans-serif;--fm:'JetBrains Mono','Fira Code',monospace;
+  --r-sm:4px;--r-md:6px;--r-lg:8px;--r-xl:12px;--r-2xl:16px;--r-full:9999px;
+}
+[data-theme="dark"] {
+  --sp:#0E0D20;--sc:#15132C;--sr:#1C1A38;--ss:#110F2E;--ssa:#2A2760;
+  --tp:#F8F7FF;--ts:#9894CC;--tm:#635E96;--td:#3E3A6E;
+  --tb:#9894CC;--ta:#EC5F4C;
+  --bd:#25224A;--bs:#3A3578;--bb:#4D489A;--bf:#9894CC;--ba:#D93D2A;
+  --sh-sm:0 1px 3px rgba(0,0,0,.3),0 1px 2px rgba(0,0,0,.2);
+  --sh-md:0 4px 6px rgba(0,0,0,.28),0 2px 4px rgba(0,0,0,.18);
+  --sh-lg:0 10px 15px rgba(0,0,0,.32),0 4px 6px rgba(0,0,0,.2);
+  --sh-xl:0 20px 25px rgba(0,0,0,.36),0 8px 10px rgba(0,0,0,.2);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--sp);color:var(--tp);font-family:var(--fb);font-size:16px;line-height:1.6;transition:background .25s,color .25s}
+
+.page{max-width:1080px;margin:0 auto;padding:0 32px 120px}
+.sec{padding:80px 0 0}
+.sec+.sec{border-top:1px solid var(--bd);margin-top:80px}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--tm);margin-bottom:8px}
+.sec-title{font-size:1.5rem;font-weight:600;color:var(--tp);margin-bottom:6px}
+.sec-desc{font-size:.9375rem;color:var(--ts);margin-bottom:40px;max-width:560px;line-height:1.6}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+
+/* Nav */
+.nav{position:sticky;top:0;z-index:100;background:var(--sc);border-bottom:1px solid var(--bd)}
+.nav-inner{max-width:1080px;margin:0 auto;padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:var(--fd);font-size:1.25rem;font-weight:400;color:var(--tp);letter-spacing:-.01em;font-variation-settings:'opsz' 24}
+.logo em{font-style:normal;color:var(--accent-500)}
+.nav-links{display:flex;gap:2px}
+.nl{font-size:.8125rem;font-weight:500;color:var(--ts);text-decoration:none;padding:5px 10px;border-radius:var(--r-md);transition:background .12s,color .12s}
+.nl:hover{background:var(--brand-50);color:var(--tb)}
+.tbtn{display:flex;align-items:center;gap:6px;background:var(--n100);border:1px solid var(--bd);border-radius:var(--r-full);padding:5px 14px;font-size:.8125rem;font-weight:500;color:var(--ts);cursor:pointer;transition:all .15s;font-family:var(--fb)}
+.tbtn:hover{border-color:var(--bb);color:var(--tp)}
+
+/* Hero */
+.hero{padding:88px 0 72px;border-bottom:1px solid var(--bd)}
+.hero-pill{display:inline-flex;align-items:center;gap:6px;background:var(--brand-50);border:1px solid var(--brand-100);border-radius:var(--r-full);padding:4px 14px;font-size:.75rem;font-weight:500;color:var(--tb);margin-bottom:24px}
+.hero-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-400)}
+.hero-h1{font-family:var(--fd);font-size:clamp(2.5rem,5vw,3.75rem);font-weight:300;line-height:1.06;letter-spacing:-.025em;color:var(--tp);margin-bottom:20px;font-variation-settings:'opsz' 72}
+.hero-h1 em{font-style:italic;color:var(--brand-500)}
+.hero-p{font-size:1.125rem;color:var(--ts);max-width:500px;line-height:1.65;margin-bottom:36px}
+.hero-meta{display:flex;align-items:center;gap:20px}
+.hm{font-size:.8125rem;color:var(--tm);font-family:var(--fm)}
+
+/* Color ramps */
+.ramp{border-radius:var(--r-xl);overflow:hidden;border:1px solid var(--bd);margin-bottom:24px}
+.ramp-head{padding:16px 20px;background:var(--sc);border-bottom:1px solid var(--bd)}
+.ramp-name{font-size:.875rem;font-weight:600;color:var(--tp)}
+.ramp-info{font-size:.75rem;color:var(--tm);margin-top:2px}
+.swatches{display:grid;grid-template-columns:repeat(10,1fr)}
+.sw{aspect-ratio:1;position:relative;cursor:default;transition:transform .1s}
+.sw:hover{transform:scaleY(1.1);z-index:2}
+.sw-lbl{position:absolute;bottom:5px;left:0;right:0;text-align:center;font-size:9px;font-weight:600;font-family:var(--fm);opacity:0;transition:opacity .1s}
+.sw:hover .sw-lbl{opacity:1}
+.lbl-dark{color:rgba(17,15,46,.5)}
+.lbl-light{color:rgba(248,247,255,.65)}
+
+/* Type */
+.trow{padding:18px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:baseline;gap:20px}
+.trow:last-child{border-bottom:none}
+.tmeta{width:156px;flex-shrink:0}
+.ttoken{font-size:.625rem;font-weight:600;letter-spacing:.05em;color:var(--tm);font-family:var(--fm);text-transform:uppercase;display:block;margin-bottom:3px}
+.tspecs{font-size:.625rem;color:var(--td);font-family:var(--fm)}
+.tsample{flex:1;color:var(--tp)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:var(--r-md);font-weight:500;cursor:pointer;transition:background .15s,border-color .15s,color .15s,transform .1s;font-family:var(--fb);border:1px solid transparent;white-space:nowrap;font-size:.875rem;padding:8px 16px;line-height:1}
+.btn:active{transform:scale(.98)}
+.bp{background:var(--brand-700);color:#fff;border-color:var(--brand-700)}.bp:hover{background:var(--brand-600)}
+.ba-btn{background:var(--accent-500);color:#fff;border-color:var(--accent-500)}.ba-btn:hover{background:var(--accent-400)}
+.bs{background:transparent;color:var(--tp);border-color:var(--bs)}.bs:hover{background:var(--n100);border-color:var(--bb)}
+.bg-btn{background:transparent;color:var(--ts);border-color:transparent}.bg-btn:hover{background:var(--n100);color:var(--tp)}
+.bd-btn{background:transparent;color:var(--ta);border-color:var(--ba)}.bd-btn:hover{background:var(--accent-50)}
+.btn-sm{padding:5px 10px;font-size:.75rem;border-radius:var(--r-sm)}
+.btn-lg{padding:12px 24px;font-size:1rem;border-radius:var(--r-lg)}
+.bico{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Inputs */
+.ig{display:flex;flex-direction:column;gap:6px}
+.lbl{font-size:.875rem;font-weight:500;color:var(--tp)}
+.hlp{font-size:.75rem;color:var(--tm)}
+.inp{height:36px;padding:0 12px;border:1px solid var(--bd);border-radius:var(--r-sm);background:var(--sc);color:var(--tp);font:400 .875rem/1 var(--fb);width:100%;transition:border-color .15s,box-shadow .15s;outline:none}
+.inp::placeholder{color:var(--tm)}.inp:hover{border-color:var(--bs)}.inp:focus{border-color:var(--bf);box-shadow:0 0 0 3px rgba(77,72,154,.12)}
+.inp.err{border-color:var(--ba)}.inp.err:focus{box-shadow:0 0 0 3px rgba(217,61,42,.12)}
+.inp.ok{border-color:#86CFA0}
+.emsg{font-size:.75rem;color:var(--ta)}
+.omsg{font-size:.75rem;color:#1A6B3A}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--r-full);border:1px solid;font:500 .6875rem/1.5 var(--fb);letter-spacing:.025em;white-space:nowrap}
+.bdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.b-active{background:#EEEDF8;border-color:#9894CC;color:#2A2760}.b-active .bdot{background:#4D489A}
+.b-draft{background:#F8F7FF;border-color:#D9D7F0;color:#8E89BC}.b-draft .bdot{background:#B8B4D8}
+.b-pending{background:#FDF4E4;border-color:#F0C070;color:#8A5A10}.b-pending .bdot{background:#C17B20}
+.b-completed{background:#EAF5EE;border-color:#86CFA0;color:#1A6B3A}.b-completed .bdot{background:#1F8048}
+.b-paused{background:#EEEDF8;border-color:#B8B5E0;color:#635E96}.b-paused .bdot{background:#9894CC}
+.b-error{background:#FEF2F0;border-color:#F48A7C;color:#961F11}.b-error .bdot{background:#D93D2A}
+
+/* Cards */
+.card{background:var(--sc);border:1px solid var(--bd);border-radius:var(--r-lg);padding:24px;transition:border-color .15s,box-shadow .15s}
+.card:hover{border-color:var(--bb);box-shadow:var(--sh-sm)}
+.stat-card{background:var(--sc);border:1px solid var(--bd);border-radius:var(--r-lg);padding:20px 24px}
+.stat-lbl{font-size:.625rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--tm);margin-bottom:8px}
+.stat-val{font-size:1.75rem;font-weight:600;color:var(--tp);font-family:var(--fm);letter-spacing:-.02em;line-height:1}
+.stat-chg{font-size:.8125rem;color:#1A6B3A;margin-top:6px}
+.stat-chg.dn{color:var(--ta)}
+
+/* Creator card */
+.cc{background:var(--sc);border:1px solid var(--bd);border-radius:var(--r-lg);padding:18px;display:flex;gap:14px;align-items:flex-start;transition:border-color .15s,box-shadow .15s;cursor:pointer}
+.cc:hover{border-color:var(--bb);box-shadow:var(--sh-sm)}
+.av{border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:600}
+.av-lg{width:46px;height:46px;font-size:.875rem;background:var(--brand-100);color:var(--brand-700)}
+.av-a{background:var(--accent-100);color:var(--accent-700)}
+.ci{flex:1;min-width:0}
+.cn{font-size:.9375rem;font-weight:600;color:var(--tp);margin-bottom:2px}
+.ch{font-size:.8125rem;color:var(--tm);font-family:var(--fm)}
+.cms{display:flex;gap:16px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bd)}
+.cm{display:flex;flex-direction:column;gap:2px}
+.cmv{font-size:.875rem;font-weight:600;color:var(--tp);font-family:var(--fm)}
+.cml{font-size:.625rem;color:var(--tm);letter-spacing:.02em;text-transform:uppercase}
+.pico{display:flex;gap:6px;margin-top:10px}
+.pi{width:22px;height:22px;border-radius:5px;background:var(--n100);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center}
+.pi svg{width:12px;height:12px;fill:var(--tm)}
+
+/* Toast */
+.toast{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:var(--r-lg);border:1px solid;box-shadow:var(--sh-lg);max-width:340px;background:var(--sc)}
+.ticon{width:18px;height:18px;flex-shrink:0;margin-top:1px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ttitle{font-size:.875rem;font-weight:500;color:var(--tp);line-height:1.4}
+.tmsg2{font-size:.8125rem;color:var(--ts);margin-top:2px;line-height:1.4}
+.t-ok{border-color:#86CFA0}.t-ok .ticon{color:#1F8048}
+.t-err{border-color:var(--ba)}.t-err .ticon{color:var(--accent-500)}
+.t-warn{border-color:#F0C070}.t-warn .ticon{color:#C17B20}
+.t-info{border-color:var(--brand-300)}.t-info .ticon{color:var(--brand-500)}
+
+/* Spacing scale */
+.sprow{display:flex;align-items:center;gap:16px;padding:8px 0;border-bottom:1px solid var(--bd)}
+.sprow:last-child{border-bottom:none}
+.sptok{width:110px;font-size:.6875rem;font-family:var(--fm);color:var(--tm);flex-shrink:0}
+.spbar{height:8px;background:var(--brand-400);border-radius:2px;flex-shrink:0}
+.sppx{font-size:.6875rem;color:var(--ts);font-family:var(--fm);width:36px;flex-shrink:0}
+.spuse{font-size:.75rem;color:var(--tm)}
+
+/* App frame */
+.app-frame{border:1px solid var(--bd);border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-xl)}
+.app-body{display:flex;height:400px}
+.app-sidebar{width:196px;background:var(--ss);border-right:1px solid var(--bd);padding:12px 8px;display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.sbl{padding:4px 10px 14px;font-family:var(--fd);font-size:1.125rem;font-weight:400;color:var(--tp);letter-spacing:-.01em;border-bottom:1px solid var(--bd);margin-bottom:8px;font-variation-settings:'opsz' 24}
+.sbl em{font-style:normal;color:var(--accent-500)}
+.ni{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:var(--r-md);font-size:.8125rem;font-weight:500;color:var(--ts);transition:all .12s;cursor:pointer}
+.ni:hover{background:var(--ssa);color:var(--tp)}
+.ni.act{background:var(--ssa);color:var(--tb)}
+.niico{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.app-content{flex:1;padding:20px;overflow:auto;background:var(--sp)}
+.aph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.apt{font-size:1.125rem;font-weight:600;color:var(--tp)}
+.sg{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.ms{background:var(--sc);border:1px solid var(--bd);border-radius:var(--r-lg);padding:14px 16px}
+.msl{font-size:.5625rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--tm);margin-bottom:6px}
+.msv{font-size:1.25rem;font-weight:600;color:var(--tp);font-family:var(--fm);letter-spacing:-.02em}
+.mss{font-size:.6875rem;color:#1A6B3A;margin-top:4px}
+.tw{background:var(--sc);border:1px solid var(--bd);border-radius:var(--r-lg);overflow:hidden}
+.mt{width:100%;border-collapse:collapse;font-size:.8125rem}
+.mt th{padding:8px 14px;text-align:left;font-size:.5625rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--tm);border-bottom:1px solid var(--bd);background:var(--n50)}
+.mt td{padding:10px 14px;color:var(--tp);border-bottom:1px solid var(--bd)}
+.mt tr:last-child td{border-bottom:none}
+.mt tr:hover td{background:var(--brand-50)}
+.mono-c{font-family:var(--fm);font-size:.75rem;color:var(--ts)}
+
+/* Marketing */
+.mp{border:1px solid var(--bd);border-radius:var(--r-xl);overflow:hidden;background:var(--n50)}
+.mnav{background:rgba(248,247,255,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd);padding:0 32px;height:52px;display:flex;align-items:center;justify-content:space-between}
+.mnl{display:flex;gap:24px}
+.mnl span{font-size:.875rem;color:var(--ts)}
+.mhero{padding:56px 48px 48px;text-align:center}
+.mey{display:inline-flex;align-items:center;gap:6px;background:var(--brand-50);border:1px solid var(--brand-100);border-radius:9999px;padding:4px 14px;font-size:.75rem;font-weight:500;color:var(--tb);margin-bottom:20px}
+.mh1{font-family:var(--fd);font-size:clamp(2rem,4vw,2.625rem);font-weight:300;line-height:1.1;letter-spacing:-.025em;color:var(--tp);margin-bottom:16px;font-variation-settings:'opsz' 60}
+.mh1 em{font-style:italic;color:var(--brand-500)}
+.mp2{font-size:1rem;color:var(--ts);max-width:440px;margin:0 auto 28px;line-height:1.65}
+.mctas{display:flex;align-items:center;justify-content:center;gap:10px}
+.mft{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--bd);border-top:1px solid var(--bd)}
+.mf{background:var(--sc);padding:22px;text-align:center}
+.mfico{width:34px;height:34px;background:var(--brand-50);border:1px solid var(--brand-100);border-radius:var(--r-lg);display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.mfico svg{width:16px;height:16px;stroke:var(--tb);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mft-t{font-size:.9375rem;font-weight:600;color:var(--tp);margin-bottom:4px}
+.mft-d{font-size:.8125rem;color:var(--tm);line-height:1.5}
+
+/* Do/Dont */
+.dd{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.dob{border-radius:var(--r-lg);padding:20px;border:1px solid}
+.do{background:#EAF5EE;border-color:#86CFA0}
+.dont{background:#FEF2F0;border-color:var(--ba)}
+.do-lbl,.dn-lbl{font-size:.75rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.do-lbl{color:#1A6B3A}.dn-lbl{color:#961F11}
+.ddi{font-size:.875rem;color:var(--tp);margin-bottom:8px;line-height:1.5;padding-left:16px;position:relative}
+.ddi::before{content:'';position:absolute;left:0;top:9px;width:5px;height:5px;border-radius:50%}
+.do .ddi::before{background:#1F8048}.dont .ddi::before{background:#D93D2A}
+code{font-family:var(--fm);font-size:.8em;padding:1px 4px;border-radius:3px}
+.do code{background:rgba(31,128,72,.1)}.dont code{background:rgba(217,61,42,.1)}
+
+/* Semantic blocks */
+.sem-g{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.sem-b{border-radius:var(--r-lg);padding:16px 20px;border:1px solid}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="logo">trulead<em>o</em></div>
+    <div class="nav-links">
+      <a class="nl" href="#colors">Colors</a>
+      <a class="nl" href="#type">Type</a>
+      <a class="nl" href="#comp">Components</a>
+      <a class="nl" href="#space">Spacing</a>
+      <a class="nl" href="#app">App UI</a>
+      <a class="nl" href="#mktg">Marketing</a>
+      <a class="nl" href="#rules">Rules</a>
+    </div>
+    <button class="tbtn" onclick="toggleTheme()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <span id="tlbl">Dark mode</span>
+    </button>
+  </div>
+</nav>
+
+<div class="page">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-pill"><div class="hero-dot"></div>Brand Guidelines v1.0</div>
+  <h1 class="hero-h1">Indigo &amp; <em>Ember</em><br>by Truleado</h1>
+  <p class="hero-p">Complete visual identity for the app, marketing site, and all communications. Three ramps. Three typefaces. One ember accent. No exceptions.</p>
+  <div class="hero-meta">
+    <span class="hm">July 2026</span>
+    <span class="hm">·</span>
+    <span class="hm">Fraunces · Inter · JetBrains Mono</span>
+    <span class="hm">·</span>
+    <span class="hm">3 ramps · 30 stops</span>
+  </div>
+</div>
+
+<!-- COLORS -->
+<div class="sec" id="colors">
+  <div class="eyebrow">01 — Color system</div>
+  <h2 class="sec-title">Three ramps. No exceptions.</h2>
+  <p class="sec-desc">Violet Ink (brand), Ember Red (accent), Violet-tinted Slate (neutrals). Every color in Truleado lives within these three families. No other hues are introduced.</p>
+
+  <div class="ramp">
+    <div class="ramp-head">
+      <div class="ramp-name">Violet Ink — Brand Primary</div>
+      <div class="ramp-info">Used for buttons, active states, sidebar, links. 700 is the primary. Hover the swatches to reveal stop numbers.</div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#EEEDF8"><div class="sw-lbl lbl-dark">50</div></div>
+      <div class="sw" style="background:#D9D7F0"><div class="sw-lbl lbl-dark">100</div></div>
+      <div class="sw" style="background:#B8B5E0"><div class="sw-lbl lbl-dark">200</div></div>
+      <div class="sw" style="background:#9894CC"><div class="sw-lbl lbl-dark">300</div></div>
+      <div class="sw" style="background:#6D69AA"><div class="sw-lbl lbl-light">400</div></div>
+      <div class="sw" style="background:#4D489A"><div class="sw-lbl lbl-light">500</div></div>
+      <div class="sw" style="background:#3A3578"><div class="sw-lbl lbl-light">600</div></div>
+      <div class="sw" style="background:#2A2760;box-shadow:inset 0 0 0 3px rgba(255,255,255,.3)"><div class="sw-lbl lbl-light">700★</div></div>
+      <div class="sw" style="background:#1E1C4A"><div class="sw-lbl lbl-light">800</div></div>
+      <div class="sw" style="background:#16143A"><div class="sw-lbl lbl-light">900</div></div>
+    </div>
+  </div>
+
+  <div class="ramp">
+    <div class="ramp-head">
+      <div class="ramp-name">Ember Red — Accent</div>
+      <div class="ramp-info">One accent per viewport. CTAs, errors, destructive actions. Never decorative. 500 is the primary.</div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#FEF2F0"><div class="sw-lbl lbl-dark">50</div></div>
+      <div class="sw" style="background:#FDDDD9"><div class="sw-lbl lbl-dark">100</div></div>
+      <div class="sw" style="background:#F9B5AC"><div class="sw-lbl lbl-dark">200</div></div>
+      <div class="sw" style="background:#F48A7C"><div class="sw-lbl lbl-dark">300</div></div>
+      <div class="sw" style="background:#EC5F4C"><div class="sw-lbl lbl-light">400</div></div>
+      <div class="sw" style="background:#D93D2A;box-shadow:inset 0 0 0 3px rgba(255,255,255,.3)"><div class="sw-lbl lbl-light">500★</div></div>
+      <div class="sw" style="background:#B82E1D"><div class="sw-lbl lbl-light">600</div></div>
+      <div class="sw" style="background:#961F11"><div class="sw-lbl lbl-light">700</div></div>
+      <div class="sw" style="background:#741409"><div class="sw-lbl lbl-light">800</div></div>
+      <div class="sw" style="background:#4A0C04"><div class="sw-lbl lbl-light">900</div></div>
+    </div>
+  </div>
+
+  <div class="ramp">
+    <div class="ramp-head">
+      <div class="ramp-name">Violet-tinted Slate — Neutrals</div>
+      <div class="ramp-info">Hue ~248°. Backgrounds, text, borders. Feels native to the brand palette rather than generic grey.</div>
+    </div>
+    <div class="swatches">
+      <div class="sw" style="background:#F8F7FF"><div class="sw-lbl lbl-dark">50</div></div>
+      <div class="sw" style="background:#EEEDF8"><div class="sw-lbl lbl-dark">100</div></div>
+      <div class="sw" style="background:#D9D7F0"><div class="sw-lbl lbl-dark">200</div></div>
+      <div class="sw" style="background:#B8B4D8"><div class="sw-lbl lbl-dark">300</div></div>
+      <div class="sw" style="background:#8E89BC"><div class="sw-lbl lbl-light">400</div></div>
+      <div class="sw" style="background:#635E96"><div class="sw-lbl lbl-light">500</div></div>
+      <div class="sw" style="background:#3E3A6E"><div class="sw-lbl lbl-light">600</div></div>
+      <div class="sw" style="background:#2E2A58"><div class="sw-lbl lbl-light">700</div></div>
+      <div class="sw" style="background:#1E1B44"><div class="sw-lbl lbl-light">800</div></div>
+      <div class="sw" style="background:#110F2E"><div class="sw-lbl lbl-light">900</div></div>
+    </div>
+  </div>
+
+  <div class="eyebrow" style="margin-bottom:16px">Semantic colors</div>
+  <div class="sem-g">
+    <div class="sem-b" style="background:#EAF5EE;border-color:#86CFA0">
+      <div style="font-size:.625rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#1A6B3A;margin-bottom:6px">Success</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:.9375rem;font-weight:600;color:#1F8048;font-family:var(--fm)">#1F8048</span>
+        <span style="font-size:.8125rem;color:#1A6B3A">bg #EAF5EE · border #86CFA0</span>
+      </div>
+    </div>
+    <div class="sem-b" style="background:#FDF4E4;border-color:#F0C070">
+      <div style="font-size:.625rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#8A5A10;margin-bottom:6px">Warning</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:.9375rem;font-weight:600;color:#C17B20;font-family:var(--fm)">#C17B20</span>
+        <span style="font-size:.8125rem;color:#8A5A10">bg #FDF4E4 · border #F0C070</span>
+      </div>
+    </div>
+    <div class="sem-b" style="background:#FEF2F0;border-color:#F48A7C">
+      <div style="font-size:.625rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#961F11;margin-bottom:6px">Error — shares accent ramp</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:.9375rem;font-weight:600;color:#D93D2A;font-family:var(--fm)">#D93D2A</span>
+        <span style="font-size:.8125rem;color:#961F11">bg #FEF2F0 · border #F48A7C</span>
+      </div>
+    </div>
+    <div class="sem-b" style="background:#EEEDF8;border-color:#9894CC">
+      <div style="font-size:.625rem;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:#2A2760;margin-bottom:6px">Info — shares brand ramp</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:.9375rem;font-weight:600;color:#4D489A;font-family:var(--fm)">#4D489A</span>
+        <span style="font-size:.8125rem;color:#2A2760">bg #EEEDF8 · border #9894CC</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TYPOGRAPHY -->
+<div class="sec" id="type">
+  <div class="eyebrow">02 — Typography</div>
+  <h2 class="sec-title">Three roles. No mixing.</h2>
+  <p class="sec-desc">Fraunces for marketing display only. Inter for all UI and body copy. JetBrains Mono for data, IDs, and handles.</p>
+
+  <div class="g3" style="margin-bottom:40px">
+    <div class="card">
+      <div class="eyebrow" style="margin-bottom:8px">Display — marketing only</div>
+      <div style="font-family:var(--fd);font-size:1.625rem;font-weight:300;color:var(--tp);margin-bottom:8px;line-height:1.15;font-variation-settings:'opsz' 36">Fraunces</div>
+      <div style="font-size:.75rem;color:var(--tm);line-height:1.6">Hero headlines, section heads,<br>PDF covers, email headers.</div>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="margin-bottom:8px">UI / Body — everywhere</div>
+      <div style="font-family:var(--fb);font-size:1.625rem;font-weight:500;color:var(--tp);margin-bottom:8px;line-height:1.15">Inter</div>
+      <div style="font-size:.75rem;color:var(--tm);line-height:1.6">App UI, labels, descriptions,<br>navigation, buttons, tables.</div>
+    </div>
+    <div class="card">
+      <div class="eyebrow" style="margin-bottom:8px">Mono — data only</div>
+      <div style="font-family:var(--fm);font-size:1.25rem;font-weight:400;color:var(--tp);margin-bottom:8px;line-height:1.25">JetBrains</div>
+      <div style="font-size:.75rem;color:var(--tm);line-height:1.6">Campaign IDs, creator handles,<br>metrics in tables, API keys.</div>
+    </div>
+  </div>
+
+  <div style="border:1px solid var(--bd);border-radius:var(--r-xl);overflow:hidden">
+    <div class="trow"><div class="tmeta"><span class="ttoken">display-xl</span><span class="tspecs">64px · 300 · −0.03em · Fraunces</span></div><div class="tsample" style="font-family:var(--fd);font-size:clamp(2rem,5vw,3.75rem);font-weight:300;line-height:1.06;letter-spacing:-.03em;font-variation-settings:'opsz' 72">Campaign</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">display-lg</span><span class="tspecs">48px · 300 · −0.025em</span></div><div class="tsample" style="font-family:var(--fd);font-size:clamp(1.75rem,4vw,3rem);font-weight:300;line-height:1.1;letter-spacing:-.025em;font-variation-settings:'opsz' 48">Creator discovery</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">display-md</span><span class="tspecs">36px · 400 · −0.02em</span></div><div class="tsample" style="font-family:var(--fd);font-size:clamp(1.375rem,3vw,2.25rem);font-weight:400;line-height:1.15;letter-spacing:-.02em;font-variation-settings:'opsz' 36">Agency workflows</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">heading-xl</span><span class="tspecs">24px · 600 · Inter</span></div><div class="tsample" style="font-size:1.5rem;font-weight:600;line-height:1.3;letter-spacing:-.01em">Campaign dashboard</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">heading-lg</span><span class="tspecs">20px · 600</span></div><div class="tsample" style="font-size:1.25rem;font-weight:600;line-height:1.35;letter-spacing:-.005em">Active campaigns</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">heading-md</span><span class="tspecs">18px · 600</span></div><div class="tsample" style="font-size:1.125rem;font-weight:600;line-height:1.4">Creator shortlist</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">body-lg</span><span class="tspecs">18px · 400 · 1.7lh</span></div><div class="tsample" style="font-size:1.125rem;font-weight:400;line-height:1.7;color:var(--ts)">Truleado helps agencies manage influencer campaigns from brief to report — without switching between seven tools.</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">body-md</span><span class="tspecs">16px · 400 · 1.6lh</span></div><div class="tsample" style="font-size:1rem;font-weight:400;line-height:1.6;color:var(--ts)">Campaign approvals, deliverable tracking, and client reporting in one place.</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">body-sm</span><span class="tspecs">14px · 400</span></div><div class="tsample" style="font-size:.875rem;font-weight:400;line-height:1.5;color:var(--ts)">Last updated 3 hours ago · 12 creators · €48,000 budget</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">label-md</span><span class="tspecs">14px · 500</span></div><div class="tsample" style="font-size:.875rem;font-weight:500">Campaign name</div></div>
+    <div class="trow"><div class="tmeta"><span class="ttoken">label-sm</span><span class="tspecs">12px · 500 · +0.02em</span></div><div class="tsample" style="font-size:.75rem;font-weight:500;letter-spacing:.02em;color:var(--tm)">STATUS · PLATFORM · BUDGET</div></div>
+    <div class="trow" style="border-bottom:none"><div class="tmeta"><span class="ttoken">mono-md</span><span class="tspecs">14px · 400 · JetBrains</span></div><div class="tsample" style="font-family:var(--fm);font-size:.875rem;color:var(--ts)">@sarah.creates · #CMP-2024-0831 · 84,200</div></div>
+  </div>
+</div>
+
+<!-- COMPONENTS -->
+<div class="sec" id="comp">
+  <div class="eyebrow">03 — Components</div>
+  <h2 class="sec-title">Buttons, inputs, badges, cards</h2>
+  <p class="sec-desc">Every interactive element specced with states and usage constraints.</p>
+
+  <div class="eyebrow" style="margin-bottom:14px">Buttons</div>
+  <div class="card" style="margin-bottom:16px">
+    <div style="margin-bottom:20px">
+      <div style="font-size:.75rem;font-weight:500;color:var(--tm);margin-bottom:12px">Variants — never two Primary or two Accent in the same view</div>
+      <div class="row">
+        <button class="btn bp"><svg class="bico" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New campaign</button>
+        <button class="btn ba-btn">Start free trial</button>
+        <button class="btn bs">View all</button>
+        <button class="btn bg-btn">Cancel</button>
+        <button class="btn bd-btn">Delete</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--bd);padding-top:20px">
+      <div style="font-size:.75rem;font-weight:500;color:var(--tm);margin-bottom:12px">Sizes</div>
+      <div class="row" style="align-items:center">
+        <button class="btn bp btn-sm">Small</button>
+        <button class="btn bp">Medium</button>
+        <button class="btn bp btn-lg">Large</button>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--bd);padding-top:20px;margin-top:20px">
+      <div style="font-size:.75rem;font-weight:500;color:var(--tm);margin-bottom:12px">Disabled</div>
+      <div class="row">
+        <button class="btn" disabled style="background:var(--n200);color:var(--td);border-color:var(--n200);cursor:not-allowed">Disabled primary</button>
+        <button class="btn bs" disabled style="color:var(--td);cursor:not-allowed">Disabled secondary</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="eyebrow" style="margin-bottom:14px;margin-top:40px">Form inputs</div>
+  <div class="g2">
+    <div class="ig">
+      <label class="lbl">Campaign name</label>
+      <input class="inp" type="text" placeholder="e.g. Summer collection 2026">
+      <span class="hlp">Appears in client reports.</span>
+    </div>
+    <div class="ig">
+      <label class="lbl">Creator handle</label>
+      <input class="inp" type="text" placeholder="@username" style="font-family:var(--fm)">
+    </div>
+    <div class="ig">
+      <label class="lbl">Budget</label>
+      <input class="inp err" type="text" value="not a number">
+      <span class="emsg">Enter a valid number.</span>
+    </div>
+    <div class="ig">
+      <label class="lbl">Email</label>
+      <input class="inp ok" type="email" value="peter@truleado.com">
+      <span class="omsg">Email confirmed.</span>
+    </div>
+  </div>
+
+  <div class="eyebrow" style="margin-bottom:14px;margin-top:40px">Status badges</div>
+  <div class="card"><div class="row">
+    <span class="badge b-active"><span class="bdot"></span>Active</span>
+    <span class="badge b-draft"><span class="bdot"></span>Draft</span>
+    <span class="badge b-pending"><span class="bdot"></span>Pending</span>
+    <span class="badge b-completed"><span class="bdot"></span>Completed</span>
+    <span class="badge b-paused"><span class="bdot"></span>Paused</span>
+    <span class="badge b-error"><span class="bdot"></span>Error</span>
+  </div></div>
+
+  <div class="eyebrow" style="margin-bottom:14px;margin-top:40px">Stat cards</div>
+  <div class="g3">
+    <div class="stat-card"><div class="stat-lbl">Campaign revenue</div><div class="stat-val">€84,200</div><div class="stat-chg">↑ 18% vs last month</div></div>
+    <div class="stat-card"><div class="stat-lbl">Active creators</div><div class="stat-val">47</div><div class="stat-chg">↑ 6 this week</div></div>
+    <div class="stat-card"><div class="stat-lbl">Avg. engagement</div><div class="stat-val">4.8%</div><div class="stat-chg dn">↓ 0.3% vs prev.</div></div>
+  </div>
+
+  <div class="eyebrow" style="margin-bottom:14px;margin-top:24px">Creator cards</div>
+  <div class="g2">
+    <div class="cc">
+      <div class="av av-lg">SC</div>
+      <div class="ci">
+        <div class="cn">Sarah Chen</div>
+        <div class="ch">@sarahcreates</div>
+        <div class="pico">
+          <div class="pi"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></div>
+          <div class="pi"><svg viewBox="0 0 24 24"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.95C18.88 4 12 4 12 4s-6.88 0-8.59.47A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.95 1.95C5.12 20 12 20 12 20s6.88 0 8.59-.47a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75,15.02 15.5,12 9.75,8.98"/></svg></div>
+        </div>
+        <div class="cms">
+          <div class="cm"><span class="cmv">284K</span><span class="cml">Followers</span></div>
+          <div class="cm"><span class="cmv">5.2%</span><span class="cml">Engagement</span></div>
+          <div class="cm"><span class="cmv">€1,800</span><span class="cml">Avg. CPE</span></div>
+        </div>
+      </div>
+      <span class="badge b-active" style="flex-shrink:0"><span class="bdot"></span>Active</span>
+    </div>
+    <div class="cc">
+      <div class="av av-lg av-a">MR</div>
+      <div class="ci">
+        <div class="cn">Marc Reijnen</div>
+        <div class="ch">@marcreijnen</div>
+        <div class="pico"><div class="pi"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg></div></div>
+        <div class="cms">
+          <div class="cm"><span class="cmv">91K</span><span class="cml">Followers</span></div>
+          <div class="cm"><span class="cmv">7.8%</span><span class="cml">Engagement</span></div>
+          <div class="cm"><span class="cmv">€650</span><span class="cml">Avg. CPE</span></div>
+        </div>
+      </div>
+      <span class="badge b-pending" style="flex-shrink:0"><span class="bdot"></span>Pending</span>
+    </div>
+  </div>
+
+  <div class="eyebrow" style="margin-bottom:14px;margin-top:40px">Toast notifications</div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="toast t-ok"><svg class="ticon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg><div><div class="ttitle">Campaign saved</div><div class="tmsg2">Summer collection 2026 has been updated.</div></div></div>
+    <div class="toast t-err"><svg class="ticon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><div><div class="ttitle">Failed to send brief</div><div class="tmsg2">Check your connection and try again.</div></div></div>
+    <div class="toast t-warn"><svg class="ticon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><div><div class="ttitle">3 deliverables overdue</div><div class="tmsg2">Review the campaign timeline.</div></div></div>
+    <div class="toast t-info"><svg class="ticon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><div><div class="ttitle">New creator matched</div><div class="tmsg2">@laurabeauty matches your campaign brief.</div></div></div>
+  </div>
+</div>
+
+<!-- SPACING -->
+<div class="sec" id="space">
+  <div class="eyebrow">04 — Spacing</div>
+  <h2 class="sec-title">4px base unit</h2>
+  <p class="sec-desc">Every spacing decision is a multiple of 4px. Use the token names in code, never raw pixel values.</p>
+  <div style="border:1px solid var(--bd);border-radius:var(--r-xl);overflow:hidden;padding:24px">
+    <div class="sprow"><span class="sptok">--space-1</span><div class="spbar" style="width:4px"></div><span class="sppx">4px</span><span class="spuse">Icon-label gap, badge inner gap</span></div>
+    <div class="sprow"><span class="sptok">--space-2</span><div class="spbar" style="width:8px"></div><span class="sppx">8px</span><span class="spuse">Inline gaps, badge padding, nav item gap</span></div>
+    <div class="sprow"><span class="sptok">--space-3</span><div class="spbar" style="width:12px"></div><span class="sppx">12px</span><span class="spuse">Button sm padding, compact lists</span></div>
+    <div class="sprow"><span class="sptok">--space-4</span><div class="spbar" style="width:16px"></div><span class="sppx">16px</span><span class="spuse">Button md padding, form field gap, table cell</span></div>
+    <div class="sprow"><span class="sptok">--space-5</span><div class="spbar" style="width:20px"></div><span class="sppx">20px</span><span class="spuse">Card padding (compact)</span></div>
+    <div class="sprow"><span class="sptok">--space-6</span><div class="spbar" style="width:24px"></div><span class="sppx">24px</span><span class="spuse">Card padding (default), grid gap</span></div>
+    <div class="sprow"><span class="sptok">--space-8</span><div class="spbar" style="width:32px"></div><span class="sppx">32px</span><span class="spuse">Section padding (app), component group gap</span></div>
+    <div class="sprow"><span class="sptok">--space-10</span><div class="spbar" style="width:40px"></div><span class="sppx">40px</span><span class="spuse">Large section internal padding</span></div>
+    <div class="sprow"><span class="sptok">--space-12</span><div class="spbar" style="width:48px"></div><span class="sppx">48px</span><span class="spuse">App page top padding</span></div>
+    <div class="sprow"><span class="sptok">--space-16</span><div class="spbar" style="width:64px"></div><span class="sppx">64px</span><span class="spuse">Marketing content gap</span></div>
+    <div class="sprow" style="border-bottom:none"><span class="sptok">--space-20</span><div class="spbar" style="width:80px"></div><span class="sppx">80px</span><span class="spuse">Marketing section vertical padding</span></div>
+  </div>
+</div>
+
+<!-- APP PREVIEW -->
+<div class="sec" id="app">
+  <div class="eyebrow">05 — App UI</div>
+  <h2 class="sec-title">Dashboard preview</h2>
+  <p class="sec-desc">Sidebar, navigation, stats, and data table assembled with actual tokens.</p>
+  <div style="border:1px solid var(--bd);border-radius:var(--r-xl);overflow:hidden;box-shadow:var(--sh-xl)">
+    <div style="display:flex;height:410px">
+      <div class="app-sidebar">
+        <div class="sbl">trulead<em>o</em></div>
+        <div class="ni act"><svg class="niico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</div>
+        <div class="ni"><svg class="niico" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Campaigns</div>
+        <div class="ni"><svg class="niico" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Creators</div>
+        <div class="ni"><svg class="niico" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Analytics</div>
+        <div class="ni"><svg class="niico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Deliverables</div>
+        <div class="ni"><svg class="niico" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Client portal</div>
+      </div>
+      <div class="app-content">
+        <div class="aph"><div class="apt">Dashboard</div><button class="btn bp btn-sm"><svg class="bico" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New campaign</button></div>
+        <div class="sg">
+          <div class="ms"><div class="msl">Revenue MTD</div><div class="msv">€84.2K</div><div class="mss">↑ 18% vs last month</div></div>
+          <div class="ms"><div class="msl">Active campaigns</div><div class="msv">12</div><div class="mss">↑ 3 this week</div></div>
+          <div class="ms"><div class="msl">Creators on brief</div><div class="msv">47</div><div class="mss">↑ 6 added</div></div>
+        </div>
+        <div class="tw">
+          <table class="mt">
+            <thead><tr><th>Campaign</th><th>Client</th><th>Status</th><th style="text-align:right">Budget</th></tr></thead>
+            <tbody>
+              <tr><td style="font-weight:500">Summer collection</td><td style="color:var(--ts)">Zalando NL</td><td><span class="badge b-active"><span class="bdot"></span>Active</span></td><td class="mono-c" style="text-align:right">€24,000</td></tr>
+              <tr><td style="font-weight:500">Back to school</td><td style="color:var(--ts)">H&amp;M DE</td><td><span class="badge b-draft"><span class="bdot"></span>Draft</span></td><td class="mono-c" style="text-align:right">€18,500</td></tr>
+              <tr><td style="font-weight:500">Autumn launch</td><td style="color:var(--ts)">ASOS UK</td><td><span class="badge b-pending"><span class="bdot"></span>Pending</span></td><td class="mono-c" style="text-align:right">€41,700</td></tr>
+              <tr><td style="font-weight:500">Brand awareness</td><td style="color:var(--ts)">Nike FR</td><td><span class="badge b-completed"><span class="bdot"></span>Completed</span></td><td class="mono-c" style="text-align:right">€60,000</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MARKETING -->
+<div class="sec" id="mktg">
+  <div class="eyebrow">06 — Marketing site</div>
+  <h2 class="sec-title">Homepage preview</h2>
+  <p class="sec-desc">Fraunces at display scale. Brand ramp eyebrow. Ember accent on the one CTA that matters.</p>
+  <div class="mp">
+    <div class="mnav">
+      <div class="logo" style="font-size:1.125rem">trulead<em>o</em></div>
+      <div class="mnl"><span>Features</span><span>Pricing</span><span>Blog</span></div>
+      <button class="btn bs btn-sm">Sign in</button>
+    </div>
+    <div class="mhero">
+      <div class="mey"><span style="width:5px;height:5px;border-radius:50%;background:var(--brand-400);display:inline-block"></span>Built for agencies</div>
+      <h2 class="mh1">Run influencer campaigns<br>without <em>the chaos</em></h2>
+      <p class="mp2">Truleado gives mid-size agencies the workflow infrastructure they've been stitching together from spreadsheets, Slack, and Drive.</p>
+      <div class="mctas">
+        <button class="btn ba-btn btn-lg">Start free trial</button>
+        <button class="btn bs btn-lg">See how it works</button>
+      </div>
+    </div>
+    <div class="mft">
+      <div class="mf">
+        <div class="mfico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+        <div class="mft-t">Creator discovery</div>
+        <div class="mft-d">Find and vet creators across Instagram, TikTok, and YouTube.</div>
+      </div>
+      <div class="mf">
+        <div class="mfico"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+        <div class="mft-t">Approval workflows</div>
+        <div class="mft-d">Brief, review, and approve content in one structured flow.</div>
+      </div>
+      <div class="mf">
+        <div class="mfico"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <div class="mft-t">Client reporting</div>
+        <div class="mft-d">Auto-generated reports your clients actually understand.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RULES -->
+<div class="sec" id="rules">
+  <div class="eyebrow">07 — Rules</div>
+  <h2 class="sec-title">Hard rules for Claude Code</h2>
+  <p class="sec-desc">Not guidelines. These apply to every file, every component, every screen.</p>
+  <div class="dd">
+    <div class="dob do">
+      <div class="do-lbl"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Do</div>
+      <div class="ddi">Use <code>#2A2760</code> as the primary brand color everywhere</div>
+      <div class="ddi">Reserve <code>#D93D2A</code> for the single most important CTA per page</div>
+      <div class="ddi">Use Fraunces only on marketing surfaces, never in app UI</div>
+      <div class="ddi">Apply Inter at weights 400, 500, and 600 only</div>
+      <div class="ddi">Use JetBrains Mono for all metrics, IDs, and handles</div>
+      <div class="ddi">Sentence case everywhere — buttons, headings, nav, labels</div>
+      <div class="ddi">Base all spacing on multiples of 4px using the token names</div>
+      <div class="ddi">Use violet-tinted shadow values from the token specification</div>
+      <div class="ddi">Keep border-radius ≤ 16px (pills use 9999px)</div>
+      <div class="ddi">Write active voice, verb-first copy on all CTAs</div>
+    </div>
+    <div class="dob dont">
+      <div class="dn-lbl"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Don't</div>
+      <div class="ddi">Don't introduce any color outside the three defined ramps</div>
+      <div class="ddi">Don't create gradients between brand and accent colors</div>
+      <div class="ddi">Don't place two Primary or two Accent buttons in one viewport</div>
+      <div class="ddi">Don't combine brand indigo and ember red in a single element</div>
+      <div class="ddi">Don't use font-weight 700 or 800 anywhere in the product</div>
+      <div class="ddi">Don't use pure <code>#000000</code> or <code>#FFFFFF</code> as page backgrounds</div>
+      <div class="ddi">Don't apply glassmorphism or backdrop-blur effects</div>
+      <div class="ddi">Don't override token values with hardcoded hex in production</div>
+      <div class="ddi">Don't use emoji as icons inside the app UI</div>
+      <div class="ddi">Don't animate more than two CSS properties simultaneously</div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function toggleTheme(){
+  const h=document.documentElement;
+  const d=h.getAttribute('data-theme')==='dark';
+  h.setAttribute('data-theme',d?'light':'dark');
+  document.getElementById('tlbl').textContent=d?'Dark mode':'Light mode';
+}
+</script>
+</body>
+</html>

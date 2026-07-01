@@ -49,11 +49,26 @@ const config: Config = {
           DEFAULT:    'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
-        // Truleado brand colours (used directly by name)
-        gold:  { DEFAULT: '#C49A3C', bg: '#FDF8EE', border: '#EBD99A' },
-        green: { DEFAULT: '#2D9D6E', bg: '#F0FAF5', border: '#A8DFC5' },
-        red:   { DEFAULT: '#D94F3D', bg: '#FEF3F2', border: '#F5C0BB' },
-        blue:  { DEFAULT: '#2563EB', bg: '#EFF4FF', border: '#BFCCF8' },
+        // ── Truleado brand — "Indigo & Ember" (docs/brand-guidelines.html) ──
+        // Violet Ink ramp (brand primary). 700 = #2A2760 is the primary.
+        brand: {
+          50: '#EEEDF8', 100: '#D9D7F0', 200: '#B8B5E0', 300: '#9894CC', 400: '#6D69AA',
+          500: '#4D489A', 600: '#3A3578', 700: '#2A2760', 800: '#1E1C4A', 900: '#16143A',
+          DEFAULT: '#2A2760',
+        },
+        // Ember Red ramp (accent). One per viewport. 500 = #D93D2A is the primary.
+        ember: {
+          50: '#FEF2F0', 100: '#FDDDD9', 200: '#F9B5AC', 300: '#F48A7C', 400: '#EC5F4C',
+          500: '#D93D2A', 600: '#B82E1D', 700: '#961F11', 800: '#741409', 900: '#4A0C04',
+          DEFAULT: '#D93D2A',
+        },
+        // Semantic aliases used across the app (class name kept, value = brand palette).
+        // `gold` is now Violet Ink — a legacy bridge so existing bg-gold/text-gold adopt brand.
+        gold:  { DEFAULT: '#2A2760', bg: '#EEEDF8', border: '#9894CC' },
+        green: { DEFAULT: '#1F8048', bg: '#EAF5EE', border: '#86CFA0' }, // success
+        red:   { DEFAULT: '#D93D2A', bg: '#FEF2F0', border: '#F48A7C' }, // error (ember)
+        blue:  { DEFAULT: '#4D489A', bg: '#EEEDF8', border: '#9894CC' }, // info (brand ramp)
+        amber: { DEFAULT: '#C17B20', bg: '#FDF4E4', border: '#F0C070' }, // warning
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -61,8 +76,10 @@ const config: Config = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        serif: ["'DM Serif Display'", 'Georgia', 'serif'],
+        // Fraunces = marketing display only; Inter = all app UI; JetBrains Mono = data/IDs/handles
+        serif: ['Fraunces', 'Georgia', 'serif'],
         sans:  ['Inter', 'system-ui', 'sans-serif'],
+        mono:  ["'JetBrains Mono'", "'Fira Code'", 'monospace'],
       },
       keyframes: {
         'accordion-down': { from: { height: '0' }, to: { height: 'var(--radix-accordion-content-height)' } },

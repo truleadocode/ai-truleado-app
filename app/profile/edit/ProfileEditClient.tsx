@@ -328,12 +328,12 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M9 2L4 7l5 5"/></svg>
           Profile
         </Link>
-        <h2 className="text-base font-bold">Edit profile</h2>
+        <h2 className="text-base font-semibold">Edit profile</h2>
       </div>
 
       {/* AI Summary — always visible */}
       <div className="bg-card border border-gold-border rounded-xl px-[18px] py-3.5 mb-5">
-        <p className={cn('text-[11px] font-bold text-gold tracking-[0.08em] uppercase', aiSummary ? 'mb-2' : 'mb-1')}>AI Summary</p>
+        <p className={cn('text-[11px] font-semibold text-gold tracking-[0.08em] uppercase', aiSummary ? 'mb-2' : 'mb-1')}>AI Summary</p>
         {isAnyProcessing ? (
           <div className="flex items-center gap-2">
             <div className="w-3.5 h-3.5 border-2 border-gold border-t-transparent rounded-full flex-shrink-0 animate-spin" />
@@ -373,7 +373,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
               {avatarUrl ? (
                 <img src={avatarUrl} alt="Avatar" className="w-[72px] h-[72px] rounded-full object-cover border-2 border-border" />
               ) : (
-                <div className="w-[72px] h-[72px] rounded-full bg-gold flex items-center justify-center text-2xl font-extrabold text-white">
+                <div className="w-[72px] h-[72px] rounded-full bg-gold flex items-center justify-center text-2xl font-semibold text-white">
                   {firstName?.[0]}{lastName?.[0]}
                 </div>
               )}
@@ -386,7 +386,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             <div>
               <input ref={avatarInputRef} type="file" accept="image/*" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) uploadAvatar(f) }} />
-              <button onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading} className="bg-muted border border-border rounded-lg px-3.5 py-2 text-xs font-bold cursor-pointer text-foreground">
+              <button onClick={() => avatarInputRef.current?.click()} disabled={avatarUploading} className="bg-muted border border-border rounded-lg px-3.5 py-2 text-xs font-semibold cursor-pointer text-foreground">
                 {avatarUploading ? 'Uploading…' : 'Upload photo'}
               </button>
               <p className="text-[11px] text-muted-foreground mt-[5px]">JPG, PNG or WebP · max 5MB</p>
@@ -481,7 +481,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
       {section === 'brands' && (
         <div className="flex flex-col gap-5">
           <div>
-            <p className="text-[13px] font-bold mb-1">Brand categories I love ❤️</p>
+            <p className="text-[13px] font-semibold mb-1">Brand categories I love ❤️</p>
             <p className="text-xs text-muted-foreground mb-2.5">Categories you enjoy working with</p>
             <div className="flex gap-1.5 flex-wrap mb-1.5">
               {CATEGORIES.filter(c => !brandNever.includes(c)).map(c => chip(c, brandLoves.includes(c), () => { toggle(brandLoves, setBrandLoves, c); setBrandNever(prev => prev.filter(x => x !== c)) }, 'green'))}
@@ -490,7 +490,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             <textarea className={cn(inputClass, 'min-h-[60px] resize-y')} value={brandLovesCustom} onChange={e => setBrandLovesCustom(e.target.value)} placeholder="Add your own (e.g. sustainable brands, indie brands...)" />
           </div>
           <div>
-            <p className="text-[13px] font-bold mb-1">Categories I never work with 🚫</p>
+            <p className="text-[13px] font-semibold mb-1">Categories I never work with 🚫</p>
             <p className="text-xs text-muted-foreground mb-2.5">Hard stops — Sarah will never match you with these</p>
             <div className="flex gap-1.5 flex-wrap mb-2.5">
               {CATEGORIES.filter(c => !brandLoves.includes(c)).map(c => chip(c, brandNever.includes(c), () => { toggle(brandNever, setBrandNever, c); setBrandLoves(prev => prev.filter(x => x !== c)) }, 'red'))}
@@ -514,7 +514,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
 
             return (
               <div key={platform} className="bg-card border border-border rounded-xl px-[18px] py-4 mb-3">
-                <p className="text-sm font-bold mb-3.5 capitalize">{platform}</p>
+                <p className="text-sm font-semibold mb-3.5 capitalize">{platform}</p>
                 <div className="grid grid-cols-2 gap-2.5">
                   {FIELDS.map(([label, ct]) => {
                     const key = `${platform}__${ct}`
@@ -609,7 +609,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             return (
               <div key={p.id} className="bg-card border border-border rounded-xl px-[18px] py-3.5 mb-2.5">
                 <div className="flex items-center gap-2.5 mb-2.5">
-                  <p className="text-sm font-bold capitalize flex-1">{p.platform}</p>
+                  <p className="text-sm font-semibold capitalize flex-1">{p.platform}</p>
                   {!showProgress && (
                     <span className={cn('inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-[20px] border', parsedBadgeClass)}>
                       {parsedLabel}
@@ -746,7 +746,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
           <button
             onClick={saveSection}
             disabled={saving}
-            className={cn('text-white border-none rounded-[9px] px-7 py-3 text-sm font-bold transition-colors', saved ? 'bg-green' : 'bg-gold', saving ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100')}
+            className={cn('text-white border-none rounded-[9px] px-7 py-3 text-sm font-semibold transition-colors', saved ? 'bg-green' : 'bg-gold', saving ? 'cursor-not-allowed opacity-70' : 'cursor-pointer opacity-100')}
           >
             {saving ? 'Saving…' : saved ? '✓ Saved' : 'Save changes'}
           </button>

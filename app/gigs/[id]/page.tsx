@@ -168,13 +168,13 @@ export default function GigDetailPage() {
             {gig.brand_revealed ? '🌿' : '🔒'}
           </div>
           <div className="flex-1">
-            <h2 className="text-[17px] font-extrabold mb-[3px]">
+            <h2 className="text-[17px] font-semibold mb-[3px]">
               {gig.brand_revealed ? gig.brand_name : `${gig.brand_category} campaign`}
             </h2>
             <p className="text-[13px] text-muted-foreground">{gig.platform} · {gig.deliverables_summary}</p>
             {!gig.brand_revealed && <p className="text-[11px] text-muted-foreground mt-1">Brand name revealed once you confirm the deal.</p>}
           </div>
-          <span className={cn('inline-flex items-center gap-[5px] text-[11px] font-bold px-2.5 py-1 rounded-[20px] border flex-shrink-0', st.className)}>
+          <span className={cn('inline-flex items-center gap-[5px] text-[11px] font-semibold px-2.5 py-1 rounded-[20px] border flex-shrink-0', st.className)}>
             <span className="w-[5px] h-[5px] rounded-full bg-current inline-block" />
             {st.label}
           </span>
@@ -185,25 +185,25 @@ export default function GigDetailPage() {
           {gig.budget_eur && (
             <div className="bg-muted border border-border rounded-lg px-3.5 py-2 text-center">
               <p className="text-[10px] text-muted-foreground mb-0.5">Budget</p>
-              <p className="text-[15px] font-extrabold text-gold">{formatEur(gig.budget_eur)}</p>
+              <p className="text-[15px] font-semibold text-gold">{formatEur(gig.budget_eur)}</p>
             </div>
           )}
           {gig.respond_by && gig.status === 'offered' && (
             <div className="bg-muted border border-border rounded-lg px-3.5 py-2 text-center">
               <p className="text-[10px] text-muted-foreground mb-0.5">Respond by</p>
-              <p className="text-[13px] font-bold">{new Date(gig.respond_by).toLocaleDateString('en-GB', { weekday:'short', month:'short', day:'numeric' })}</p>
+              <p className="text-[13px] font-semibold">{new Date(gig.respond_by).toLocaleDateString('en-GB', { weekday:'short', month:'short', day:'numeric' })}</p>
             </div>
           )}
           {gig.content_due_at && (
             <div className="bg-muted border border-border rounded-lg px-3.5 py-2 text-center">
               <p className="text-[10px] text-muted-foreground mb-0.5">Content due</p>
-              <p className="text-[13px] font-bold">{new Date(gig.content_due_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
+              <p className="text-[13px] font-semibold">{new Date(gig.content_due_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
             </div>
           )}
           {gig.go_live_at && (
             <div className="bg-muted border border-border rounded-lg px-3.5 py-2 text-center">
               <p className="text-[10px] text-muted-foreground mb-0.5">Goes live</p>
-              <p className="text-[13px] font-bold">{new Date(gig.go_live_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
+              <p className="text-[13px] font-semibold">{new Date(gig.go_live_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>
             </div>
           )}
         </div>
@@ -211,10 +211,10 @@ export default function GigDetailPage() {
         {/* Offer actions */}
         {gig.status === 'offered' && (
           <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-            <button onClick={expressInterest} disabled={updatingStatus} className="flex-1 bg-gold text-white border-none rounded-[9px] py-[11px] text-[13px] font-bold cursor-pointer font-[inherit]">
+            <button onClick={expressInterest} disabled={updatingStatus} className="flex-1 bg-gold text-white border-none rounded-[9px] py-[11px] text-[13px] font-semibold cursor-pointer font-[inherit]">
               I&apos;m interested
             </button>
-            <button onClick={passGig} disabled={updatingStatus} className="flex-1 bg-red-bg text-red border border-red-border rounded-[9px] py-[11px] text-[13px] font-bold cursor-pointer font-[inherit]">
+            <button onClick={passGig} disabled={updatingStatus} className="flex-1 bg-red-bg text-red border border-red-border rounded-[9px] py-[11px] text-[13px] font-semibold cursor-pointer font-[inherit]">
               Not interested
             </button>
           </div>
@@ -238,7 +238,7 @@ export default function GigDetailPage() {
         <div>
           {gig.offer_notes && (
             <div className="bg-card border border-border rounded-xl px-[18px] py-4 mb-3">
-              <p className="text-[11px] font-bold text-muted-foreground tracking-[0.08em] uppercase mb-2.5">Brief from Sarah</p>
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.08em] uppercase mb-2.5">Brief from Sarah</p>
               <p className="text-[13px] leading-[1.65] text-muted-foreground">{gig.offer_notes}</p>
             </div>
           )}
@@ -247,7 +247,7 @@ export default function GigDetailPage() {
           {checklist.length > 0 && (
             <div className="bg-card border border-border rounded-xl px-[18px] py-4">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-[11px] font-bold text-muted-foreground tracking-[0.08em] uppercase">Deliverables</p>
+                <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.08em] uppercase">Deliverables</p>
                 <span className="text-xs text-muted-foreground">{doneCount}/{checklist.length} done</span>
               </div>
               <div className="h-1 bg-border rounded mb-3.5 overflow-hidden">
@@ -301,7 +301,7 @@ export default function GigDetailPage() {
                     )}
                     <div className={cn('flex gap-2 items-end', isInfluencer ? 'flex-row-reverse' : 'flex-row')}>
                       {!isInfluencer && (
-                        <div className="w-[26px] h-[26px] rounded-full bg-gold flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0">SC</div>
+                        <div className="w-[26px] h-[26px] rounded-full bg-gold flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0">SC</div>
                       )}
                       <div className="max-w-[70%]">
                         <div className={cn(

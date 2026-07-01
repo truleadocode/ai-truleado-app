@@ -63,7 +63,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { erro
             <div className="w-11 h-11 rounded-xl bg-accent flex items-center justify-center mx-auto mb-5">
               <Lock size={20} className="text-gold" />
             </div>
-            <h1 className="text-lg font-extrabold tracking-tight text-center mb-1">Admin access</h1>
+            <h1 className="text-lg font-semibold tracking-tight text-center mb-1">Admin access</h1>
             <p className="text-xs text-muted-foreground text-center mb-6">Enter the password to continue.</p>
             <form action={login} className="space-y-3">
               <div className="space-y-1.5">
@@ -73,7 +73,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { erro
               {searchParams.error && (
                 <p className="text-xs text-destructive">Incorrect password. Try again.</p>
               )}
-              <Button type="submit" className="w-full bg-gold hover:bg-gold/90 text-white font-bold">
+              <Button type="submit" className="w-full bg-gold hover:bg-gold/90 text-white font-semibold">
                 Unlock
               </Button>
             </form>
@@ -114,7 +114,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { erro
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight mb-1">Admin</h1>
+            <h1 className="text-2xl font-semibold tracking-tight mb-1">Admin</h1>
             <p className="text-sm text-muted-foreground">Overview of accounts on Truleado.</p>
           </div>
           <form action={logout}>
@@ -131,7 +131,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { erro
                   <Icon size={20} className={accent} />
                 </div>
                 <div>
-                  <p className="text-3xl font-extrabold tracking-tight leading-none tabular-nums">{value.toLocaleString()}</p>
+                  <p className="text-3xl font-semibold tracking-tight leading-none font-mono tabular-nums">{value.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground mt-1">{label}</p>
                 </div>
               </CardContent>
@@ -140,7 +140,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { erro
         </div>
 
         {/* Influencers */}
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Influencers ({infs.length})</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Influencers ({infs.length})</h2>
         <Card className="mb-10 overflow-hidden">
           <Table>
             <TableHeader>
@@ -172,7 +172,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { erro
                         {(i.influencer_platforms || []).map((p: any, idx: number) => (
                           <span key={idx} className="whitespace-nowrap">
                             <span className="capitalize text-foreground">{p.platform}</span>
-                            {p.handle ? ` @${p.handle}` : ''} · <span className="tabular-nums">{fmtFollowers(p.followers)}</span>
+                            {p.handle ? ` @${p.handle}` : ''} · <span className="font-mono tabular-nums">{fmtFollowers(p.followers)}</span>
                           </span>
                         ))}
                       </div>
@@ -183,7 +183,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { erro
                       {i.onboarding_complete ? 'Onboarded' : 'Incomplete'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground whitespace-nowrap tabular-nums">{fmtDate(i.created_at)}</TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap font-mono tabular-nums">{fmtDate(i.created_at)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -191,7 +191,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { erro
         </Card>
 
         {/* Advertisers */}
-        <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground mb-3">Brands / Agencies ({advs.length})</h2>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-3">Brands / Agencies ({advs.length})</h2>
         <Card className="overflow-hidden">
           <Table>
             <TableHeader>
@@ -225,7 +225,7 @@ export default async function AdminPage({ searchParams }: { searchParams: { erro
                       {a.onboarding_complete ? 'Onboarded' : 'Incomplete'}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground whitespace-nowrap tabular-nums">{fmtDate(a.created_at)}</TableCell>
+                  <TableCell className="text-muted-foreground whitespace-nowrap font-mono tabular-nums">{fmtDate(a.created_at)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

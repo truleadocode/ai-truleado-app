@@ -49,14 +49,14 @@ export default async function AdvertiserDashboardPage() {
       {/* ── Page header ─────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">
+          <h1 className="text-2xl font-semibold tracking-tight">
             {advertiser.company_name ? `${advertiser.company_name}'s briefs` : 'Your briefs'}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {briefList.length === 0 ? 'No briefs yet — create your first one below.' : `${briefList.length} campaign${briefList.length > 1 ? 's' : ''}`}
           </p>
         </div>
-        <Button className="bg-gold hover:bg-gold/90 text-white font-bold gap-1.5" asChild>
+        <Button className="bg-gold hover:bg-gold/90 text-white font-semibold gap-1.5" asChild>
           <Link href="/advertiser/briefs/new">
             <Zap size={14} /> New brief
           </Link>
@@ -67,11 +67,11 @@ export default async function AdvertiserDashboardPage() {
         /* ── Empty state ─────────────────────────── */
         <div className="text-center py-24">
           <FileText size={40} className="mx-auto text-muted-foreground/30 mb-4" />
-          <h3 className="font-bold text-lg mb-2">No briefs yet</h3>
+          <h3 className="font-semibold text-lg mb-2">No briefs yet</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
             Create your first campaign brief and Sarah will find the right creators for you.
           </p>
-          <Button className="bg-gold hover:bg-gold/90 text-white font-bold" asChild>
+          <Button className="bg-gold hover:bg-gold/90 text-white font-semibold" asChild>
             <Link href="/advertiser/briefs/new">Create first brief</Link>
           </Button>
         </div>
@@ -96,7 +96,7 @@ export default async function AdvertiserDashboardPage() {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm font-bold truncate">{brief.brand_name || 'Untitled brief'}</CardTitle>
+                        <CardTitle className="text-sm font-semibold truncate">{brief.brand_name || 'Untitled brief'}</CardTitle>
                         <CardDescription className="text-xs mt-1 line-clamp-2">{brief.product_description}</CardDescription>
                       </div>
                       <Badge variant={statusCfg.variant} className="shrink-0 text-[10px]">
@@ -120,7 +120,7 @@ export default async function AdvertiserDashboardPage() {
                       <div className="space-y-1.5">
                         <div className="flex justify-between text-[11px] text-muted-foreground">
                           <span>Creators confirmed</span>
-                          <span className="font-bold text-foreground">{confirmed}/{needed}</span>
+                          <span className="font-semibold text-foreground">{confirmed}/{needed}</span>
                         </div>
                         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                           <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${pct}%` }} />
@@ -130,7 +130,7 @@ export default async function AdvertiserDashboardPage() {
                   </CardContent>
 
                   <CardFooter className="pt-0 pb-3">
-                    <span className="ml-auto text-xs font-bold text-gold flex items-center gap-1 group-hover:gap-1.5 transition-all">
+                    <span className="ml-auto text-xs font-semibold text-gold flex items-center gap-1 group-hover:gap-1.5 transition-all">
                       {isDraft ? 'Continue' : 'View'} <ChevronRight size={13} />
                     </span>
                   </CardFooter>

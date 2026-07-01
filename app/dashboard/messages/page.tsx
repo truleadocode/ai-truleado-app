@@ -142,7 +142,7 @@ export default function MessagesPage() {
               selectedGig?.id === gig.id ? 'bg-gold-bg' : 'bg-transparent'
             )}
           >
-            <div className="w-9 h-9 rounded-full bg-gold-bg border-[1.5px] border-gold-border flex items-center justify-center text-[11px] font-bold text-gold shrink-0">SC</div>
+            <div className="w-9 h-9 rounded-full bg-gold-bg border-[1.5px] border-gold-border flex items-center justify-center text-[11px] font-semibold text-gold shrink-0">SC</div>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between mb-0.5">
                 <p className="text-[13px] font-semibold text-foreground">Sarah Chen</p>
@@ -157,7 +157,7 @@ export default function MessagesPage() {
               )}
             </div>
             {(gig.unread_count || 0) > 0 && (
-              <div className="w-[18px] h-[18px] rounded-full bg-red flex items-center justify-center text-[10px] font-bold text-white shrink-0 mt-0.5">{gig.unread_count}</div>
+              <div className="w-[18px] h-[18px] rounded-full bg-red flex items-center justify-center text-[10px] font-semibold text-white shrink-0 mt-0.5">{gig.unread_count}</div>
             )}
           </div>
         ))}
@@ -172,7 +172,7 @@ export default function MessagesPage() {
         ) : (
           <>
             <div className="px-5 py-3.5 border-b border-border flex items-center gap-3 shrink-0">
-              <div className="w-9 h-9 rounded-full bg-gold-bg border-[1.5px] border-gold-border flex items-center justify-center text-[11px] font-bold text-gold">SC</div>
+              <div className="w-9 h-9 rounded-full bg-gold-bg border-[1.5px] border-gold-border flex items-center justify-center text-[11px] font-semibold text-gold">SC</div>
               <div>
                 <h4 className="text-[14px] font-semibold text-foreground leading-[1.2]">Sarah Chen</h4>
                 <p className="text-[12px] text-muted-foreground">Creator Partnerships · Truleado</p>
@@ -199,7 +199,7 @@ export default function MessagesPage() {
                       isInfluencer ? 'flex-row-reverse' : 'flex-row'
                     )}>
                       {!isInfluencer && (
-                        <div className="w-7 h-7 rounded-full bg-gold-bg border-[1.5px] border-gold-border flex items-center justify-center text-[10px] font-bold text-gold shrink-0">SC</div>
+                        <div className="w-7 h-7 rounded-full bg-gold-bg border-[1.5px] border-gold-border flex items-center justify-center text-[10px] font-semibold text-gold shrink-0">SC</div>
                       )}
                       <div className="max-w-[75%]">
                         <div className={cn(

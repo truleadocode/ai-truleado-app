@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Inter:wght@400;500;600;700;800&display=swap');
+/* Truleado type system: Fraunces (marketing display), Inter (UI/body, weights 400/500/600 only), JetBrains Mono (data/IDs/handles) */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,32 +7,34 @@
 
 @layer base {
   :root {
-    /* ── shadcn/ui design tokens (HSL without hsl() wrapper) ── */
-    --background:         0 0% 100%;
-    --foreground:         0 0% 7%;
-    --card:               0 0% 100%;
-    --card-foreground:    0 0% 7%;
+    /* ── Truleado brand tokens — "Indigo & Ember" (see docs/brand-guidelines.html)
+       shadcn/ui tokens as HSL triplets (consumed via hsl(var(--x))). ── */
+    /* Page bg = Violet-tinted Slate 50 #F8F7FF (never pure white per brand rules) */
+    --background:         248 100% 98%;
+    --foreground:         244 51% 12%;   /* Slate 900 #110F2E */
+    --card:               0 0% 100%;      /* cards may be pure white */
+    --card-foreground:    244 51% 12%;
     --popover:            0 0% 100%;
-    --popover-foreground: 0 0% 7%;
-    /* primary = Truleado gold #C49A3C ≈ hsl(41 53% 50%) */
-    --primary:            41 53% 50%;
+    --popover-foreground: 244 51% 12%;
+    /* primary = Violet Ink 700 #2A2760 (buttons, active states, links) */
+    --primary:            244 42% 26%;
     --primary-foreground: 0 0% 100%;
-    /* secondary / muted = surface #F7F7F5 */
-    --secondary:          60 3% 97%;
-    --secondary-foreground: 0 0% 7%;
-    --muted:              60 3% 97%;
-    --muted-foreground:   0 0% 42%;
-    /* accent = gold-bg #FDF8EE */
-    --accent:             43 80% 96%;
-    --accent-foreground:  41 53% 40%;
-    /* destructive = red #D94F3D */
-    --destructive:        7 64% 54%;
+    /* secondary / muted = Slate 100 #EEEDF8 */
+    --secondary:          245 44% 95%;
+    --secondary-foreground: 244 42% 26%;
+    --muted:              245 44% 95%;
+    --muted-foreground:   245 23% 48%;   /* Slate 500 #635E96 */
+    /* accent (subtle tint bg / hover) = Brand 50 #EEEDF8 */
+    --accent:             245 44% 95%;
+    --accent-foreground:  244 42% 26%;
+    /* destructive = Ember Red 500 #D93D2A */
+    --destructive:        7 70% 51%;
     --destructive-foreground: 0 0% 100%;
-    /* border / input = #EBEBEB */
-    --border: 0 0% 92%;
-    --input:  0 0% 92%;
-    --ring:   41 53% 50%;
-    --radius: 0.625rem;
+    /* border / input = Slate 200 #D9D7F0 */
+    --border: 245 45% 89%;
+    --input:  245 45% 89%;
+    --ring:   244 36% 44%;               /* Brand 500 #4D489A */
+    --radius: 0.5rem;                     /* lg 8 / md 6 / sm 4 per brand scale */
   }
 
   * { @apply border-border; }

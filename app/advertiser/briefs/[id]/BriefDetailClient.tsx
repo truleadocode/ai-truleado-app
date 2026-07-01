@@ -102,13 +102,13 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
           {/* Avatar */}
-          <div className="w-10 h-10 rounded-full bg-gold/20 border-2 border-gold-border flex items-center justify-center text-gold font-bold text-sm shrink-0">
+          <div className="w-10 h-10 rounded-full bg-gold/20 border-2 border-gold-border flex items-center justify-center text-gold font-semibold text-sm shrink-0">
             {inf.first_name?.[0]}{inf.last_name?.[0]}
           </div>
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold">{inf.first_name} {inf.last_name}</span>
+              <span className="text-sm font-semibold">{inf.first_name} {inf.last_name}</span>
               {isConfirmed && <Badge variant="success" className="text-[10px]">Confirmed</Badge>}
               {isPassed    && <Badge variant="outline" className="text-[10px] text-muted-foreground">Passed</Badge>}
             </div>
@@ -121,7 +121,7 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
 
           {/* Score */}
           <div className="text-right shrink-0">
-            <div className={cn('text-2xl font-extrabold tabular-nums', scoreColor(score))}>{score}</div>
+            <div className={cn('text-2xl font-semibold tabular-nums', scoreColor(score))}>{score}</div>
             <div className="text-[10px] text-muted-foreground">/&nbsp;100</div>
           </div>
         </div>
@@ -137,7 +137,7 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
           ].map(({ icon, label, val }) => (
             <div key={label} className="bg-muted rounded-lg p-2 text-center">
               <div className="flex items-center justify-center gap-0.5 text-muted-foreground mb-0.5">{icon}</div>
-              <div className="text-[11px] font-bold text-foreground">{val}</div>
+              <div className="text-[11px] font-semibold text-foreground">{val}</div>
               <div className="text-[10px] text-muted-foreground">{label}</div>
             </div>
           ))}
@@ -152,7 +152,7 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
         {/* Why matched */}
         {match.match_reason && (
           <div className="bg-accent border border-gold-border rounded-lg p-3">
-            <p className="text-[10px] font-bold text-gold uppercase tracking-wider mb-1">Why we matched them</p>
+            <p className="text-[10px] font-semibold text-gold uppercase tracking-wider mb-1">Why we matched them</p>
             <p className="text-xs text-foreground/80 leading-relaxed">{match.match_reason}</p>
           </div>
         )}
@@ -169,7 +169,7 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
           </Button>
           <Button
             size="sm"
-            className="flex-1 gap-1.5 bg-gold hover:bg-gold/90 text-white font-bold"
+            className="flex-1 gap-1.5 bg-gold hover:bg-gold/90 text-white font-semibold"
             onClick={handleConfirm} disabled={loading}
           >
             <CheckCircle size={13} /> Confirm
@@ -226,7 +226,7 @@ export default function BriefDetailClient({ brief, initialMatches }: Props) {
         </Link>
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">{brief.brand_name}</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">{brief.brand_name}</h1>
             <p className="text-sm text-muted-foreground mt-1">{brief.product_description}</p>
           </div>
           <div className="flex gap-1.5 flex-wrap">
@@ -241,12 +241,12 @@ export default function BriefDetailClient({ brief, initialMatches }: Props) {
       <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-sm font-bold">Creator confirmation</p>
+            <p className="text-sm font-semibold">Creator confirmation</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {confirmed} of {needed} creators confirmed
             </p>
           </div>
-          <span className="text-2xl font-extrabold text-gold">{confirmed}<span className="text-muted-foreground text-base font-normal">/{needed}</span></span>
+          <span className="text-2xl font-semibold text-gold">{confirmed}<span className="text-muted-foreground text-base font-normal">/{needed}</span></span>
         </div>
         <Progress value={Math.min(100, (confirmed / needed) * 100)} className="h-2" />
       </div>

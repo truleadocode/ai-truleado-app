@@ -38,7 +38,7 @@ export default async function NotificationsPage() {
 
   return (
     <div className="px-7 pt-6 pb-10 max-w-[600px]">
-      <h2 className="text-base font-bold mb-5">Notifications</h2>
+      <h2 className="text-base font-semibold mb-5">Notifications</h2>
 
       {(!notifs || notifs.length === 0) && (
         <div className="bg-card border border-border rounded-xl px-6 py-12 text-center">
@@ -61,7 +61,7 @@ export default async function NotificationsPage() {
           </div>
           <div className="flex-1">
             <div className="flex items-start justify-between gap-2 mb-[3px]">
-              <p className="text-[13px] font-bold">{n.title}</p>
+              <p className="text-[13px] font-semibold">{n.title}</p>
               <div className="flex gap-1.5 items-center flex-shrink-0">
                 {!n.read && <div className="w-[7px] h-[7px] rounded-full bg-gold" />}
                 <p className="text-[11px] text-muted-foreground">{new Date(n.created_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</p>

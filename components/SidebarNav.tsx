@@ -30,7 +30,7 @@ export default function SidebarNav({ items, variant = 'vertical' }: Props) {
             >
               {iconSm ?? icon} {label}
               {!!badge && (
-                <span className="ml-0.5 text-[9px] font-bold bg-gold text-white rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-1">
+                <span className="ml-0.5 text-[9px] font-semibold bg-gold text-white rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-1">
                   {badge > 9 ? '9+' : badge}
                 </span>
               )}
@@ -59,7 +59,7 @@ export default function SidebarNav({ items, variant = 'vertical' }: Props) {
             <span className="shrink-0">{icon}</span>
             <span className="flex-1 truncate">{label}</span>
             {!!badge && (
-              <span className="text-[10px] font-bold bg-gold text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              <span className="text-[10px] font-semibold bg-gold text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
                 {badge > 9 ? '9+' : badge}
               </span>
             )}

@@ -31,7 +31,7 @@ function TruleadoLogo() {
           <path d="M5 10h6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
         </svg>
       </div>
-      <span className="text-base font-extrabold tracking-tight text-foreground">Truleado</span>
+      <span className="text-base font-semibold tracking-tight text-foreground">Truleado</span>
     </Link>
   )
 }
@@ -105,7 +105,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6">
         <Card className="w-full max-w-sm shadow-lg">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-extrabold tracking-tight">Welcome back</CardTitle>
+            <CardTitle className="text-2xl font-semibold tracking-tight">Welcome back</CardTitle>
             <CardDescription>Log in to your Truleado account</CardDescription>
           </CardHeader>
 
@@ -150,7 +150,7 @@ export default function LoginPage() {
                 {error && <p className="text-xs text-destructive leading-relaxed">{error}</p>}
 
                 <Button
-                  className="w-full bg-gold hover:bg-gold/90 text-white font-bold"
+                  className="w-full bg-gold hover:bg-gold/90 text-white font-semibold"
                   onClick={emailBrandLogin}
                   disabled={loading}
                 >
@@ -159,7 +159,7 @@ export default function LoginPage() {
 
                 <p className="text-center text-xs text-muted-foreground pt-1">
                   New here?{' '}
-                  <Link href="/advertiser" className="text-gold font-bold no-underline hover:underline">
+                  <Link href="/advertiser" className="text-gold font-semibold no-underline hover:underline">
                     Create a brand account
                   </Link>
                 </p>
@@ -173,7 +173,7 @@ export default function LoginPage() {
                 <p className="text-center text-xs text-muted-foreground leading-relaxed">
                   Creators sign in with Google only.<br />
                   New here?{' '}
-                  <Link href="/influencer" className="text-gold font-bold no-underline hover:underline">
+                  <Link href="/influencer" className="text-gold font-semibold no-underline hover:underline">
                     Create a creator account
                   </Link>
                 </p>
