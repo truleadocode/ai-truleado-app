@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const month = new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' })
     const title = briefData.title || `${briefData.brand_name || 'Brief'} — ${briefData.product_description?.slice(0,30) || 'Campaign'} · ${month}`
 
-    const { data: brief, error } = await service.from('briefs').insert({
+    const briefRow = {
       advertiser_id,
       title,
       brand_name: briefData.brand_name,
@@ -59,16 +59,32 @@ export async function POST(request: NextRequest) {
       source: briefData.source || 'chat',
       uploaded_brief_path: briefData.uploaded_brief_path,
       raw_brief_text: briefData.raw_brief_text,
-    }).select('id').single()
+    }
 
-    if (error) throw error
+    // Resuming a saved draft updates that row in place — otherwise every
+    // save/submit of a resumed draft would spawn a duplicate brief.
+    const draftId = body.draft_id || null
+    let brief: { id: string } | null = null
+    if (draftId) {
+      const { data: existing } = await service.from('briefs').select('id, advertiser_id, status').eq('id', draftId).single()
+      if (!existing || existing.advertiser_id !== advertiser_id || existing.status !== 'draft') {
+        return NextResponse.json({ error: 'Draft not found' }, { status: 404 })
+      }
+      const { data, error } = await service.from('briefs').update(briefRow).eq('id', draftId).select('id').single()
+      if (error) throw error
+      brief = data
+    } else {
+      const { data, error } = await service.from('briefs').insert(briefRow).select('id').single()
+      if (error) throw error
+      brief = data
+    }
 
     // Only kick off matching for a real submission — a draft isn't ready
     // for creators to see yet.
     if (status === 'submitted') {
       fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/advertiser/match-brief`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY! },
         body: JSON.stringify({ brief_id: brief.id }),
       }).catch(console.error)
     }

@@ -91,7 +91,7 @@ export async function GET(request: Request) {
         if (brief?.id) {
           fetch(`${origin}/api/advertiser/match-brief`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY! },
             body: JSON.stringify({ brief_id: brief.id }),
           }).catch(console.error)
         }

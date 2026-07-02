@@ -5,7 +5,7 @@ import DashboardShell from '@/components/DashboardShell'
 
 export const dynamic = 'force-dynamic'
 
-export default async function NewBriefPage() {
+export default async function NewBriefPage({ searchParams }: { searchParams: { draft?: string } }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/advertiser')
@@ -17,9 +17,22 @@ export default async function NewBriefPage() {
   const { count } = await supabase.from('briefs').select('id', { count: 'exact', head: true }).eq('advertiser_id', advertiser.id).neq('status', 'draft')
   const needsSubscription = !advertiser.subscribed && (count || 0) >= 1
 
+  // Resume a saved draft (?draft=<brief_id>) — scoped to this advertiser.
+  let draftBrief = null
+  if (searchParams.draft) {
+    const { data } = await supabase
+      .from('briefs')
+      .select('*')
+      .eq('id', searchParams.draft)
+      .eq('advertiser_id', advertiser.id)
+      .eq('status', 'draft')
+      .single()
+    draftBrief = data
+  }
+
   return (
     <DashboardShell role="advertiser">
-      <BriefCreationClient advertiser={advertiser} needsSubscription={needsSubscription} />
+      <BriefCreationClient advertiser={advertiser} needsSubscription={needsSubscription} draftBrief={draftBrief} />
     </DashboardShell>
   )
 }

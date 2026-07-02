@@ -69,15 +69,20 @@ export default function GigDetailPage() {
       if (!inf) { router.push('/'); return }
       setInfluencerId(inf.id)
 
+      // Explicit column list: direct select of brand_name is revoked for
+      // client roles — brand_name_visible is null until brand_revealed.
       const { data: gigData } = await supabase
         .from('gigs')
-        .select('*')
+        .select('id, brand_category, brand_name:brand_name_visible, brand_revealed, platform, deliverables_summary, budget_eur, respond_by, content_due_at, goes_live_at, status, ai_outreach_draft')
         .eq('id', gigId)
         .eq('influencer_id', inf.id)
         .single()
 
       if (!gigData) { router.push('/dashboard'); return }
-      setGig(gigData)
+      // offer_notes / deliverables_checklist / go_live_at aren't columns on
+      // gigs (never returned, even by the old select('*')) — the UI already
+      // null-guards them, so the cast preserves prior behavior.
+      setGig(gigData as unknown as Gig)
 
       const { data: msgs } = await supabase
         .from('gig_messages')

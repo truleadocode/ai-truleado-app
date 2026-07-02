@@ -40,7 +40,7 @@ export default async function GigsPage({ searchParams }: { searchParams: { tab?:
 
   const { data: gigs } = await supabase
     .from('gigs')
-    .select('id, brand_category, brand_name, brand_revealed, platform, deliverables_summary, budget_eur, respond_by, content_due_at, status, created_at')
+    .select('id, brand_category, brand_name:brand_name_visible, brand_revealed, platform, deliverables_summary, budget_eur, respond_by, content_due_at, status, created_at')
     .eq('influencer_id', influencer.id)
     .in('status', tab.statuses)
     .order('created_at', { ascending: false })

@@ -89,7 +89,7 @@ export default async function AdvertiserDashboardPage() {
             return (
               <Link
                 key={brief.id}
-                href={isDraft ? '/advertiser/briefs/new' : `/advertiser/briefs/${brief.id}`}
+                href={isDraft ? `/advertiser/briefs/new?draft=${brief.id}` : `/advertiser/briefs/${brief.id}`}
                 className="no-underline group"
               >
                 <Card className="h-full transition-shadow hover:shadow-md border-border group-hover:border-gold/40">

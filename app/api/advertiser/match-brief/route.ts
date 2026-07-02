@@ -47,7 +47,16 @@ Return JSON:
 }
 
 export async function POST(request: NextRequest) {
-  const { brief_id } = await request.json()
+  // Internal-only endpoint: called server-to-server from submit-brief,
+  // finalize-auth, and the advertiser OAuth callback. The service-role key
+  // doubles as the shared secret — it never leaves the server.
+  if (request.headers.get('x-internal-key') !== process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  let brief_id: string
+  try { ({ brief_id } = await request.json()) } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
   const service = createServiceClient()
 
   try {

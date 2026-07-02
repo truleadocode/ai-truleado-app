@@ -45,7 +45,7 @@ export default function MessagesPage() {
 
       const { data: gigsData } = await supabase
         .from('gigs')
-        .select('id, brand_category, brand_name, brand_revealed, status')
+        .select('id, brand_category, brand_name:brand_name_visible, brand_revealed, status')
         .eq('influencer_id', inf.id)
         .order('created_at', { ascending: false })
 

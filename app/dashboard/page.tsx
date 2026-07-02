@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import OpportunityCards from './OpportunityCards'
 
@@ -18,7 +18,10 @@ export default async function InfluencerDashboardPage() {
   if (!influencer) redirect('/influencer')
   if (!influencer.onboarding_complete) redirect('/influencer')
 
-  const { data: opportunities } = await supabase
+  // Service client (server-only): influencers have NO direct read access to
+  // briefs/brief_matches (RLS) so brand identity can't leak pre-reveal — this
+  // query selects only the brand-safe fields shown on opportunity cards.
+  const { data: opportunities } = await createServiceClient()
     .from('brief_matches')
     .select(`
       id, status, outreach_message,

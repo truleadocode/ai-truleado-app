@@ -34,9 +34,10 @@ function hasBriefContent(d: Record<string, any> | null) {
   return Boolean(d?.brand_name || d?.product_description || d?.platforms?.length)
 }
 
-export default function BriefCreationClient({ advertiser, needsSubscription }: { advertiser: any; needsSubscription: boolean }) {
+export default function BriefCreationClient({ advertiser, needsSubscription, draftBrief }: { advertiser: any; needsSubscription: boolean; draftBrief?: any }) {
   const router = useRouter()
-  const [phase, setPhase] = useState<Phase>('choose')
+  // A resumed draft skips straight to the review screen with its saved fields.
+  const [phase, setPhase] = useState<Phase>(draftBrief ? 'review' : 'choose')
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [step, setStep] = useState('brand')
@@ -44,7 +45,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
   const [sessionData, setSessionData] = useState<Record<string, any>>({})
   const [isThinking, setIsThinking] = useState(false)
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [reviewData, setReviewData] = useState<Record<string, any> | null>(null)
+  const [reviewData, setReviewData] = useState<Record<string, any> | null>(draftBrief || null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [savingDraft, setSavingDraft] = useState(false)
 
@@ -214,7 +215,7 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
     try {
       const res = await fetch('/api/advertiser/submit-brief', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ advertiser_id: advertiser.id, status: 'draft', ...reviewData }),
+        body: JSON.stringify({ advertiser_id: advertiser.id, draft_id: draftBrief?.id, ...reviewData, status: 'draft' }),
       })
       const result = await res.json()
       if (!res.ok || !result.brief_id) {
@@ -243,7 +244,9 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
     try {
       const res = await fetch('/api/advertiser/submit-brief', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ advertiser_id: advertiser.id, ...data }),
+        // status pinned last: a resumed draft row carries status:'draft' in its
+        // fields, which must not downgrade this real submission back to a draft.
+        body: JSON.stringify({ advertiser_id: advertiser.id, draft_id: draftBrief?.id, ...data, status: 'submitted' }),
       })
       const result = await res.json()
       if (!res.ok || !result.brief_id) {
