@@ -47,7 +47,8 @@ async function callGemini(system: string, user: string) {
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
+  let body: any
+  try { body = await request.json() } catch { return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }) }
   const { action, session_key, user_id, advertiser_id } = body
   const service = createServiceClient()
 
@@ -213,8 +214,6 @@ Return ONLY JSON: {"extracted": <schema>, "reply": "string"}`
       .eq('session_key', session_key)
       .single()
 
-    if (!session) return NextResponse.json({ phase: 'done' })
-
     // Check if advertiser row already exists
     const { data: existing } = await service
       .from('advertisers')
@@ -223,27 +222,35 @@ Return ONLY JSON: {"extracted": <schema>, "reply": "string"}`
       .single()
 
     if (existing) {
-      await service.from('advertiser_onboarding_sessions')
-        .update({ user_id: uid, advertiser_id: existing.id, completed: true })
-        .eq('session_key', session_key)
+      if (session) {
+        await service.from('advertiser_onboarding_sessions')
+          .update({ user_id: uid, advertiser_id: existing.id, completed: true })
+          .eq('session_key', session_key)
+      }
       return NextResponse.json({ phase: 'done', advertiser_id: existing.id })
     }
 
-    // Create new advertiser row
+    // Create new advertiser row (even if the onboarding session row is
+    // missing — otherwise the user lands on the dashboard with no
+    // advertisers record at all)
     const { data: { user } } = await service.auth.admin.getUserById(uid)
+    const fullName = user?.user_metadata?.full_name || ''
+    const parts = fullName.trim().split(' ')
     const { data: newAdv } = await service.from('advertisers').insert({
       user_id: uid,
       email: user?.email || '',
-      first_name: session.first_name,
-      last_name: session.last_name,
-      company_name: session.company_name,
-      advertiser_type: session.advertiser_type,
+      first_name: session?.first_name || parts[0] || '',
+      last_name: session?.last_name || parts.slice(1).join(' ') || '',
+      company_name: session?.company_name || null,
+      advertiser_type: session?.advertiser_type || null,
       onboarding_complete: true,
     }).select('id').single()
 
-    await service.from('advertiser_onboarding_sessions')
-      .update({ user_id: uid, advertiser_id: newAdv?.id, completed: true })
-      .eq('session_key', session_key)
+    if (session) {
+      await service.from('advertiser_onboarding_sessions')
+        .update({ user_id: uid, advertiser_id: newAdv?.id, completed: true })
+        .eq('session_key', session_key)
+    }
 
     return NextResponse.json({ phase: 'done', advertiser_id: newAdv?.id })
   }

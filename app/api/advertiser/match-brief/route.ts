@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
           const { count: activeConfirmed } = await service.from('brief_matches')
             .select('id', { count: 'exact', head: true })
             .eq('influencer_id', match.influencer_id)
-            .eq('status', 'advertiser_confirmed')
+            .in('status', ['advertiser_confirmed', 'completed'])
           if ((activeConfirmed || 0) > 0) continue
         }
 

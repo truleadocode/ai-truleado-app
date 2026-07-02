@@ -221,6 +221,9 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
         setSubmitError(result.error || 'Could not save your draft. Please try again.')
         return
       }
+      // This brief's session is done — clear the stored key so the next
+      // brief doesn't reuse (and merge into) the old brief_sessions row.
+      localStorage.removeItem(SESSION_KEY_LS)
       // Invalidate Next's client router cache before navigating, so the
       // dashboard list re-fetches instead of serving a stale cached payload
       // from before this draft existed.
@@ -248,9 +251,8 @@ export default function BriefCreationClient({ advertiser, needsSubscription }: {
         setPhase('review')
         return
       }
-      // Same cache-invalidation reasoning as saveDraft — the dashboard list
-      // (and the brief detail page itself, if revisited) should never show
-      // stale data after this mutation.
+      // Same session-key + cache-invalidation reasoning as saveDraft.
+      localStorage.removeItem(SESSION_KEY_LS)
       router.refresh()
       router.push(`/advertiser/briefs/${result.brief_id}`)
     } catch {

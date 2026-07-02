@@ -80,7 +80,7 @@ export default async function AdvertiserDashboardPage() {
         <div className="grid sm:grid-cols-2 gap-4">
           {briefList.map(brief => {
             const matches   = (brief.brief_matches as any[]) || []
-            const confirmed = matches.filter(m => m.status === 'advertiser_confirmed').length
+            const confirmed = matches.filter(m => m.status === 'advertiser_confirmed' || m.status === 'completed').length
             const needed    = brief.creators_needed || 1
             const pct       = Math.min(100, Math.round((confirmed / needed) * 100))
             const statusCfg = STATUS_MAP[brief.status] || STATUS_MAP.submitted

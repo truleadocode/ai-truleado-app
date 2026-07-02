@@ -92,6 +92,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
         body: JSON.stringify({ action: 'resume_continue', session_key: sessionKey, step: s }),
       })
       const data = await res.json()
+      if (!res.ok || data.error || !data.sarah_reply) { addSarah('Sorry, I had a hiccup — say "yes" to try again. 😅'); return }
       if (data.step) setStep(data.step)
       setIsResumePrompt(false); addSarah(data.sarah_reply); setPhase(data.phase || 'chat')
     } finally { setIsThinking(false); setTimeout(() => inputRef.current?.focus(), 100) }
@@ -114,6 +115,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
         body: JSON.stringify({ action: 'message', session_key: sessionKey, step, user_message: text, data: sessionData }),
       })
       const data = await res.json()
+      if (!res.ok || data.error) { addSarah("Sorry, I had a hiccup — can you say that again? 😅"); return }
       if (data.extracted) setSessionData((prev: any) => ({ ...prev, ...data.extracted }))
       if (data.step) setStep(data.step)
       addSarah(data.sarah_reply || 'Got it!')
@@ -270,7 +272,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
     const sk = sessionKey || localStorage.getItem(SESSION_KEY_LS)
     supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/advertiser-callback?sk=${sk}`, queryParams: { prompt: 'select_account' } },
+      options: { redirectTo: `${window.location.origin}/auth/advertiser-callback${sk ? `?sk=${encodeURIComponent(sk)}` : ''}`, queryParams: { prompt: 'select_account' } },
     })
   }
 
@@ -301,6 +303,7 @@ export default function AdvertiserOnboardingClient({ user, advertiser, embedded 
         setAuthError('This email is registered as a creator. Please use a different email for your brand account.')
         setAuthLoading(false); return
       }
+      if (!finRes.ok) { setAuthError('Something went wrong finishing setup. Please try again.'); setAuthLoading(false); return }
       router.push('/advertiser/dashboard')
     } catch { setAuthError('Something went wrong. Please try again.'); setAuthLoading(false) }
   }

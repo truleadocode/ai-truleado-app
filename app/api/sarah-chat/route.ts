@@ -105,12 +105,17 @@ async function callGemini(systemPrompt: string, userPrompt: string): Promise<any
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction: systemPrompt })
   const result = await model.generateContent(userPrompt)
-  const raw = result.response.text().trim().replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim()
+  const raw = result.response.text().trim().replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '').trim()
   return JSON.parse(raw)
 }
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
+  let body: any
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
   const { action, session_key, user_id, influencer_id, user_message } = body
   const service = createServiceClient()
 
@@ -188,6 +193,14 @@ export async function POST(request: NextRequest) {
   if (action === 'resume_continue') {
     const { step: currentStep } = body
     const stepInfo = STEPS[currentStep]
+    if (currentStep === 'rates_done') {
+      // Finished all questions but never signed in — resume at the auth step
+      return NextResponse.json({
+        phase: 'auth',
+        sarah_reply: `You're all set! 🎉 Just sign in with Google so I can save everything.`,
+        step: currentStep,
+      })
+    }
     if (!stepInfo) {
       return NextResponse.json({
         sarah_reply: "Let's start fresh! What's your name?",

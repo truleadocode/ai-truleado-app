@@ -208,7 +208,13 @@ export default function BriefDetailClient({ brief, initialMatches }: Props) {
             .eq('brief_id', brief.id)
             .in('status', ['creator_confirmed','advertiser_confirmed','advertiser_passed','completed'])
             .order('score', { ascending: false })
-          if (data) setMatches(data as any)
+          // Same PII rule as the server page: creator email is only shown
+          // once the advertiser has confirmed the match.
+          if (data) setMatches(data.map((m: any) => {
+            const revealed = m.status === 'advertiser_confirmed' || m.status === 'completed'
+            const inf = Array.isArray(m.influencers) ? m.influencers[0] : m.influencers
+            return { ...m, influencers: inf ? { ...inf, email: revealed ? inf.email : undefined } : inf }
+          }) as any)
         }
       ).subscribe()
     return () => { supabase.removeChannel(channel) }

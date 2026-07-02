@@ -162,6 +162,8 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
           setPlatformStatuses(prev => ({ ...prev, [id]: status }))
 
           if (status === 'processing') {
+            // Restart the safety timeout — parsing may still hang after this update
+            startProcessingTimeout(id)
             setBanner('processing')
             if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current)
           }
@@ -245,6 +247,15 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
     formData.append('platformId', platformId)
     formData.append('influencerId', influencer.id)
     fetch('/api/parse-screenshots', { method: 'POST', body: formData })
+      .catch(() => {
+        // Network-level failure — the API never ran, so no realtime update will come
+        if (processingTimeouts.current[platformId]) {
+          clearTimeout(processingTimeouts.current[platformId])
+          delete processingTimeouts.current[platformId]
+        }
+        setPlatformStatuses(prev => ({ ...prev, [platformId]: 'failed' }))
+        setBanner(null)
+      })
       .finally(() => setUploadingPlatform(null))
   }
 
@@ -665,6 +676,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                   type="file" multiple accept="image/*" className="hidden"
                   onChange={e => {
                     const files = Array.from(e.target.files || [])
+                    e.target.value = ''
                     if (files.length) uploadAndParseScreenshots(p.id, p.platform, files)
                   }}
                 />

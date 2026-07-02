@@ -5,7 +5,8 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 // for BOTH email/password and as a shared helper. Ensures the advertiser
 // row exists, blocks influencer cross-role, and saves any pending brief.
 export async function POST(request: Request) {
-  const { session_key } = await request.json()
+  let session_key: string | null = null
+  try { ({ session_key } = await request.json()) } catch {}
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

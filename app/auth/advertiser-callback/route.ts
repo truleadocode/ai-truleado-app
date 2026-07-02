@@ -41,7 +41,7 @@ export async function GET(request: Request) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'merge', session_key: sessionKey, user_id: user.id }),
     })
-    const mergeData = await mergeRes.json()
+    const mergeData = await mergeRes.json().catch(() => ({}))
     const advertiserId = mergeData.advertiser_id
 
     // ── SAVE BRIEF if session has brief data ──────────────────────

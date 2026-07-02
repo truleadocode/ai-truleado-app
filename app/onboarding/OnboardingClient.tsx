@@ -101,15 +101,23 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
 
   async function mergeSession(sk: string) {
     if (!user?.id || !influencer?.id) return
-    const res = await fetch('/api/sarah-chat', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'merge', session_key: sk || sessionKey, user_id: user.id, influencer_id: influencer.id }),
-    })
-    const data = await res.json()
-    if (data.phase === 'screenshots') {
-      setPlatforms(data.platforms || []); setInfluencerId(data.influencer_id)
-      if (data.first_name) setFirstName(data.first_name)
-      setPhase('screenshots'); setupRealtime(data.influencer_id, data.platforms || [])
+    try {
+      const res = await fetch('/api/sarah-chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'merge', session_key: sk || sessionKey, user_id: user.id, influencer_id: influencer.id }),
+      })
+      const data = await res.json()
+      if (data.phase === 'screenshots') {
+        setPlatforms(data.platforms || []); setInfluencerId(data.influencer_id)
+        if (data.first_name) setFirstName(data.first_name)
+        setPhase('screenshots'); setupRealtime(data.influencer_id, data.platforms || [])
+        return
+      }
+      throw new Error('merge failed')
+    } catch {
+      // Don't leave the user stuck on the loading screen — fall back to screenshots
+      setInfluencerId(influencer.id)
+      setPhase('screenshots')
     }
   }
 
@@ -147,10 +155,13 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'resume_continue', session_key: sessionKey, step: s }),
       })
+      if (!res.ok) throw new Error('resume failed')
       const data = await res.json()
+      if (!data.sarah_reply) throw new Error('resume failed')
       if (data.step) setStep(data.step)
       setIsResumePrompt(false); addS(data.sarah_reply)
-    } catch { addS("Let's pick up where we left off!") }
+      if (data.phase === 'auth') setPhase('auth')
+    } catch { setIsResumePrompt(false); addS("Let's pick up where we left off!") }
     finally { setIsThinking(false); setTimeout(() => inputRef.current?.focus(), 100) }
   }
 
@@ -184,6 +195,7 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
         body: JSON.stringify({ action: 'message', session_key: sessionKey, step, user_message: text, data: sessionData }),
       })
       const data = await res.json()
+      if (!res.ok || !data.sarah_reply) throw new Error(data.error || 'chat failed')
       if (data.extracted) setSessionData((prev: any) => ({ ...prev, ...data.extracted }))
       if (data.step) setStep(data.step)
       addS(data.sarah_reply)
@@ -194,9 +206,10 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
 
   async function signInWithGoogle() {
     const sk = sessionKey || localStorage.getItem(SESSION_KEY_LS)
+    const skParam = sk ? `&sk=${encodeURIComponent(sk)}` : ''
     await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/auth/callback?onboarding=true&sk=${sk}`, queryParams: { prompt: 'select_account' } },
+      options: { redirectTo: `${window.location.origin}/auth/callback?onboarding=true${skParam}`, queryParams: { prompt: 'select_account' } },
     })
   }
 

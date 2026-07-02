@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,10 +12,24 @@ export async function POST(request: NextRequest) {
     // the original behaviour.
     const status = requestedStatus === 'draft' ? 'draft' : 'submitted'
 
+    // Ownership: the brief must be created for the authed user's own
+    // advertiser account — advertiser_id comes from the client.
+    const { data: { user } } = await createClient().auth.getUser()
+    const { data: advertiser } = await service.from('advertisers').select('user_id, subscribed').eq('id', advertiser_id).single()
+    if (!user || !advertiser || advertiser.user_id !== user.id) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+    }
+
     // Check if this is their first submitted brief — drafts never count
     // against the free-brief allowance, matching the gate in page.tsx.
     const { count } = await service.from('briefs').select('id', { count: 'exact', head: true }).eq('advertiser_id', advertiser_id).neq('status', 'draft')
     const isFreeBrief = status === 'submitted' && (count || 0) === 0
+
+    // Enforce the free-brief gate server-side too — the client check in
+    // briefs/new/page.tsx alone can be bypassed by calling this API directly.
+    if (status === 'submitted' && !advertiser.subscribed && (count || 0) >= 1) {
+      return NextResponse.json({ error: 'Subscription required to submit more briefs.' }, { status: 403 })
+    }
 
     // Auto-generate title
     const month = new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' })

@@ -12,6 +12,9 @@ function getResend() {
 
 export async function POST(request: NextRequest) {
   const { match_id, influencer_id, response } = await request.json()
+  if (!match_id || !influencer_id || !['interested', 'declined'].includes(response)) {
+    return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+  }
   const service = createServiceClient()
 
   try {
@@ -34,7 +37,8 @@ export async function POST(request: NextRequest) {
 
     const brief = match.brief as any
 
-    if (response === 'yes') {
+    // Client sends 'interested' | 'declined' (see OpportunityCards.tsx)
+    if (response === 'interested') {
       await service.from('brief_matches').update({
         status: 'creator_confirmed',
         creator_response: 'yes',

@@ -42,11 +42,19 @@ export default async function BriefDetailPage({ params }: { params: { id: string
     .in('status', ['creator_confirmed','advertiser_confirmed','advertiser_passed','completed'])
     .order('score', { ascending: false })
 
+  // PII guard: the advertiser only gets the creator's email once THEY have
+  // confirmed the match — not while it's merely creator_confirmed.
+  const safeMatches = (matches || []).map((m: any) => {
+    const revealed = m.status === 'advertiser_confirmed' || m.status === 'completed'
+    const inf = Array.isArray(m.influencers) ? m.influencers[0] : m.influencers
+    return { ...m, influencers: inf ? { ...inf, email: revealed ? inf.email : undefined } : inf }
+  })
+
   return (
     <DashboardShell role="advertiser">
       {/* Supabase infers the to-one `influencers` relation as an array; at
           runtime it's a single object, matching BriefDetailClient's Match type. */}
-      <BriefDetailClient brief={brief} initialMatches={(matches || []) as any} />
+      <BriefDetailClient brief={brief} initialMatches={safeMatches as any} />
     </DashboardShell>
   )
 }

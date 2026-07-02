@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { Resend } from 'resend'
 
 // Lazy init so the build's page-data collection doesn't construct Resend
@@ -12,6 +12,7 @@ function getResend() {
 
 export async function POST(request: NextRequest) {
   const { match_id, brief_id } = await request.json()
+  if (!match_id) return NextResponse.json({ error: 'Missing match_id' }, { status: 400 })
   const service = createServiceClient()
 
   try {
@@ -22,9 +23,27 @@ export async function POST(request: NextRequest) {
     const brief = match.brief as any
     const advertiser = brief?.advertiser as any
 
+    // Only the advertiser who owns this brief may confirm the match
+    const { data: { user } } = await createClient().auth.getUser()
+    if (!user || advertiser?.user_id !== user.id) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+    }
+
+    // Idempotency: never re-send handoff emails for an already-confirmed match
+    if (match.status === 'advertiser_confirmed' || match.status === 'completed') {
+      return NextResponse.json({ ok: true })
+    }
+
+    // Record the confirmation BEFORE attempting emails so an email failure
+    // can't lose the advertiser's decision.
+    await service.from('brief_matches').update({ status: 'advertiser_confirmed' }).eq('id', match_id)
+
     const creatorName = [creator?.first_name, creator?.last_name].filter(Boolean).join(' ') || 'Creator'
     const advertiserName = [advertiser?.first_name, advertiser?.last_name].filter(Boolean).join(' ') || 'the brand'
 
+    // Emails are best-effort: a Resend failure must not undo or block the
+    // confirmation recorded above.
+    try {
     // Email to creator
     if (creator?.email) {
       await getResend().emails.send({
@@ -76,6 +95,9 @@ export async function POST(request: NextRequest) {
     }
 
     await service.from('brief_matches').update({ handoff_sent_at: new Date().toISOString(), status: 'completed' }).eq('id', match_id)
+    } catch (emailErr) {
+      console.error('Confirm creator email error:', emailErr)
+    }
 
     return NextResponse.json({ ok: true })
   } catch (err) {

@@ -4,10 +4,11 @@ import { createServiceClient } from '@/lib/supabase/server'
 // Creates a new advertiser account with email + password (auto-confirmed).
 // Does NOT save the brief here — finalize-auth handles that after the client signs in.
 export async function POST(request: NextRequest) {
-  const { email, password } = await request.json()
   const service = createServiceClient()
 
   try {
+    let email: string, password: string
+    try { ({ email, password } = await request.json()) } catch { return NextResponse.json({ error: 'Invalid request.' }, { status: 400 }) }
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 })
     }
