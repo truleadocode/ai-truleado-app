@@ -6,10 +6,10 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
-import { Building2, Sparkles } from 'lucide-react'
+import { Building2, Sparkles, Check } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 function GoogleIcon() {
   return (
@@ -22,31 +22,57 @@ function GoogleIcon() {
   )
 }
 
-function TruleadoLogo() {
+function TruleadoMark({ light = false }: { light?: boolean }) {
   return (
-    <Link href="/" className="flex items-center gap-2 no-underline">
-      <div className="w-7 h-7 rounded-[6px] bg-gold flex items-center justify-center">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M3 13L8 3L13 13" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M5 10h6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
-        </svg>
-      </div>
-      <span className="text-base font-semibold tracking-tight text-foreground">Truleado</span>
-    </Link>
+    <div className={cn('w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0', light ? 'bg-white/12' : 'bg-brand')}>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+        <path d="M3 13L8 3L13 13" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M5 10h6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
+      </svg>
+    </div>
   )
 }
 
 const SESSION_KEY_LS = 'truleado_session_key'
 
+type Mode = 'login' | 'signup'
+
+// Small pill segmented control shared by both role tabs to flip between
+// signing in and creating a new account without leaving the page.
+function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-1 bg-muted rounded-full p-1 mb-5">
+      {(['login', 'signup'] as Mode[]).map(m => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => onChange(m)}
+          className={cn(
+            'h-8 rounded-full text-[13px] font-medium transition-colors',
+            mode === m ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+          )}
+        >
+          {m === 'login' ? 'Log in' : 'Sign up'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const BRAND_POINTS = ['AI reads and scores every brief', 'Matched creators land in their Gigs feed', 'Accept, chat, and go — no back-and-forth']
+
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
+  const [checking, setChecking] = useState(true)
+
+  const [brandMode, setBrandMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [checking, setChecking] = useState(true)
 
+  const [creatorMode, setCreatorMode] = useState<Mode>('login')
   const [creatorEmail, setCreatorEmail] = useState('')
   const [creatorPassword, setCreatorPassword] = useState('')
   const [creatorError, setCreatorError] = useState('')
@@ -95,6 +121,33 @@ export default function LoginPage() {
     router.push('/advertiser/dashboard')
   }
 
+  async function emailBrandSignup() {
+    setError('')
+    if (!email.trim() || !password) { setError('Enter an email and password.'); return }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
+    setLoading(true)
+    try {
+      const res = await fetch('/api/advertiser/email-signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(data.error || 'Could not create your account.'); setLoading(false); return }
+
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      if (signInErr) { setError(signInErr.message); setLoading(false); return }
+
+      await fetch('/api/advertiser/finalize-auth', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_key: null }),
+      })
+      router.push('/advertiser')
+    } catch {
+      setError('Something went wrong. Please try again.')
+      setLoading(false)
+    }
+  }
+
   async function emailCreatorLogin() {
     setCreatorError('')
     if (!creatorEmail.trim() || !creatorPassword) { setCreatorError('Enter your email and password.'); return }
@@ -119,6 +172,35 @@ export default function LoginPage() {
     router.push('/influencer')
   }
 
+  async function emailCreatorSignup() {
+    setCreatorError('')
+    if (!creatorEmail.trim() || !creatorPassword) { setCreatorError('Enter an email and password.'); return }
+    if (creatorPassword.length < 6) { setCreatorError('Password must be at least 6 characters.'); return }
+    setCreatorLoading(true)
+    try {
+      const res = await fetch('/api/influencer/email-signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: creatorEmail.trim(), password: creatorPassword }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setCreatorError(data.error || 'Could not create your account.'); setCreatorLoading(false); return }
+
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: creatorEmail.trim(), password: creatorPassword })
+      if (signInErr) { setCreatorError(signInErr.message); setCreatorLoading(false); return }
+
+      const sk = typeof window !== 'undefined' ? localStorage.getItem(SESSION_KEY_LS) : null
+      await fetch('/api/onboarding', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete_signup', session_key: sk }),
+      })
+      localStorage.removeItem(SESSION_KEY_LS)
+      router.push('/influencer')
+    } catch {
+      setCreatorError('Something went wrong. Please try again.')
+      setCreatorLoading(false)
+    }
+  }
+
   if (checking) {
     return (
       <div className="min-h-screen bg-muted flex items-center justify-center">
@@ -128,20 +210,65 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted flex flex-col font-sans">
-      <div className="border-b bg-card px-6 py-4">
-        <TruleadoLogo />
+    <div className="min-h-screen bg-muted font-sans grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+
+      {/* ── Left — brand panel (hidden on small screens) ─────────────── */}
+      <div className="hidden lg:flex relative flex-col justify-between overflow-hidden bg-brand-900 text-white px-14 py-12">
+        {/* Decorative — soft violet-on-violet glow, the one ember dot is the
+            single accent element on this viewport per brand rules. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-32 -right-24 w-[420px] h-[420px] rounded-full bg-brand-600/40 blur-3xl" />
+          <div className="absolute bottom-[-140px] left-[-80px] w-[380px] h-[380px] rounded-full bg-brand-700/50 blur-3xl" />
+        </div>
+
+        <Link href="/" className="relative flex items-center gap-2.5 no-underline">
+          <TruleadoMark light />
+          <span className="text-base font-semibold tracking-tight text-white">Truleado</span>
+        </Link>
+
+        <div className="relative max-w-md">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/70 bg-white/10 rounded-full px-3 py-1 mb-6">
+            <span className="w-1.5 h-1.5 rounded-full bg-ember-400" />
+            Brand-to-creator matching
+          </span>
+          <h1 className="font-serif text-[2.75rem] leading-[1.1] font-semibold tracking-tight mb-5">
+            Great campaigns start with the right match.
+          </h1>
+          <p className="text-[15px] text-white/70 leading-relaxed mb-8">
+            Upload a brief, and let AI find, offer, and connect you with creators who actually fit — no cold outreach, no guesswork.
+          </p>
+          <ul className="space-y-3">
+            {BRAND_POINTS.map(point => (
+              <li key={point} className="flex items-start gap-2.5 text-sm text-white/85">
+                <span className="mt-0.5 w-4 h-4 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+                  <Check size={10} strokeWidth={3} />
+                </span>
+                {point}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="relative text-xs text-white/40">© {new Date().getFullYear()} Truleado. All rights reserved.</p>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-6">
-        <Card className="w-full max-w-sm shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-semibold tracking-tight">Welcome back</CardTitle>
-            <CardDescription>Log in to your Truleado account</CardDescription>
-          </CardHeader>
+      {/* ── Right — auth card ─────────────────────────────────────────── */}
+      <div className="flex flex-col min-h-screen">
+        <div className="px-6 py-5 lg:hidden">
+          <Link href="/" className="flex items-center gap-2 no-underline">
+            <TruleadoMark />
+            <span className="text-base font-semibold tracking-tight text-foreground">Truleado</span>
+          </Link>
+        </div>
 
-          <CardContent>
-            <Tabs defaultValue="brand" onValueChange={() => setError('')}>
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="w-full max-w-sm">
+            <div className="mb-7 text-center lg:text-left">
+              <h2 className="text-[22px] font-semibold tracking-tight text-foreground">Welcome to Truleado</h2>
+              <p className="text-sm text-muted-foreground mt-1">Log in or create an account to continue.</p>
+            </div>
+
+            <Tabs defaultValue="brand" onValueChange={() => { setError(''); setCreatorError('') }}>
               <TabsList className="w-full mb-6">
                 <TabsTrigger value="brand" className="flex-1 gap-1.5">
                   <Building2 size={13} /> Brand / Agency
@@ -151,110 +278,116 @@ export default function LoginPage() {
                 </TabsTrigger>
               </TabsList>
 
-              {/* Brand */}
-              <TabsContent value="brand" className="space-y-3 mt-0">
-                <Button variant="outline" className="w-full gap-2" onClick={googleBrand}>
-                  <GoogleIcon /> Continue with Google
-                </Button>
+              {/* ── Brand ──────────────────────────────────────────── */}
+              <TabsContent value="brand" className="mt-0">
+                <ModeSwitch mode={brandMode} onChange={m => { setBrandMode(m); setError('') }} />
 
-                <div className="flex items-center gap-3 py-1">
-                  <Separator className="flex-1" />
-                  <span className="text-[11px] text-muted-foreground font-medium">OR</span>
-                  <Separator className="flex-1" />
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full gap-2 font-normal" onClick={googleBrand}>
+                    <GoogleIcon /> Continue with Google
+                  </Button>
+
+                  <div className="flex items-center gap-3 py-1">
+                    <Separator className="flex-1" />
+                    <span className="text-[11px] text-muted-foreground font-medium">OR</span>
+                    <Separator className="flex-1" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-xs">Email</Label>
+                    <Input id="email" type="email" placeholder="you@company.com"
+                      value={email} onChange={e => setEmail(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (brandMode === 'login' ? emailBrandLogin() : emailBrandSignup())}
+                      autoComplete="email" className="h-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pw" className="text-xs">Password</Label>
+                    <Input id="pw" type="password" placeholder={brandMode === 'signup' ? 'At least 6 characters' : 'Your password'}
+                      value={password} onChange={e => setPassword(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (brandMode === 'login' ? emailBrandLogin() : emailBrandSignup())}
+                      autoComplete={brandMode === 'login' ? 'current-password' : 'new-password'} className="h-10" />
+                  </div>
+
+                  {error && <p className="text-xs text-destructive leading-relaxed">{error}</p>}
+
+                  <Button
+                    className="w-full bg-ember hover:bg-ember-600 text-white font-medium"
+                    onClick={brandMode === 'login' ? emailBrandLogin : emailBrandSignup}
+                    disabled={loading}
+                  >
+                    {loading ? (brandMode === 'login' ? 'Logging in…' : 'Creating account…') : (brandMode === 'login' ? 'Log in' : 'Create brand account')}
+                  </Button>
+
+                  {brandMode === 'login' ? (
+                    <p className="text-center text-xs">
+                      <Link href="/auth/forgot-password" className="text-muted-foreground no-underline hover:underline">
+                        Forgot password?
+                      </Link>
+                    </p>
+                  ) : (
+                    <p className="text-center text-xs text-muted-foreground leading-relaxed">
+                      By creating an account you agree to be contacted about your campaigns.
+                    </p>
+                  )}
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-xs">Email</Label>
-                  <Input id="email" type="email" placeholder="you@company.com"
-                    value={email} onChange={e => setEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && emailBrandLogin()}
-                    autoComplete="email" className="h-9" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="pw" className="text-xs">Password</Label>
-                  <Input id="pw" type="password" placeholder="Your password"
-                    value={password} onChange={e => setPassword(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && emailBrandLogin()}
-                    autoComplete="current-password" className="h-9" />
-                </div>
-
-                {error && <p className="text-xs text-destructive leading-relaxed">{error}</p>}
-
-                <Button
-                  className="w-full bg-gold hover:bg-gold/90 text-white font-semibold"
-                  onClick={emailBrandLogin}
-                  disabled={loading}
-                >
-                  {loading ? 'Logging in…' : 'Log in'}
-                </Button>
-
-                <p className="text-center text-xs">
-                  <Link href="/auth/forgot-password" className="text-muted-foreground no-underline hover:underline">
-                    Forgot password?
-                  </Link>
-                </p>
-
-                <p className="text-center text-xs text-muted-foreground pt-1">
-                  New here?{' '}
-                  <Link href="/advertiser" className="text-gold font-semibold no-underline hover:underline">
-                    Create a brand account
-                  </Link>
-                </p>
               </TabsContent>
 
-              {/* Creator */}
-              <TabsContent value="creator" className="mt-0 space-y-3">
-                <Button variant="outline" className="w-full gap-2" onClick={googleCreator}>
-                  <GoogleIcon /> Continue with Google
-                </Button>
+              {/* ── Creator ────────────────────────────────────────── */}
+              <TabsContent value="creator" className="mt-0">
+                <ModeSwitch mode={creatorMode} onChange={m => { setCreatorMode(m); setCreatorError('') }} />
 
-                <div className="flex items-center gap-3 py-1">
-                  <Separator className="flex-1" />
-                  <span className="text-[11px] text-muted-foreground font-medium">OR</span>
-                  <Separator className="flex-1" />
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full gap-2 font-normal" onClick={googleCreator}>
+                    <GoogleIcon /> Continue with Google
+                  </Button>
+
+                  <div className="flex items-center gap-3 py-1">
+                    <Separator className="flex-1" />
+                    <span className="text-[11px] text-muted-foreground font-medium">OR</span>
+                    <Separator className="flex-1" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="creator-email" className="text-xs">Email</Label>
+                    <Input id="creator-email" type="email" placeholder="you@example.com"
+                      value={creatorEmail} onChange={e => setCreatorEmail(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (creatorMode === 'login' ? emailCreatorLogin() : emailCreatorSignup())}
+                      autoComplete="email" className="h-10" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="creator-pw" className="text-xs">Password</Label>
+                    <Input id="creator-pw" type="password" placeholder={creatorMode === 'signup' ? 'At least 6 characters' : 'Your password'}
+                      value={creatorPassword} onChange={e => setCreatorPassword(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && (creatorMode === 'login' ? emailCreatorLogin() : emailCreatorSignup())}
+                      autoComplete={creatorMode === 'login' ? 'current-password' : 'new-password'} className="h-10" />
+                  </div>
+
+                  {creatorError && <p className="text-xs text-destructive leading-relaxed">{creatorError}</p>}
+
+                  <Button
+                    className="w-full bg-ember hover:bg-ember-600 text-white font-medium"
+                    onClick={creatorMode === 'login' ? emailCreatorLogin : emailCreatorSignup}
+                    disabled={creatorLoading}
+                  >
+                    {creatorLoading ? (creatorMode === 'login' ? 'Logging in…' : 'Creating account…') : (creatorMode === 'login' ? 'Log in' : 'Create creator account')}
+                  </Button>
+
+                  {creatorMode === 'login' ? (
+                    <p className="text-center text-xs">
+                      <Link href="/auth/forgot-password" className="text-muted-foreground no-underline hover:underline">
+                        Forgot password?
+                      </Link>
+                    </p>
+                  ) : (
+                    <p className="text-center text-xs text-muted-foreground leading-relaxed">
+                      Next you'll tell us about your content — takes about 2 minutes.
+                    </p>
+                  )}
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="creator-email" className="text-xs">Email</Label>
-                  <Input id="creator-email" type="email" placeholder="you@example.com"
-                    value={creatorEmail} onChange={e => setCreatorEmail(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && emailCreatorLogin()}
-                    autoComplete="email" className="h-9" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="creator-pw" className="text-xs">Password</Label>
-                  <Input id="creator-pw" type="password" placeholder="Your password"
-                    value={creatorPassword} onChange={e => setCreatorPassword(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && emailCreatorLogin()}
-                    autoComplete="current-password" className="h-9" />
-                </div>
-
-                {creatorError && <p className="text-xs text-destructive leading-relaxed">{creatorError}</p>}
-
-                <Button
-                  className="w-full bg-gold hover:bg-gold/90 text-white font-semibold"
-                  onClick={emailCreatorLogin}
-                  disabled={creatorLoading}
-                >
-                  {creatorLoading ? 'Logging in…' : 'Log in'}
-                </Button>
-
-                <p className="text-center text-xs">
-                  <Link href="/auth/forgot-password" className="text-muted-foreground no-underline hover:underline">
-                    Forgot password?
-                  </Link>
-                </p>
-
-                <p className="text-center text-xs text-muted-foreground pt-1">
-                  New here?{' '}
-                  <Link href="/influencer" className="text-gold font-semibold no-underline hover:underline">
-                    Create a creator account
-                  </Link>
-                </p>
               </TabsContent>
             </Tabs>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   )

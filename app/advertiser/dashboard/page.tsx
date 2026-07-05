@@ -105,7 +105,7 @@ export default async function AdvertiserDashboardPage() {
             <FileText size={36} className="mx-auto text-muted-foreground/30 mb-4" />
             <h3 className="font-semibold mb-1.5">No briefs yet</h3>
             <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-              Create your first campaign brief and Sarah will find the right creators for you.
+              Create your first campaign brief and we'll find the right creators for you.
             </p>
             <Button className="bg-gold hover:bg-gold/90 text-white font-semibold" asChild>
               <Link href="/advertiser/briefs/new">Create first brief</Link>
