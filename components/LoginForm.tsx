@@ -417,6 +417,10 @@ export default function LoginForm() {
                 </div>
               </TabsContent>
             </Tabs>
+
+            <p className="text-center text-xs text-muted-foreground mt-6">
+              Need help? <a href="mailto:support@truleado.com" className="text-gold no-underline hover:underline">support@truleado.com</a>
+            </p>
           </div>
         </div>
       </div>

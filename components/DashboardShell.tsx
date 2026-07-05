@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import SignOutButton from './SignOutButton'
 import SidebarNav, { type NavItem } from './SidebarNav'
-import { FileText, Briefcase, MessageSquare, Bell, User as UserIcon, LayoutDashboard, Settings } from 'lucide-react'
+import { FileText, Briefcase, MessageSquare, Bell, User as UserIcon, LayoutDashboard, Settings, LifeBuoy } from 'lucide-react'
 
 function TruleadoLogo() {
   return (
@@ -70,6 +70,13 @@ export default async function DashboardShell({
         </div>
 
         <SidebarNav items={navItems} />
+
+        <div className="px-4 pb-1">
+          <a href="mailto:support@truleado.com" className="flex items-center gap-1.5 text-[11px] text-muted-foreground no-underline hover:text-gold transition-colors py-2">
+            <LifeBuoy size={12} className="shrink-0" />
+            <span className="truncate">Need help? support@truleado.com</span>
+          </a>
+        </div>
 
         <div className="px-3 py-3 border-t border-border flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-accent border border-gold-border flex items-center justify-center text-xs font-semibold text-gold shrink-0">

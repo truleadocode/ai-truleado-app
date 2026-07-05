@@ -342,6 +342,10 @@ export default function AdvertiserOnboardingClient({ user, advertiser }: Props) 
           Looking to get brand deals as a creator?{' '}
           <Link href="/influencer" className="text-gold font-semibold no-underline hover:underline">Join as a creator</Link>
         </p>
+
+        <p className="text-[11px] text-muted-foreground text-center mt-2">
+          Need help? <a href="mailto:support@truleado.com" className="text-gold no-underline hover:underline">support@truleado.com</a>
+        </p>
       </div>
     </div>
   )
