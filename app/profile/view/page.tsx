@@ -367,6 +367,7 @@ export default async function ViewProfilePage() {
 
               <div className="border-t border-border pt-3 grid grid-cols-2 gap-x-4 gap-y-2.5">
                 <FIELD label="Location" value={location || '—'} />
+                <FIELD label="Phone" value={inf.phone || '—'} />
                 <FIELD label="Languages" value={inf.languages?.length ? inf.languages.join(', ') : '—'} />
                 <FIELD label="Status" value={inf.status || '—'} />
                 <div>

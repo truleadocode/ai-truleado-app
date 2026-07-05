@@ -93,6 +93,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
   // ── Form state ──────────────────────────────────────────────────
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
 
@@ -126,6 +127,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
   function prefill(data: Record<string, any>) {
     setFirstName(data.first_name || '')
     setLastName(data.last_name || '')
+    setPhone(data.phone || '')
     setCity(data.city || '')
     setCountry(data.country || '')
     const plats: any[] = data.platforms || []
@@ -221,6 +223,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
     return {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
+      phone: phone.trim() || null,
       city: city.trim() || null,
       country: country.trim() || null,
       platforms: selectedPlatforms.map(p => ({ platform: p, handle: (handles[p] || '').trim() || null })),
@@ -397,6 +400,10 @@ export default function OnboardingClient({ user, influencer }: Props) {
                       <Label htmlFor="ln">Last name</Label>
                       <Input id="ln" value={lastName} onChange={e => setLastName(e.target.value)} />
                     </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone">Phone number</Label>
+                    <Input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 555 000 0000" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">

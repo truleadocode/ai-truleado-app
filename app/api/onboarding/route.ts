@@ -22,6 +22,7 @@ async function applySessionToInfluencer(service: ReturnType<typeof createService
   const influencerUpdates: Record<string, any> = {}
   if (session.first_name) influencerUpdates.first_name = session.first_name
   if (session.last_name) influencerUpdates.last_name = session.last_name
+  if (session.phone) influencerUpdates.phone = session.phone
   if (session.city) influencerUpdates.city = session.city
   if (session.country) influencerUpdates.country = session.country
   if (session.languages?.length) influencerUpdates.languages = session.languages
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
       if (user_id && influencer_id) {
         const { data: inf } = await service
           .from('influencers')
-          .select('first_name, last_name, city, country, languages, primary_niche, content_style, posting_frequency, bio, brand_loves, brand_never')
+          .select('first_name, last_name, phone, city, country, languages, primary_niche, content_style, posting_frequency, bio, brand_loves, brand_never')
           .eq('id', influencer_id)
           .single()
 
@@ -154,6 +155,7 @@ export async function POST(request: NextRequest) {
         const { error: updateErr } = await service.from('influencers').update({
           first_name: data.first_name || '',
           last_name: data.last_name || '',
+          phone: data.phone || null,
           city: data.city || null,
           country: data.country || null,
           languages: data.languages || [],
@@ -204,6 +206,7 @@ export async function POST(request: NextRequest) {
       await service.from('onboarding_sessions').update({
         first_name: data.first_name || null,
         last_name: data.last_name || null,
+        phone: data.phone || null,
         city: data.city || null,
         country: data.country || null,
         languages: data.languages || [],
