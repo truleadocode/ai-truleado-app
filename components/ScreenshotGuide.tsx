@@ -37,6 +37,44 @@ const GUIDES: Record<string, { note?: string, steps: string[] }> = {
       'Screenshot your profile page showing follower count',
     ],
   },
+  twitter: {
+    note: 'Requires Premium/Verified for full analytics access.',
+    steps: [
+      'Go to your profile → tap "Analytics" (or analytics.twitter.com)',
+      'Screenshot the overview showing impressions and engagement rate',
+      'Screenshot your main profile page showing follower count',
+    ],
+  },
+  facebook: {
+    note: 'Requires a Facebook Page (not a personal profile).',
+    steps: [
+      'Go to your Page → Meta Business Suite → Insights',
+      'Screenshot the overview — reach, engagement, followers',
+      'Screenshot the Audience tab — age, gender, top countries',
+    ],
+  },
+  linkedin: {
+    steps: [
+      'Go to your profile or Page → "Analytics" tab',
+      'Screenshot impressions and engagement over the last 30 days',
+      'Screenshot your profile page showing follower count',
+    ],
+  },
+  twitch: {
+    steps: [
+      'Go to the Creator Dashboard → Analytics → Channel Analytics',
+      'Screenshot average viewers and watch time for recent streams',
+      'Screenshot your channel page showing follower count',
+    ],
+  },
+  snapchat: {
+    note: 'Requires a Snapchat Creator/Public profile.',
+    steps: [
+      'Go to your profile → tap Insights',
+      'Screenshot views, engagement, and audience demographics',
+      'Screenshot your profile page showing subscriber count',
+    ],
+  },
 }
 
 export default function ScreenshotGuide({ platform }: { platform: string }) {

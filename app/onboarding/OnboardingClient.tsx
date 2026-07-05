@@ -10,16 +10,20 @@ import LanguageSelector from '@/components/LanguageSelector'
 import ParseProgressCard, { type ParseStatus } from '@/components/ParseProgressCard'
 import { cn } from '@/lib/utils'
 import {
-  Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Share2,
+  Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Facebook, Twitch, Ghost, Share2,
   Sparkles, PartyPopper, Upload, Check, ArrowLeft, ArrowRight, Loader2, type LucideIcon,
 } from 'lucide-react'
 
 const SESSION_KEY_LS = 'truleado_session_key'
 
-const ALL_PLATFORMS = ['instagram', 'tiktok', 'youtube', 'pinterest']
+// Keep in sync with: app/profile/edit/ProfileEditClient.tsx (ALL_PLATFORMS,
+// RATE_FIELDS, UPLOAD_HINTS), app/profile/view/page.tsx (CONTENT_TYPES),
+// app/dashboard/profile/page.tsx, components/ScreenshotGuide.tsx, and the
+// PLATFORM_PROMPTS map in app/api/parse-screenshots/route.ts.
+const ALL_PLATFORMS = ['instagram', 'tiktok', 'youtube', 'pinterest', 'twitter', 'facebook', 'linkedin', 'twitch', 'snapchat']
 const PLATFORM_ICONS: Record<string, LucideIcon> = {
   instagram: Instagram, tiktok: Music2, youtube: Youtube, pinterest: Pin,
-  twitter: Twitter, linkedin: Linkedin,
+  twitter: Twitter, linkedin: Linkedin, facebook: Facebook, twitch: Twitch, snapchat: Ghost,
 }
 function platformIcon(platform: string): LucideIcon {
   return PLATFORM_ICONS[platform] || Share2
@@ -34,6 +38,11 @@ const RATE_FIELDS: Record<string, [string, string][]> = {
   tiktok:    [['Video', 'video']],
   youtube:   [['Integration', 'integration'], ['Video', 'video']],
   pinterest: [['Post', 'post']],
+  twitter:   [['Post', 'post']],
+  facebook:  [['Post', 'post'], ['Video', 'video']],
+  linkedin:  [['Post', 'post'], ['Video', 'video']],
+  twitch:    [['Stream', 'stream'], ['Video', 'video']],
+  snapchat:  [['Story', 'story'], ['Post', 'post']],
 }
 
 const STEPS = ['Basics', 'Platforms', 'Content', 'About you', 'Brand fit', 'Rates'] as const

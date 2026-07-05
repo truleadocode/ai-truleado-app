@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Share2, Check, ChevronRight, type LucideIcon } from 'lucide-react'
+import { Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Facebook, Twitch, Ghost, Share2, Check, ChevronRight, type LucideIcon } from 'lucide-react'
 
 function formatEur(cents: number) {
   return `€${(cents / 100).toLocaleString('en-EU')}`
@@ -17,7 +17,7 @@ function fmt(v: number | null | undefined, suffix = '') {
 
 const PLATFORM_ICON: Record<string, LucideIcon> = {
   instagram: Instagram, tiktok: Music2, youtube: Youtube, pinterest: Pin,
-  twitter: Twitter, linkedin: Linkedin,
+  twitter: Twitter, linkedin: Linkedin, facebook: Facebook, twitch: Twitch, snapchat: Ghost,
 }
 
 function platformIcon(p: string): LucideIcon {

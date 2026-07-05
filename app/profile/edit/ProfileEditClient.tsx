@@ -36,6 +36,47 @@ const UPLOAD_HINTS: Record<string, string[]> = {
     'Analytics overview — monthly views, impressions',
     'Audience insights — age, gender, location',
   ],
+  twitter: [
+    'Your profile page (follower count visible)',
+    'Analytics dashboard — impressions, engagement rate',
+    'Audience demographics if visible',
+  ],
+  facebook: [
+    'Your Page overview (followers/likes visible)',
+    'Meta Business Suite insights — reach, engagement',
+    'Audience demographics — age, gender, top countries',
+  ],
+  linkedin: [
+    'Your profile or Page followers count',
+    'Analytics tab — impressions, engagement',
+    'Audience demographics if visible',
+  ],
+  twitch: [
+    'Your channel page (follower count visible)',
+    'Creator Dashboard → Analytics — average viewers, watch time',
+    'Audience demographics if visible',
+  ],
+  snapchat: [
+    'Your profile page (subscriber count visible)',
+    'Snapchat Insights — views, engagement',
+    'Audience demographics if visible',
+  ],
+}
+
+// Keep in sync with: app/onboarding/OnboardingClient.tsx (ALL_PLATFORMS,
+// RATE_FIELDS), app/profile/view/page.tsx (CONTENT_TYPES),
+// app/dashboard/profile/page.tsx, components/ScreenshotGuide.tsx, and the
+// PLATFORM_PROMPTS map in app/api/parse-screenshots/route.ts.
+const RATE_FIELDS: Record<string, [string, string][]> = {
+  instagram: [['Reel', 'reel'], ['Story', 'story'], ['Feed post', 'post']],
+  tiktok:    [['Video', 'video']],
+  youtube:   [['Integration', 'integration'], ['Video', 'video']],
+  pinterest: [['Post', 'post']],
+  twitter:   [['Post', 'post']],
+  facebook:  [['Post', 'post'], ['Video', 'video']],
+  linkedin:  [['Post', 'post'], ['Video', 'video']],
+  twitch:    [['Stream', 'stream'], ['Video', 'video']],
+  snapchat:  [['Story', 'story'], ['Post', 'post']],
 }
 
 const NICHES = ['Fashion','Beauty','Lifestyle','Fitness','Food','Travel','Tech','Gaming','Finance','Parenting','Home','Wellness','Music','Art','Comedy','Sustainability']
@@ -130,7 +171,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   const [savedHandle, setSavedHandle] = useState<string | null>(null)
 
   // Add new platform state
-  const ALL_PLATFORMS = ['instagram', 'tiktok', 'youtube', 'pinterest']
+  const ALL_PLATFORMS = ['instagram', 'tiktok', 'youtube', 'pinterest', 'twitter', 'facebook', 'linkedin', 'twitch', 'snapchat']
   const connectedPlatforms = platforms.map(p => p.platform.toLowerCase())
   const availablePlatforms = ALL_PLATFORMS.filter(p => !connectedPlatforms.includes(p))
   const [newPlatform, setNewPlatform] = useState(availablePlatforms[0] || '')
@@ -523,13 +564,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
       {section === 'rates' && (
         <div>
           {Array.from(new Set([...rates.map((r: any) => r.platform), ...(platforms.map((p: any) => p.platform))])).map(platform => {
-            const FIELDS: [string, string][] = platform === 'instagram'
-              ? [['Reel','reel'],['Story','story'],['Feed post','post']]
-              : platform === 'tiktok'
-              ? [['Video','video']]
-              : platform === 'youtube'
-              ? [['Integration','integration'],['Video','video']]
-              : [['Post','post']]
+            const FIELDS: [string, string][] = RATE_FIELDS[platform] || [['Post', 'post']]
 
             return (
               <div key={platform} className="bg-card border border-border rounded-xl px-[18px] py-4 mb-3">
@@ -602,7 +637,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
           {platforms.length === 0 && (
             <div className="bg-card border border-border rounded-xl px-6 py-8 text-center">
               <p className="text-sm font-semibold mb-1.5">No platforms yet</p>
-              <p className="text-[13px] text-muted-foreground">Add platforms during onboarding or contact Sarah to update.</p>
+              <p className="text-[13px] text-muted-foreground">Add a platform below to get started.</p>
             </div>
           )}
 

@@ -69,8 +69,13 @@ const CONTENT_TYPES: Record<string, string[]> = {
   tiktok: ['video'],
   youtube: ['integration', 'video'],
   pinterest: ['post'],
+  twitter: ['post'],
+  facebook: ['post', 'video'],
+  linkedin: ['post', 'video'],
+  twitch: ['stream', 'video'],
+  snapchat: ['story', 'post'],
 }
-const CT_LABEL: Record<string, string> = { reel: 'Reel', story: 'Story', post: 'Post', video: 'Video', integration: 'Integration' }
+const CT_LABEL: Record<string, string> = { reel: 'Reel', story: 'Story', post: 'Post', video: 'Video', integration: 'Integration', stream: 'Stream' }
 
 /* ─── page ─── */
 export default async function ViewProfilePage() {

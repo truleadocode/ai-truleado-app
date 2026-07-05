@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
-import { CalendarDays, Sparkles, FileText, Check, Instagram, Youtube, Twitter, Linkedin, Music2, Pin, Share2, type LucideIcon } from 'lucide-react'
+import { CalendarDays, Sparkles, FileText, Check, Instagram, Youtube, Twitter, Linkedin, Music2, Pin, Facebook, Twitch, Ghost, Share2, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Opportunity {
@@ -28,6 +28,7 @@ interface Props {
 // SVG icons (Lucide) rather than emoji — consistent, themeable, crisp at any size.
 const PLATFORM_ICONS: Record<string, LucideIcon> = {
   instagram: Instagram, tiktok: Music2, youtube: Youtube, pinterest: Pin, twitter: Twitter, linkedin: Linkedin,
+  facebook: Facebook, twitch: Twitch, snapchat: Ghost,
 }
 function platformIcon(p: string): LucideIcon {
   return PLATFORM_ICONS[p] || Share2
