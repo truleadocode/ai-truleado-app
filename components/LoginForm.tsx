@@ -59,7 +59,23 @@ function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
   )
 }
 
-const BRAND_POINTS = ['AI reads and scores every brief', 'Matched creators land in their Gigs feed', 'Accept, chat, and go — no back-and-forth']
+type Role = 'brand' | 'creator'
+
+// Left-panel copy swaps with the active role tab.
+const PANEL_CONTENT: Record<Role, { badge: string; headline: string; body: string; points: string[] }> = {
+  brand: {
+    badge: 'Brand-to-creator matching',
+    headline: 'Great campaigns start with the right match.',
+    body: 'Upload a brief, and let AI find, offer, and connect you with creators who actually fit — no cold outreach, no guesswork.',
+    points: ['AI reads and scores every brief', 'Matched creators land in their Gigs feed', 'Accept, chat, and go — no back-and-forth'],
+  },
+  creator: {
+    badge: 'Creator opportunities',
+    headline: 'Get matched with brands that fit your content.',
+    body: 'Set up your profile once, and let AI bring the right brand offers straight to your Gigs feed — you just accept or pass.',
+    points: ['Your profile is scored against every brief', 'New offers land directly in your Gigs feed', 'Accept a gig and start chatting right away'],
+  },
+}
 
 // This IS the app's home page (see app/page.tsx) — there's no separate
 // /login route. Middleware already redirects a fully-onboarded, logged-in
@@ -70,6 +86,7 @@ export default function LoginForm() {
   const router = useRouter()
   const supabase = createClient()
   const [checking, setChecking] = useState(true)
+  const [role, setRole] = useState<Role>('brand')
 
   const [brandMode, setBrandMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
@@ -178,7 +195,7 @@ export default function LoginForm() {
     const finData = await fin.json()
     if (finData.error === 'already_advertiser') {
       await supabase.auth.signOut()
-      setCreatorError('This is a brand account — switch to the Brand / Agency tab to log in.')
+      setCreatorError('This is a brand account — switch to the Advertisers tab to log in.')
       setCreatorLoading(false)
       return
     }
@@ -243,16 +260,16 @@ export default function LoginForm() {
         <div className="relative max-w-md">
           <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white/70 bg-white/10 rounded-full px-3 py-1 mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-ember-400" />
-            Brand-to-creator matching
+            {PANEL_CONTENT[role].badge}
           </span>
           <h1 className="font-serif text-[2.75rem] leading-[1.1] font-semibold tracking-tight mb-5">
-            Great campaigns start with the right match.
+            {PANEL_CONTENT[role].headline}
           </h1>
           <p className="text-[15px] text-white/70 leading-relaxed mb-8">
-            Upload a brief, and let AI find, offer, and connect you with creators who actually fit — no cold outreach, no guesswork.
+            {PANEL_CONTENT[role].body}
           </p>
           <ul className="space-y-3">
-            {BRAND_POINTS.map(point => (
+            {PANEL_CONTENT[role].points.map(point => (
               <li key={point} className="flex items-start gap-2.5 text-sm text-white/85">
                 <span className="mt-0.5 w-4 h-4 rounded-full bg-white/15 flex items-center justify-center shrink-0">
                   <Check size={10} strokeWidth={3} />
@@ -282,10 +299,10 @@ export default function LoginForm() {
               <p className="text-sm text-muted-foreground mt-1">Log in or create an account to continue.</p>
             </div>
 
-            <Tabs defaultValue="brand" onValueChange={() => { setError(''); setCreatorError('') }}>
+            <Tabs value={role} onValueChange={v => { setRole(v as Role); setError(''); setCreatorError('') }}>
               <TabsList className="w-full mb-6">
                 <TabsTrigger value="brand" className="flex-1 gap-1.5">
-                  <Building2 size={13} /> Brand / Agency
+                  <Building2 size={13} /> Advertisers
                 </TabsTrigger>
                 <TabsTrigger value="creator" className="flex-1 gap-1.5">
                   <Sparkles size={13} /> Creator
