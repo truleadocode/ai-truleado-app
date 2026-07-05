@@ -6,7 +6,14 @@ import { createClient, createServiceClient } from '@/lib/supabase/server'
 // row exists, blocks influencer cross-role, and saves any pending brief.
 export async function POST(request: Request) {
   let session_key: string | null = null
-  try { ({ session_key } = await request.json()) } catch {}
+  // Form-based onboarding sends the profile directly; the legacy Google
+  // callback path still passes a session_key instead.
+  let profile: { first_name?: string; last_name?: string; company_name?: string; advertiser_type?: string } | null = null
+  try {
+    const body = await request.json()
+    session_key = body.session_key || null
+    profile = body.profile || null
+  } catch {}
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -24,16 +31,17 @@ export async function POST(request: Request) {
   let { data: advertiser } = await service.from('advertisers').select('id').eq('user_id', user.id).single()
 
   if (!advertiser) {
-    const { data: onb } = await service
-      .from('advertiser_onboarding_sessions').select('*').eq('session_key', session_key).single()
+    const { data: onb } = session_key
+      ? await service.from('advertiser_onboarding_sessions').select('*').eq('session_key', session_key).single()
+      : { data: null }
 
     const { data: newAdv } = await service.from('advertisers').insert({
       user_id: user.id,
       email: user.email!,
-      first_name: onb?.first_name || '',
-      last_name: onb?.last_name || '',
-      company_name: onb?.company_name || null,
-      advertiser_type: onb?.advertiser_type || null,
+      first_name: profile?.first_name || onb?.first_name || '',
+      last_name: profile?.last_name || onb?.last_name || '',
+      company_name: profile?.company_name || onb?.company_name || null,
+      advertiser_type: profile?.advertiser_type || onb?.advertiser_type || null,
       onboarding_complete: true,
     }).select('id').single()
 
@@ -44,6 +52,16 @@ export async function POST(request: Request) {
         .update({ user_id: user.id, advertiser_id: advertiser?.id, completed: true })
         .eq('session_key', session_key)
     }
+  } else if (profile) {
+    // Row already existed (e.g. authed user completing the details form):
+    // fill in the submitted profile fields.
+    await service.from('advertisers').update({
+      first_name: profile.first_name || '',
+      last_name: profile.last_name || '',
+      company_name: profile.company_name || null,
+      advertiser_type: profile.advertiser_type || null,
+      onboarding_complete: true,
+    }).eq('id', advertiser.id)
   }
 
   // Save pending brief from brief_sessions
