@@ -11,6 +11,9 @@ import type { ParseStatus } from '@/components/ParseProgressCard'
 import { cn, normalizeHandle } from '@/lib/utils'
 import { Heart, Ban, Check } from 'lucide-react'
 
+// Matches the `influencers_bio_check` DB constraint (char_length(bio) <= 220).
+const BIO_MAX_LENGTH = 220
+
 const UPLOAD_HINTS: Record<string, string[]> = {
   instagram: [
     'Your profile page (follower count visible)',
@@ -334,7 +337,8 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
     }
 
     if (Object.keys(updates).length > 0) {
-      await supabase.from('influencers').update(updates).eq('id', influencer.id)
+      const { error } = await supabase.from('influencers').update(updates).eq('id', influencer.id)
+      if (error) console.error('saveSection: influencer update failed:', error)
     }
 
     setSaving(false)
@@ -525,7 +529,8 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
           </div>
           <div>
             <label className={labelClass}>Bio</label>
-            <textarea className={cn(inputClass, 'min-h-[90px] resize-y leading-[1.5]')} value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell brands a bit about you and your content..." />
+            <textarea className={cn(inputClass, 'min-h-[90px] resize-y leading-[1.5]')} value={bio} onChange={e => setBio(e.target.value.slice(0, BIO_MAX_LENGTH))} maxLength={BIO_MAX_LENGTH} placeholder="Tell brands a bit about you and your content..." />
+            <p className="text-xs text-muted-foreground text-right mt-1">{bio.length}/{BIO_MAX_LENGTH}</p>
           </div>
         </div>
       )}

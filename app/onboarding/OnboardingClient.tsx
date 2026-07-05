@@ -15,6 +15,10 @@ import {
 } from 'lucide-react'
 
 const SESSION_KEY_LS = 'truleado_session_key'
+// Matches the `influencers_bio_check` DB constraint (char_length(bio) <= 220)
+// — enforcing it here so a too-long bio can never silently fail the entire
+// profile update server-side (see applySessionToInfluencer).
+const BIO_MAX_LENGTH = 220
 
 // Keep in sync with: app/profile/edit/ProfileEditClient.tsx (ALL_PLATFORMS,
 // RATE_FIELDS, UPLOAD_HINTS), app/profile/view/page.tsx (CONTENT_TYPES),
@@ -475,7 +479,8 @@ export default function OnboardingClient({ user, influencer }: Props) {
                 <div className="space-y-4">
                   <h2 className="text-lg font-semibold tracking-tight mb-1">About you</h2>
                   <p className="text-xs text-muted-foreground mb-4">2-3 sentences about you and your content — this is what brands read first.</p>
-                  <textarea value={bio} onChange={e => setBio(e.target.value)} className={textareaClass} placeholder="e.g. I'm a skincare creator sharing honest reviews and routines for sensitive skin…" autoFocus />
+                  <textarea value={bio} onChange={e => setBio(e.target.value.slice(0, BIO_MAX_LENGTH))} maxLength={BIO_MAX_LENGTH} className={textareaClass} placeholder="e.g. I'm a skincare creator sharing honest reviews and routines for sensitive skin…" autoFocus />
+                  <p className="text-xs text-muted-foreground text-right -mt-2">{bio.length}/{BIO_MAX_LENGTH}</p>
                 </div>
               )}
 

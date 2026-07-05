@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { normalizeHandle } from '@/lib/utils'
 
+// Matches the `influencers_bio_check` DB constraint (char_length(bio) <= 220)
+// — enforced client-side too, but truncating here means a stray over-limit
+// bio can never silently fail the whole profile update again (see below).
+const BIO_MAX_LENGTH = 220
+
 // Influencer onboarding backend. Plain structured form data in, structured
 // writes out — no chat, no AI extraction. Three entry paths:
 //  - Pre-auth: form answers persist to `onboarding_sessions` (localStorage
@@ -23,7 +28,7 @@ async function applySessionToInfluencer(service: ReturnType<typeof createService
   if (session.primary_niche) influencerUpdates.primary_niche = session.primary_niche
   if (session.content_style) influencerUpdates.content_style = session.content_style
   if (session.posting_frequency) influencerUpdates.posting_frequency = session.posting_frequency
-  if (session.bio) influencerUpdates.bio = session.bio
+  if (session.bio) influencerUpdates.bio = String(session.bio).slice(0, BIO_MAX_LENGTH)
   if (session.brand_loves?.length) influencerUpdates.brand_loves = session.brand_loves
   if (session.brand_never?.length) influencerUpdates.brand_never = session.brand_never
 
@@ -33,7 +38,12 @@ async function applySessionToInfluencer(service: ReturnType<typeof createService
   if ('open_to_exclusivity' in ratesParsed) influencerUpdates.open_to_exclusivity = ratesParsed.open_to_exclusivity || false
 
   if (Object.keys(influencerUpdates).length > 0) {
-    await service.from('influencers').update(influencerUpdates).eq('id', influencer_id)
+    // Previously unchecked — a single invalid field (e.g. a too-long bio
+    // tripping the DB's char_length check) silently failed this ENTIRE
+    // update, discarding every other typed field (name, city, niche, etc.)
+    // with no error surfaced anywhere.
+    const { error } = await service.from('influencers').update(influencerUpdates).eq('id', influencer_id)
+    if (error) console.error('applySessionToInfluencer: influencer update failed:', error)
   }
 
   const platforms: any[] = session.platforms || []
@@ -141,7 +151,7 @@ export async function POST(request: NextRequest) {
     try {
       if (influencer_id) {
         // Already authed — write straight to the real tables.
-        await service.from('influencers').update({
+        const { error: updateErr } = await service.from('influencers').update({
           first_name: data.first_name || '',
           last_name: data.last_name || '',
           city: data.city || null,
@@ -150,13 +160,14 @@ export async function POST(request: NextRequest) {
           primary_niche: data.primary_niche || null,
           content_style: data.content_style || null,
           posting_frequency: data.posting_frequency || null,
-          bio: data.bio || null,
+          bio: data.bio ? String(data.bio).slice(0, BIO_MAX_LENGTH) : null,
           brand_loves: data.brand_loves || [],
           brand_never: data.brand_never || [],
           open_to_gifting: data.open_to_gifting || false,
           open_to_rev_share: data.open_to_rev_share || false,
           open_to_exclusivity: data.open_to_exclusivity || false,
         }).eq('id', influencer_id)
+        if (updateErr) console.error('onboarding save: influencer update failed:', updateErr)
 
         const createdPlatforms: any[] = []
         for (const p of (data.platforms || [])) {
