@@ -105,7 +105,6 @@ export default async function ViewProfilePage() {
   const formatList = (contentFormats || []).map(f => f.format)
   const nicheList = niches || []
   const primaryNiche = nicheList.find(n => n.is_primary)?.niche || inf.primary_niche || null
-  const secondaryNiches = nicheList.filter(n => !n.is_primary).map(n => n.niche).filter(Boolean)
   const brandLoves = (brandPrefs || []).filter(b => b.preference_type === 'love').map(b => b.category)
   const brandNever = (brandPrefs || []).filter(b => b.preference_type === 'never').map(b => b.category)
 
@@ -113,7 +112,6 @@ export default async function ViewProfilePage() {
   const allBrandLoves = brandLoves.length ? brandLoves : (inf.brand_loves || [])
   const allBrandNever = brandNever.length ? brandNever : (inf.brand_never || [])
   const allFormats = formatList.length ? formatList : (inf.formats || [])
-  const allSecondary = secondaryNiches.length ? secondaryNiches : (inf.secondary_niches || [])
 
   const totalReach = platformList.reduce((sum, p) => sum + (p.followers || 0), 0)
   const fullName = [inf.first_name, inf.last_name].filter(Boolean).join(' ') || '—'
@@ -176,7 +174,6 @@ export default async function ViewProfilePage() {
               {primaryNiche
                 ? <PILL color="gold">{primaryNiche}</PILL>
                 : <PILL color="muted">No niche set</PILL>}
-              {allSecondary.map((n: string) => <PILL key={n} color="muted">{n}</PILL>)}
             </div>
 
             {/* Languages */}
@@ -262,15 +259,6 @@ export default async function ViewProfilePage() {
               <FIELD label="Content style" value={inf.content_style || '—'} />
               <FIELD label="Posting frequency" value={inf.posting_frequency || '—'} />
               <FIELD label="Past partnerships" value={inf.past_partnerships || '—'} />
-            </div>
-
-            <div className="mb-3">
-              <p className="text-[11px] text-muted-foreground font-semibold mb-2">Secondary niches</p>
-              <div className="flex flex-wrap gap-1.5">
-                {allSecondary.length
-                  ? allSecondary.map((n: string) => <PILL key={n} color="fg">{n}</PILL>)
-                  : <PILL color="muted">Not set</PILL>}
-              </div>
             </div>
 
             <div>

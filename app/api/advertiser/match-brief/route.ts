@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
     // Get all creators who completed onboarding (NOT status='active' — creators stay 'pending')
     const { data: influencers } = await service
       .from('influencers')
-      .select('id, primary_niche, secondary_niches, bio, languages, content_style, brand_loves, brand_never, open_to_exclusivity')
+      .select('id, primary_niche, bio, languages, content_style, brand_loves, brand_never, open_to_exclusivity')
       .eq('onboarding_complete', true)
 
     if (!influencers?.length) {

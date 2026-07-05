@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   const { data: influencer } = await service
     .from('influencers')
-    .select('primary_niche, bio, first_name, secondary_niches, content_style')
+    .select('primary_niche, bio, first_name, content_style')
     .eq('id', influencerId)
     .single()
 

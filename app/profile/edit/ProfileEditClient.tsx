@@ -126,7 +126,6 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
 
   // Content profile state
   const [primaryNiche, setPrimaryNiche] = useState(influencer.primary_niche || '')
-  const [secondaryNiches, setSecondaryNiches] = useState<string[]>(influencer.secondary_niches || [])
   const [contentStyle, setContentStyle] = useState(influencer.content_style || '')
   const [formats, setFormats] = useState<string[]>(influencer.formats || [])
   const [postingFrequency, setPostingFrequency] = useState(influencer.posting_frequency || '')
@@ -314,7 +313,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
     if (section === 'info') {
       Object.assign(updates, { first_name: firstName, last_name: lastName, phone, city, country, languages })
     } else if (section === 'content') {
-      Object.assign(updates, { primary_niche: primaryNiche, secondary_niches: secondaryNiches, content_style: contentStyle, formats, posting_frequency: postingFrequency, bio })
+      Object.assign(updates, { primary_niche: primaryNiche, content_style: contentStyle, formats, posting_frequency: postingFrequency, bio })
     } else if (section === 'brands') {
       Object.assign(updates, { brand_loves: brandLoves, brand_never: brandNever, brand_loves_custom: brandLovesCustom, brand_never_custom: brandNeverCustom })
     } else if (section === 'rates') {
@@ -491,12 +490,6 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
             <label className="text-[11px] font-semibold text-muted-foreground block mb-2">Primary niche</label>
             <div className="flex gap-1.5 flex-wrap">
               {NICHES.map(n => chip(n, primaryNiche === n, () => setPrimaryNiche(n)))}
-            </div>
-          </div>
-          <div>
-            <label className="text-[11px] font-semibold text-muted-foreground block mb-2">Secondary niches</label>
-            <div className="flex gap-1.5 flex-wrap">
-              {NICHES.filter(n => n !== primaryNiche).map(n => chip(n, secondaryNiches.includes(n), () => toggle(secondaryNiches, setSecondaryNiches, n)))}
             </div>
           </div>
           <div>

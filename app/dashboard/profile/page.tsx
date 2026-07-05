@@ -168,16 +168,6 @@ export default async function ProfilePage() {
                   <span className="text-[11px] font-semibold px-[9px] py-[3px] rounded-[20px] bg-gold-bg text-gold border border-gold-border">{inf.primary_niche}</span>
                 </div>
               )}
-              {inf.secondary_niches?.length > 0 && (
-                <div className="flex items-start justify-between py-[9px] border-b border-border gap-4">
-                  <span className="text-xs text-muted-foreground shrink-0">Secondary niches</span>
-                  <div className="flex gap-1 flex-wrap justify-end">
-                    {inf.secondary_niches.map((n: string) => (
-                      <span key={n} className="text-[11px] font-medium px-[9px] py-[3px] rounded-[20px] bg-muted text-muted-foreground border border-border">{n}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
               {inf.content_style && <FIELD label="Content style" value={inf.content_style} />}
               {inf.formats?.length > 0 && (
                 <div className="flex items-start justify-between py-[9px] border-b border-border gap-4">

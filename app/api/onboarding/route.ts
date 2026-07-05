@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       if (user_id && influencer_id) {
         const { data: inf } = await service
           .from('influencers')
-          .select('first_name, last_name, city, country, languages, primary_niche, secondary_niches, content_style, posting_frequency, bio, brand_loves, brand_never')
+          .select('first_name, last_name, city, country, languages, primary_niche, content_style, posting_frequency, bio, brand_loves, brand_never')
           .eq('id', influencer_id)
           .single()
 
@@ -84,7 +84,6 @@ export async function POST(request: NextRequest) {
           country: data.country || null,
           languages: data.languages || [],
           primary_niche: data.primary_niche || null,
-          secondary_niches: data.secondary_niches || [],
           content_style: data.content_style || null,
           posting_frequency: data.posting_frequency || null,
           bio: data.bio || null,
@@ -134,7 +133,6 @@ export async function POST(request: NextRequest) {
         languages: data.languages || [],
         platforms: data.platforms || [],
         primary_niche: data.primary_niche || null,
-        secondary_niches: data.secondary_niches || [],
         content_style: data.content_style || null,
         posting_frequency: data.posting_frequency || null,
         bio: data.bio || null,
@@ -182,7 +180,6 @@ export async function POST(request: NextRequest) {
     if (session.country) influencerUpdates.country = session.country
     if (session.languages?.length) influencerUpdates.languages = session.languages
     if (session.primary_niche) influencerUpdates.primary_niche = session.primary_niche
-    if (session.secondary_niches?.length) influencerUpdates.secondary_niches = session.secondary_niches
     if (session.content_style) influencerUpdates.content_style = session.content_style
     if (session.posting_frequency) influencerUpdates.posting_frequency = session.posting_frequency
     if (session.bio) influencerUpdates.bio = session.bio

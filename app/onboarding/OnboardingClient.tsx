@@ -90,7 +90,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
   const [handles, setHandles] = useState<Record<string, string>>({})
 
   const [primaryNiche, setPrimaryNiche] = useState('')
-  const [secondaryNiches, setSecondaryNiches] = useState<string[]>([])
   const [contentStyle, setContentStyle] = useState('')
   const [languages, setLanguages] = useState<string[]>([])
   const [postingFrequency, setPostingFrequency] = useState('')
@@ -123,7 +122,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
     setSelectedPlatforms(plats.map(p => p.platform))
     setHandles(Object.fromEntries(plats.map(p => [p.platform, p.handle || ''])))
     setPrimaryNiche(data.primary_niche || '')
-    setSecondaryNiches(data.secondary_niches || [])
     setContentStyle(data.content_style || '')
     setLanguages(data.languages || [])
     setPostingFrequency(data.posting_frequency || '')
@@ -217,7 +215,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
       country: country.trim() || null,
       platforms: selectedPlatforms.map(p => ({ platform: p, handle: (handles[p] || '').trim() || null })),
       primary_niche: primaryNiche,
-      secondary_niches: secondaryNiches,
       content_style: contentStyle || null,
       languages,
       posting_frequency: postingFrequency || null,
@@ -401,14 +398,6 @@ export default function OnboardingClient({ user, influencer }: Props) {
                     <div className="flex flex-wrap gap-2">
                       {NICHES.map(n => (
                         <button key={n} type="button" onClick={() => setPrimaryNiche(n)} className={chip(primaryNiche === n)}>{n}</button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Secondary niches <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                    <div className="flex flex-wrap gap-2">
-                      {NICHES.filter(n => n !== primaryNiche).map(n => (
-                        <button key={n} type="button" onClick={() => toggle(secondaryNiches, setSecondaryNiches, n)} className={chip(secondaryNiches.includes(n))}>{n}</button>
                       ))}
                     </div>
                   </div>
