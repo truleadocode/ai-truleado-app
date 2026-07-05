@@ -3,33 +3,47 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
+import LanguageSelector from '@/components/LanguageSelector'
 import ParseProgressCard, { type ParseStatus } from '@/components/ParseProgressCard'
 import { cn } from '@/lib/utils'
 import {
-  Send, Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Share2,
-  Sparkles, PartyPopper, Upload, type LucideIcon,
+  Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Share2,
+  Sparkles, PartyPopper, Upload, Check, ArrowLeft, ArrowRight, Loader2, type LucideIcon,
 } from 'lucide-react'
 
 const SESSION_KEY_LS = 'truleado_session_key'
 
+const ALL_PLATFORMS = ['instagram', 'tiktok', 'youtube', 'pinterest']
 const PLATFORM_ICONS: Record<string, LucideIcon> = {
   instagram: Instagram, tiktok: Music2, youtube: Youtube, pinterest: Pin,
   twitter: Twitter, linkedin: Linkedin,
 }
-
 function platformIcon(platform: string): LucideIcon {
   return PLATFORM_ICONS[platform] || Share2
 }
 
-type Phase = 'loading' | 'chat' | 'auth' | 'screenshots' | 'done'
+const NICHES = ['Fashion','Beauty','Lifestyle','Fitness','Food','Travel','Tech','Gaming','Finance','Parenting','Home','Wellness','Music','Art','Comedy','Sustainability']
+const STYLES = ['Educational','Entertaining','Inspirational','Authentic/Raw','Aesthetic','Documentary','Storytelling']
+const CATEGORIES = ['Fashion','Beauty','Skincare','Haircare','Fitness','Nutrition','Travel','Tech','Gaming','Finance','Food & Beverage','Home & Garden','Pets','Kids','Cars','Sustainability','Art','Music']
+const POSTING_FREQUENCIES = ['Daily', '4-6x per week', '2-3x per week', 'Once a week', 'Less than once a week']
+const RATE_FIELDS: Record<string, [string, string][]> = {
+  instagram: [['Reel', 'reel'], ['Story', 'story'], ['Feed post', 'post']],
+  tiktok:    [['Video', 'video']],
+  youtube:   [['Integration', 'integration'], ['Video', 'video']],
+  pinterest: [['Post', 'post']],
+}
 
-interface ChatMessage { role: 'sarah' | 'user'; text: string }
-interface Platform    { id: string; platform: string; handle: string | null }
+const STEPS = ['Basics', 'Platforms', 'Content', 'About you', 'Brand fit', 'Rates'] as const
+
+type Phase = 'loading' | 'form' | 'auth' | 'screenshots'
+
+interface PlatformRow { id: string; platform: string; handle: string | null }
 interface Props {
   user: { id: string; email?: string } | null
   influencer: { id: string; first_name?: string; onboarding_complete?: boolean } | null
-  embedded?: boolean
 }
 
 function GoogleIcon() {
@@ -43,30 +57,47 @@ function GoogleIcon() {
   )
 }
 
-export default function OnboardingClient({ user, influencer, embedded = false }: Props) {
-  const [phase, setPhase]                     = useState<Phase>('loading')
-  const [messages, setMessages]               = useState<ChatMessage[]>([])
-  const [input, setInput]                     = useState('')
-  const [step, setStep]                       = useState('greeting')
-  const [sessionKey, setSessionKey]           = useState<string | null>(null)
-  const [sessionData, setSessionData]         = useState<Record<string, any>>({})
-  const [platforms, setPlatforms]             = useState<Platform[]>([])
-  const [influencerId, setInfluencerId]       = useState<string | null>(influencer?.id || null)
-  const [firstName, setFirstName]             = useState(influencer?.first_name || '')
-  const [isThinking, setIsThinking]           = useState(false)
+export default function OnboardingClient({ user, influencer }: Props) {
+  const [phase, setPhase] = useState<Phase>('loading')
+  const [stepIdx, setStepIdx] = useState(0)
+  const [sessionKey, setSessionKey] = useState<string | null>(null)
+  const [influencerId, setInfluencerId] = useState<string | null>(influencer?.id || null)
+  const [firstNameDone, setFirstNameDone] = useState(influencer?.first_name || '')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  // Screenshots phase (unchanged behavior from before)
+  const [platforms, setPlatforms] = useState<PlatformRow[]>([])
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, string>>({})
-  const [allUploaded, setAllUploaded]         = useState(false)
-  const [isResumePrompt, setIsResumePrompt]   = useState(false)
-  const [resumeStep, setResumeStep]           = useState('greeting')
+  const [allUploaded, setAllUploaded] = useState(false)
 
-  const bottomRef    = useRef<HTMLDivElement>(null)
-  const inputRef     = useRef<HTMLInputElement>(null)
+  // ── Form state ──────────────────────────────────────────────────
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [city, setCity] = useState('')
+  const [country, setCountry] = useState('')
+
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
+  const [handles, setHandles] = useState<Record<string, string>>({})
+
+  const [primaryNiche, setPrimaryNiche] = useState('')
+  const [secondaryNiches, setSecondaryNiches] = useState<string[]>([])
+  const [contentStyle, setContentStyle] = useState('')
+  const [languages, setLanguages] = useState<string[]>([])
+  const [postingFrequency, setPostingFrequency] = useState('')
+
+  const [bio, setBio] = useState('')
+
+  const [brandLoves, setBrandLoves] = useState<string[]>([])
+  const [brandNever, setBrandNever] = useState<string[]>([])
+
+  const [rateState, setRateState] = useState<Record<string, string>>({})
+  const [gifting, setGifting] = useState(false)
+  const [revShare, setRevShare] = useState(false)
+  const [exclusivity, setExclusivity] = useState(false)
+
   const initCalledRef = useRef(false)
-  const supabase     = createClient()
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [messages, isThinking])
+  const supabase = createClient()
 
   useEffect(() => {
     if (initCalledRef.current) return
@@ -74,54 +105,55 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
     initSession()
   }, [])
 
-  async function initSession(forceNew = false) {
-    const storedKey = (!forceNew && typeof window !== 'undefined') ? localStorage.getItem(SESSION_KEY_LS) : null
-    const res = await fetch('/api/sarah-chat', {
+  function prefill(data: Record<string, any>) {
+    setFirstName(data.first_name || '')
+    setLastName(data.last_name || '')
+    setCity(data.city || '')
+    setCountry(data.country || '')
+    const plats: any[] = data.platforms || []
+    setSelectedPlatforms(plats.map(p => p.platform))
+    setHandles(Object.fromEntries(plats.map(p => [p.platform, p.handle || ''])))
+    setPrimaryNiche(data.primary_niche || '')
+    setSecondaryNiches(data.secondary_niches || [])
+    setContentStyle(data.content_style || '')
+    setLanguages(data.languages || [])
+    setPostingFrequency(data.posting_frequency || '')
+    setBio(data.bio || '')
+    setBrandLoves(data.brand_loves || [])
+    setBrandNever(data.brand_never || [])
+    const ratesParsed = data.rates_parsed || {}
+    if (ratesParsed.rates?.length) {
+      setRateState(Object.fromEntries(ratesParsed.rates.map((r: any) => [`${r.platform}__${r.content_type}`, String(Math.round((r.rate_eur_cents || 0) / 100))])))
+    }
+    setGifting(Boolean(ratesParsed.open_to_gifting))
+    setRevShare(Boolean(ratesParsed.open_to_rev_share))
+    setExclusivity(Boolean(ratesParsed.open_to_exclusivity))
+  }
+
+  async function initSession() {
+    const storedKey = typeof window !== 'undefined' ? localStorage.getItem(SESSION_KEY_LS) : null
+    const res = await fetch('/api/onboarding', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'init', session_key: storedKey, user_id: user?.id || null, influencer_id: influencer?.id || null }),
     })
-    if (!res.ok) { setPhase('chat'); addS("Hey! 👋 I'm Sarah from Truleado. What's your name?"); return }
-
+    if (!res.ok) { setPhase('form'); return }
     const data = await res.json()
+
     if (data.session_key) { localStorage.setItem(SESSION_KEY_LS, data.session_key); setSessionKey(data.session_key) }
+    if (data.influencer_id) setInfluencerId(data.influencer_id)
 
     if (data.phase === 'screenshots') {
-      setPlatforms(data.platforms || []); setInfluencerId(data.influencer_id)
-      if (data.first_name) setFirstName(data.first_name)
-      setPhase('screenshots'); setupRealtime(data.influencer_id, data.platforms || [])
-    } else if (data.phase === 'merge_needed') {
-      await mergeSession(data.session_key)
-    } else if (data.phase === 'resume') {
-      setResumeStep(data.step); setStep(data.step); setSessionData(data.data || {})
-      setIsResumePrompt(true); setPhase('chat'); addS(data.sarah_reply)
-    } else {
-      setStep(data.step); setPhase('chat'); addS(data.sarah_reply)
-    }
-  }
-
-  async function mergeSession(sk: string) {
-    if (!user?.id || !influencer?.id) return
-    try {
-      const res = await fetch('/api/sarah-chat', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'merge', session_key: sk || sessionKey, user_id: user.id, influencer_id: influencer.id }),
-      })
-      const data = await res.json()
-      if (data.phase === 'screenshots') {
-        setPlatforms(data.platforms || []); setInfluencerId(data.influencer_id)
-        if (data.first_name) setFirstName(data.first_name)
-        setPhase('screenshots'); setupRealtime(data.influencer_id, data.platforms || [])
-        return
-      }
-      throw new Error('merge failed')
-    } catch {
-      // Don't leave the user stuck on the loading screen — fall back to screenshots
-      setInfluencerId(influencer.id)
+      setPlatforms(data.platforms || [])
+      if (data.first_name) setFirstNameDone(data.first_name)
       setPhase('screenshots')
+      setupRealtime(data.influencer_id, data.platforms || [])
+    } else {
+      prefill(data.data || {})
+      setPhase('form')
     }
   }
 
-  function setupRealtime(infId: string, plats: Platform[]) {
+  function setupRealtime(infId: string, plats: PlatformRow[]) {
     const initial: Record<string, string> = {}
     for (const p of plats) initial[p.id] = 'pending'
     setPlatformStatuses(initial)
@@ -145,63 +177,77 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
     if (allDone) setAllUploaded(true)
   }, [platformStatuses, phase, platforms])
 
-  const addS = (text: string) => setMessages(prev => [...prev, { role: 'sarah', text }])
-  const addU = (text: string) => setMessages(prev => [...prev, { role: 'user',  text }])
+  function togglePlatform(p: string) {
+    setSelectedPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])
+  }
+  function toggle(list: string[], set: (v: string[]) => void, v: string) {
+    set(list.includes(v) ? list.filter(x => x !== v) : [...list, v])
+  }
 
-  async function continueFromStep(s: string) {
-    setIsThinking(true)
-    try {
-      const res = await fetch('/api/sarah-chat', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resume_continue', session_key: sessionKey, step: s }),
+  const stepValid = [
+    firstName.trim().length > 0,
+    selectedPlatforms.length > 0 && selectedPlatforms.every(p => (handles[p] || '').trim().length > 0),
+    primaryNiche.trim().length > 0,
+    bio.trim().length > 0,
+    true,
+    true,
+  ]
+
+  function buildPayload() {
+    const rates = Object.entries(rateState)
+      .filter(([, v]) => v && v.trim() !== '')
+      .map(([key, v]) => {
+        const [platform, content_type] = key.split('__')
+        return { platform, content_type, rate_eur_cents: Math.round(parseFloat(v) * 100) }
       })
-      if (!res.ok) throw new Error('resume failed')
-      const data = await res.json()
-      if (!data.sarah_reply) throw new Error('resume failed')
-      if (data.step) setStep(data.step)
-      setIsResumePrompt(false); addS(data.sarah_reply)
-      if (data.phase === 'auth') setPhase('auth')
-    } catch { setIsResumePrompt(false); addS("Let's pick up where we left off!") }
-    finally { setIsThinking(false); setTimeout(() => inputRef.current?.focus(), 100) }
-  }
 
-  async function startFresh() {
-    localStorage.removeItem(SESSION_KEY_LS)
-    setMessages([]); setSessionKey(null); setSessionData({})
-    setStep('greeting'); setResumeStep('greeting'); setIsResumePrompt(false); setPhase('loading')
-    await new Promise(r => setTimeout(r, 50))
-    initCalledRef.current = false; initCalledRef.current = true
-    await initSession(true)
-  }
-
-  async function sendMessage(text: string) {
-    if (!text.trim() || isThinking) return
-    const trimmed = text.trim().toLowerCase()
-
-    if (isResumePrompt) {
-      const isYes = ['yes','yeah','sure','ok','yep','continue','yup',"let's go",'lets go'].includes(trimmed)
-      const isNo  = ['no','nope','start fresh','restart','start over','fresh','new'].includes(trimmed)
-      addU(text); setInput('')
-      if (isYes) { await continueFromStep(resumeStep); return }
-      if (isNo)  { addS('No problem, starting fresh!'); await startFresh(); return }
-      addS('Just say "yes" to continue where we left off, or "no" to start over.')
-      return
+    return {
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      city: city.trim() || null,
+      country: country.trim() || null,
+      platforms: selectedPlatforms.map(p => ({ platform: p, handle: (handles[p] || '').trim() || null })),
+      primary_niche: primaryNiche,
+      secondary_niches: secondaryNiches,
+      content_style: contentStyle || null,
+      languages,
+      posting_frequency: postingFrequency || null,
+      bio: bio.trim(),
+      brand_loves: brandLoves,
+      brand_never: brandNever,
+      rates,
+      open_to_gifting: gifting,
+      open_to_rev_share: revShare,
+      open_to_exclusivity: exclusivity,
     }
+  }
 
-    addU(text); setInput(''); setIsThinking(true)
+  async function finishForm() {
+    if (saving) return
+    setSaving(true)
+    setSaveError(null)
     try {
-      const res = await fetch('/api/sarah-chat', {
+      const res = await fetch('/api/onboarding', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'message', session_key: sessionKey, step, user_message: text, data: sessionData }),
+        body: JSON.stringify({ action: 'save', session_key: sessionKey, influencer_id: influencerId, data: buildPayload() }),
       })
-      const data = await res.json()
-      if (!res.ok || !data.sarah_reply) throw new Error(data.error || 'chat failed')
-      if (data.extracted) setSessionData((prev: any) => ({ ...prev, ...data.extracted }))
-      if (data.step) setStep(data.step)
-      addS(data.sarah_reply)
-      if (data.phase === 'auth') setPhase('auth')
-    } catch { addS("Sorry, I had a hiccup — can you say that again? 😅") }
-    finally { setIsThinking(false); setTimeout(() => inputRef.current?.focus(), 100) }
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setSaveError(data.error || 'Something went wrong. Please try again.'); return }
+
+      if (data.phase === 'screenshots') {
+        setPlatforms(data.platforms || [])
+        setInfluencerId(data.influencer_id)
+        if (data.first_name) setFirstNameDone(data.first_name)
+        setPhase('screenshots')
+        setupRealtime(data.influencer_id, data.platforms || [])
+      } else {
+        setPhase('auth')
+      }
+    } catch {
+      setSaveError('Something went wrong. Please try again.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function signInWithGoogle() {
@@ -224,7 +270,7 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
   }
 
   async function completeOnboarding() {
-    await fetch('/api/sarah-chat', {
+    await fetch('/api/onboarding', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'complete', session_key: sessionKey, influencer_id: influencerId }),
     })
@@ -232,21 +278,30 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
     window.location.href = '/dashboard'
   }
 
+  const chip = (selected: boolean, color: 'gold' | 'green' | 'red' = 'gold') => cn(
+    'px-3 py-1.5 rounded-full border text-xs font-semibold capitalize transition-colors',
+    selected
+      ? color === 'green' ? 'border-green-border bg-green-bg text-green'
+      : color === 'red' ? 'border-red-border bg-red-bg text-red'
+      : 'border-gold bg-gold-bg text-gold'
+      : 'border-border bg-card text-muted-foreground hover:border-gold/50'
+  )
+
+  const textareaClass = 'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[90px] resize-y'
+  const selectClass = 'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+
   return (
-    <div className={cn(
-      'bg-muted flex flex-col font-sans',
-      embedded ? 'h-full rounded-2xl border border-border overflow-hidden' : 'min-h-screen'
-    )}>
+    <div className="min-h-screen bg-muted flex flex-col font-sans">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 bg-card border-b border-border shrink-0">
         <div className="w-8 h-8 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-gold"><Sparkles size={16} /></div>
         <div>
-          <p className="text-sm font-semibold">Sarah Chen</p>
-          <p className="text-[11px] text-muted-foreground">Creator Partnerships · Truleado</p>
+          <p className="text-sm font-semibold">Truleado</p>
+          <p className="text-[11px] text-muted-foreground">Creator onboarding</p>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-0 max-w-2xl w-full mx-auto">
+      <div className="flex-1 flex flex-col min-h-0 max-w-xl w-full mx-auto px-4 py-8">
         {phase === 'loading' && (
           <div className="flex-1 flex items-center justify-center p-10">
             <div className="text-center text-muted-foreground text-sm">
@@ -255,76 +310,251 @@ export default function OnboardingClient({ user, influencer, embedded = false }:
           </div>
         )}
 
-        {(phase === 'chat' || phase === 'auth') && (
-          <>
-            <div className="flex-1 flex flex-col gap-4 p-4 overflow-y-auto min-h-0">
-              {messages.map((msg, i) => (
-                <div key={i} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
-                  <div className={cn(
-                    'max-w-[80%] px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap',
-                    msg.role === 'sarah'
-                      ? 'bg-card border border-border text-foreground shadow-sm rounded-[4px_18px_18px_18px]'
-                      : 'bg-gold text-white rounded-[18px_4px_18px_18px]'
-                  )}>
-                    {msg.text}
+        {phase === 'form' && (
+          <div className="flex-1 flex flex-col">
+            {/* Progress */}
+            <div className="mb-6">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-xs font-semibold text-muted-foreground">Step {stepIdx + 1} of {STEPS.length}</p>
+                <p className="text-xs font-semibold text-gold">{STEPS[stepIdx]}</p>
+              </div>
+              <Progress value={((stepIdx + 1) / STEPS.length) * 100} className="h-1.5" />
+            </div>
+
+            {saveError && (
+              <p className="text-xs text-destructive bg-red-bg border border-red-border rounded-lg px-3 py-2 mb-4">{saveError}</p>
+            )}
+
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm mb-5">
+              {/* Step 0: Basics */}
+              {stepIdx === 0 && (
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold tracking-tight mb-1">Tell us about you</h2>
+                  <p className="text-xs text-muted-foreground mb-4">Basic info so brands know who they're working with.</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="fn">First name</Label>
+                      <Input id="fn" value={firstName} onChange={e => setFirstName(e.target.value)} autoFocus />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ln">Last name</Label>
+                      <Input id="ln" value={lastName} onChange={e => setLastName(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="city">City</Label>
+                      <Input id="city" value={city} onChange={e => setCity(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="country">Country</Label>
+                      <Input id="country" value={country} onChange={e => setCountry(e.target.value)} />
+                    </div>
                   </div>
                 </div>
-              ))}
+              )}
 
-              {isThinking && (
-                <div className="flex">
-                  <div className="bg-card border border-border shadow-sm rounded-[4px_18px_18px_18px] px-4 py-3 flex gap-1 items-center">
-                    {[0,1,2].map(i => (
-                      <span key={i} className="w-1.5 h-1.5 rounded-full bg-muted-foreground inline-block"
-                        style={{ animation: `dot-bounce 1.2s ${i * 0.2}s infinite` }} />
+              {/* Step 1: Platforms */}
+              {stepIdx === 1 && (
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold tracking-tight mb-1">Which platforms are you on?</h2>
+                  <p className="text-xs text-muted-foreground mb-4">Select all that apply, then add your handle.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {ALL_PLATFORMS.map(p => {
+                      const Icon = platformIcon(p)
+                      return (
+                        <button key={p} type="button" onClick={() => togglePlatform(p)} className={cn(chip(selectedPlatforms.includes(p)), 'inline-flex items-center gap-1.5')}>
+                          <Icon size={13} /> {p}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {selectedPlatforms.length > 0 && (
+                    <div className="space-y-3 pt-1">
+                      {selectedPlatforms.map(p => (
+                        <div key={p} className="space-y-1.5">
+                          <Label htmlFor={`h-${p}`} className="capitalize">{p} handle</Label>
+                          <Input id={`h-${p}`} value={handles[p] || ''} onChange={e => setHandles(prev => ({ ...prev, [p]: e.target.value }))} placeholder="@username" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Content */}
+              {stepIdx === 2 && (
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold tracking-tight mb-1">Your content</h2>
+                  <p className="text-xs text-muted-foreground mb-4">Helps us match you with the right brands.</p>
+                  <div className="space-y-1.5">
+                    <Label>Primary niche</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {NICHES.map(n => (
+                        <button key={n} type="button" onClick={() => setPrimaryNiche(n)} className={chip(primaryNiche === n)}>{n}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Secondary niches <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <div className="flex flex-wrap gap-2">
+                      {NICHES.filter(n => n !== primaryNiche).map(n => (
+                        <button key={n} type="button" onClick={() => toggle(secondaryNiches, setSecondaryNiches, n)} className={chip(secondaryNiches.includes(n))}>{n}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Content style <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <div className="flex flex-wrap gap-2">
+                      {STYLES.map(s => (
+                        <button key={s} type="button" onClick={() => setContentStyle(contentStyle === s ? '' : s)} className={chip(contentStyle === s)}>{s}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Languages <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <LanguageSelector value={languages} onChange={setLanguages} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="freq">Posting frequency <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                    <select id="freq" value={postingFrequency} onChange={e => setPostingFrequency(e.target.value)} className={selectClass}>
+                      <option value="">Select…</option>
+                      {POSTING_FREQUENCIES.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Bio */}
+              {stepIdx === 3 && (
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold tracking-tight mb-1">About you</h2>
+                  <p className="text-xs text-muted-foreground mb-4">2-3 sentences about you and your content — this is what brands read first.</p>
+                  <textarea value={bio} onChange={e => setBio(e.target.value)} className={textareaClass} placeholder="e.g. I'm a skincare creator sharing honest reviews and routines for sensitive skin…" autoFocus />
+                </div>
+              )}
+
+              {/* Step 4: Brand fit */}
+              {stepIdx === 4 && (
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold tracking-tight mb-1">Brand fit</h2>
+                  <p className="text-xs text-muted-foreground mb-4">Optional, but helps us pitch you to the right brands.</p>
+                  <div className="space-y-1.5">
+                    <Label>Categories you love working with</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {CATEGORIES.filter(c => !brandNever.includes(c)).map(c => (
+                        <button key={c} type="button" onClick={() => { toggle(brandLoves, setBrandLoves, c); setBrandNever(prev => prev.filter(x => x !== c)) }} className={chip(brandLoves.includes(c), 'green')}>{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Categories you'd never do</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {CATEGORIES.filter(c => !brandLoves.includes(c)).map(c => (
+                        <button key={c} type="button" onClick={() => { toggle(brandNever, setBrandNever, c); setBrandLoves(prev => prev.filter(x => x !== c)) }} className={chip(brandNever.includes(c), 'red')}>{c}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 5: Rates */}
+              {stepIdx === 5 && (
+                <div className="space-y-4">
+                  <h2 className="text-lg font-semibold tracking-tight mb-1">Your rates</h2>
+                  <p className="text-xs text-muted-foreground mb-4">Optional — a rough idea helps brands come in with realistic offers.</p>
+                  {selectedPlatforms.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No platforms selected — skip this and add rates later from your profile.</p>
+                  )}
+                  {selectedPlatforms.map(platform => (
+                    <div key={platform} className="bg-muted border border-border rounded-xl px-4 py-3.5">
+                      <p className="text-sm font-semibold mb-3 capitalize">{platform}</p>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {(RATE_FIELDS[platform] || [['Post', 'post']]).map(([label, ct]) => {
+                          const key = `${platform}__${ct}`
+                          return (
+                            <div key={ct}>
+                              <label className="text-[11px] text-muted-foreground block mb-1">{label} (€)</label>
+                              <div className="relative">
+                                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">€</span>
+                                <Input className="pl-[22px]" type="number" min="0" placeholder="0"
+                                  value={rateState[key] || ''}
+                                  onChange={e => setRateState(prev => ({ ...prev, [key]: e.target.value }))} />
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  <div className="bg-muted border border-border rounded-xl px-4 py-1">
+                    {([
+                      ['Open to gifting', gifting, setGifting],
+                      ['Open to rev-share', revShare, setRevShare],
+                      ['Open to exclusivity', exclusivity, setExclusivity],
+                    ] as [string, boolean, (v: boolean) => void][]).map(([label, val, set], i) => (
+                      <div key={label} className={cn('flex items-center justify-between py-2.5', i > 0 && 'border-t border-border')}>
+                        <p className="text-[13px] font-medium">{label}</p>
+                        <button type="button" onClick={() => set(!val)} className={cn('w-[38px] h-[21px] rounded-[11px] border-none cursor-pointer relative transition-colors', val ? 'bg-green' : 'bg-border')}>
+                          <span className="absolute w-[15px] h-[15px] rounded-full bg-white top-[3px] left-[3px] transition-transform" style={{ transform: val ? 'translateX(17px)' : 'none' }} />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              {phase === 'auth' && !isThinking && (
-                <div className="bg-card border border-border rounded-2xl p-5 shadow-sm text-center">
-                  <p className="text-xs text-muted-foreground mb-4">Your info is saved — just sign in to continue.</p>
-                  <Button variant="outline" onClick={signInWithGoogle} className="gap-2 w-full">
-                    <GoogleIcon /> Continue with Google
-                  </Button>
-                </div>
-              )}
-
-              <div ref={bottomRef} />
             </div>
 
-            {phase === 'chat' && (
-              <div className="px-4 py-3 border-t border-border bg-card flex gap-2 shrink-0">
-                <input
-                  ref={inputRef}
-                  value={input}
-                  onChange={e => setInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input) } }}
-                  placeholder={isResumePrompt ? 'Say "yes" to continue or "no" to start fresh…' : 'Type your answer…'}
-                  disabled={isThinking}
-                  className="flex-1 h-10 px-4 rounded-full border border-border bg-muted text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-2 focus:ring-ring disabled:opacity-60 font-sans"
-                />
-                <button
-                  onClick={() => sendMessage(input)}
-                  disabled={!input.trim() || isThinking}
-                  className={cn(
-                    'w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-colors',
-                    input.trim() && !isThinking ? 'bg-gold text-white' : 'bg-border text-muted-foreground'
-                  )}
+            {/* Nav buttons */}
+            <div className="flex gap-2.5">
+              {stepIdx > 0 && (
+                <Button variant="outline" onClick={() => setStepIdx(i => i - 1)} className="gap-1.5" disabled={saving}>
+                  <ArrowLeft size={14} /> Back
+                </Button>
+              )}
+              {stepIdx < STEPS.length - 1 ? (
+                <Button
+                  onClick={() => stepValid[stepIdx] && setStepIdx(i => i + 1)}
+                  disabled={!stepValid[stepIdx]}
+                  className="flex-1 bg-gold hover:bg-gold/90 text-white font-semibold gap-1.5"
                 >
-                  <Send size={15} />
-                </button>
-              </div>
+                  Continue <ArrowRight size={14} />
+                </Button>
+              ) : (
+                <Button onClick={finishForm} disabled={saving} className="flex-1 bg-gold hover:bg-gold/90 text-white font-semibold gap-1.5">
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Finish
+                </Button>
+              )}
+            </div>
+            {!stepValid[stepIdx] && stepIdx !== 4 && stepIdx !== 5 && (
+              <p className="text-[11px] text-muted-foreground mt-2 px-1">
+                {stepIdx === 0 && 'First name is required.'}
+                {stepIdx === 1 && 'Select at least one platform and add its handle.'}
+                {stepIdx === 2 && 'Pick a primary niche.'}
+                {stepIdx === 3 && 'A short bio is required.'}
+              </p>
             )}
-          </>
+          </div>
+        )}
+
+        {phase === 'auth' && (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm text-center w-full">
+              <div className="flex justify-center mb-4"><PartyPopper size={28} className="text-gold" /></div>
+              <h2 className="text-base font-semibold mb-1.5">You're all set!</h2>
+              <p className="text-xs text-muted-foreground mb-5">Your info is saved — just sign in to continue.</p>
+              <Button variant="outline" onClick={signInWithGoogle} className="gap-2 w-full">
+                <GoogleIcon /> Continue with Google
+              </Button>
+            </div>
+          </div>
         )}
 
         {phase === 'screenshots' && (
-          <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 min-h-0">
+          <div className="flex-1 overflow-y-auto flex flex-col gap-4 min-h-0">
             <div className="bg-card border border-border rounded-2xl p-4 text-sm text-foreground leading-relaxed shadow-sm">
               <span className="inline-flex items-center gap-1.5">
-                {firstName ? `Amazing, ${firstName}!` : 'Amazing!'}
+                {firstNameDone ? `Amazing, ${firstNameDone}!` : 'Amazing!'}
                 <PartyPopper size={16} className="text-gold shrink-0" />
               </span>{' '}
               Last step — upload some screenshots from your platforms so brands can see your real stats.

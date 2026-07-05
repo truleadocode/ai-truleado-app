@@ -62,9 +62,9 @@ export async function GET(request: Request) {
       onboarding_complete: false,
     }).select('id').single()
 
-    // If we have a session key from the onboarding chat, merge it
+    // If we have a session key from the pre-auth onboarding form, merge it
     if (sessionKey && newInfluencer) {
-      await fetch(`${origin}/api/sarah-chat`, {
+      await fetch(`${origin}/api/onboarding`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
