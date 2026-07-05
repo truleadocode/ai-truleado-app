@@ -36,6 +36,14 @@ export async function POST(request: Request) {
       ? await service.from('advertiser_onboarding_sessions').select('*').eq('session_key', session_key).single()
       : { data: null }
 
+    // Only mark onboarding complete when we actually have a name to show —
+    // this fallback also runs right after a fresh email/password signup
+    // with no profile yet (see LoginForm's emailBrandSignup), and setting
+    // onboarding_complete: true there skipped the whole details step:
+    // AdvertiserOnboardingClient checks this flag and immediately redirects
+    // straight to the dashboard, blank company/name and all.
+    const hasProfileData = Boolean(profile?.first_name || onb?.first_name)
+
     const { data: newAdv } = await service.from('advertisers').insert({
       user_id: user.id,
       email: user.email!,
@@ -43,7 +51,7 @@ export async function POST(request: Request) {
       last_name: profile?.last_name || onb?.last_name || '',
       company_name: profile?.company_name || onb?.company_name || null,
       advertiser_type: profile?.advertiser_type || onb?.advertiser_type || null,
-      onboarding_complete: true,
+      onboarding_complete: hasProfileData,
     }).select('id').single()
 
     advertiser = newAdv
