@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { runMatchBrief } from '@/lib/matchBrief'
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,11 +83,14 @@ export async function POST(request: NextRequest) {
     // Only kick off matching for a real submission — a draft isn't ready
     // for creators to see yet.
     if (status === 'submitted') {
-      fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/advertiser/match-brief`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY! },
-        body: JSON.stringify({ brief_id: brief.id }),
-      }).catch(console.error)
+      // Direct call, not a self-fetch — a server calling its own HTTP
+      // endpoint for an unawaited "fire and forget" job is fragile (no
+      // guarantee the request completes before this function's process is
+      // frozen/recycled). The process-briefs cron sweep re-runs this for
+      // any brief that's still short on confirmed creators, so this call
+      // failing outright isn't fatal — but there's no reason to take on
+      // that risk when a plain function call works just as well.
+      runMatchBrief(service, brief.id).catch(console.error)
     }
 
     return NextResponse.json({ brief_id: brief.id, is_free: isFreeBrief, status })

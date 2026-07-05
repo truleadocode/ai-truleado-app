@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { runMatchBrief } from '@/lib/matchBrief'
 
 // Called after the client has an authenticated session (post sign-in),
 // for BOTH email/password and as a shared helper. Ensures the advertiser
@@ -100,11 +101,8 @@ export async function POST(request: Request) {
         .eq('session_key', session_key)
 
       if (brief?.id) {
-        fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'}/api/advertiser/match-brief`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY! },
-          body: JSON.stringify({ brief_id: brief.id }),
-        }).catch(console.error)
+        // Direct call instead of a self-fetch — see submit-brief/route.ts.
+        runMatchBrief(service, brief.id).catch(console.error)
       }
     }
   }
