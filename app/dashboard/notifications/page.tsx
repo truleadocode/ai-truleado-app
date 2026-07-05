@@ -34,9 +34,13 @@ export default async function NotificationsPage() {
   const { data: influencer } = await supabase.from('influencers').select('id').eq('user_id', user.id).single()
   if (!influencer) redirect('/')
 
+  // NOTE: 'action_url' is not a column on notifications — selecting it made
+  // this query error out silently, so the page always rendered empty even
+  // when notifications existed (the sidebar badge counts separately with a
+  // head-only count query, so it stayed correct and disagreed with this page).
   const { data: notifs } = await supabase
     .from('notifications')
-    .select('id, type, title, body, read, created_at, action_url')
+    .select('id, type, title, body, read, created_at')
     .eq('influencer_id', influencer.id)
     .order('created_at', { ascending: false })
 
