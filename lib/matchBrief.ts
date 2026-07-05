@@ -169,13 +169,29 @@ export async function runMatchBrief(service: ReturnType<typeof createServiceClie
           status: 'offered',
           brand_category: brief.niche_fit || null,
           brand_name: brief.brand_name || null,
-          brand_revealed: false,
+          // Shown to the creator from the moment they're offered the gig —
+          // no reason to hide who the brand is while they decide.
+          brand_revealed: true,
           platform: matchedPlatform,
           deliverables_summary: brief.content_types?.length ? brief.content_types.join(', ') : 'Content collaboration',
           budget_eur: brief.budget_per_creator_eur ?? null,
           goes_live_at: brief.go_live_date || null,
           ai_match_score: match.score ?? null,
           ai_match_reasoning: match.match_reason || null,
+          // Influencers have no direct read access to `briefs` — denormalize
+          // the richer context here so the Brief tab has more than just
+          // platform/budget/summary to show.
+          brief_details: {
+            product_description: brief.product_description || null,
+            content_types: brief.content_types || [],
+            platforms: brief.platforms || [],
+            target_age_range: brief.target_age_range || null,
+            target_gender: brief.target_gender || null,
+            target_countries: brief.target_countries || [],
+            tone_notes: brief.tone_notes || null,
+            dos: brief.dos || null,
+            donts: brief.donts || null,
+          },
         }).select('id').single()
 
         if (gig) {

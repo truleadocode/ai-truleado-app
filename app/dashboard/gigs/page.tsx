@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { Building2, Lock } from 'lucide-react'
+import { Building2, Sparkles } from 'lucide-react'
+import GigsRealtimeRefresh from './GigsRealtimeRefresh'
 
 function formatEur(cents: number) {
   return `€${(cents / 100).toLocaleString('en-EU')}`
@@ -39,13 +40,14 @@ export default async function GigsPage({ searchParams }: { searchParams: { tab?:
 
   const { data: gigs } = await supabase
     .from('gigs')
-    .select('id, brand_category, brand_name:brand_name_visible, brand_revealed, platform, deliverables_summary, budget_eur, respond_by, content_due_at, status, created_at')
+    .select('id, brand_category, brand_name:brand_name_visible, brand_revealed, platform, deliverables_summary, budget_eur, respond_by, content_due_at, status, created_at, ai_match_score')
     .eq('influencer_id', influencer.id)
     .in('status', tab.statuses)
     .order('created_at', { ascending: false })
 
   return (
     <div className="px-7 pt-6 pb-12">
+      <GigsRealtimeRefresh influencerId={influencer.id} />
 
       {/* Tabs */}
       <div className="flex gap-0 border-b border-border mb-5">
@@ -75,16 +77,16 @@ export default async function GigsPage({ searchParams }: { searchParams: { tab?:
         const isComplete = gig.status === 'complete' || gig.status === 'passed' || gig.status === 'rejected'
         return (
           <Link key={gig.id} href={`/gigs/${gig.id}`} className={cn(
-            'block bg-card border border-border rounded-2xl px-[18px] py-4 mb-2.5 no-underline text-foreground shadow-sm transition-[border-color,box-shadow]',
+            'block bg-card border border-border rounded-2xl px-[18px] py-4 mb-2.5 no-underline text-foreground shadow-sm transition-all hover:border-gold/40 hover:shadow-md animate-in fade-in slide-in-from-bottom-1 duration-300',
             isComplete ? 'opacity-65' : 'opacity-100',
           )}>
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-[10px] bg-muted border border-border flex items-center justify-center shrink-0">
-                {gig.brand_revealed ? <Building2 size={20} className="text-muted-foreground" /> : <Lock size={20} className="text-muted-foreground" />}
+                <Building2 size={20} className="text-muted-foreground" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2 mb-[3px]">
-                  <p className="text-sm font-semibold tracking-[-0.1px]">{gig.brand_revealed ? gig.brand_name : gig.brand_category}</p>
+                  <p className="text-sm font-semibold tracking-[-0.1px]">{gig.brand_name || gig.brand_category}</p>
                   <span className={cn('inline-flex items-center gap-[5px] text-[11px] font-semibold px-2.5 py-1 rounded-[20px] shrink-0', badge.className)}>
                     {['offered','confirmed','in_progress'].includes(gig.status) && (
                       <span className="w-[5px] h-[5px] rounded-full bg-current inline-block animate-pulse" />
@@ -92,8 +94,11 @@ export default async function GigsPage({ searchParams }: { searchParams: { tab?:
                     {badge.label}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mb-2.5">{gig.platform} · {gig.deliverables_summary}</p>
-                <div className="flex gap-4 flex-wrap">
+                <p className="text-xs text-muted-foreground mb-2.5 capitalize">{gig.platform} · {gig.deliverables_summary}</p>
+                <div className="flex gap-4 flex-wrap items-center">
+                  {gig.ai_match_score != null && (
+                    <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><Sparkles size={11} className="text-gold" /> <strong className="text-foreground font-semibold">{gig.ai_match_score}</strong>/100 match</span>
+                  )}
                   {gig.budget_eur && (
                     <span className="text-xs text-muted-foreground">Budget <strong className="text-foreground font-semibold">{formatEur(gig.budget_eur)}</strong></span>
                   )}

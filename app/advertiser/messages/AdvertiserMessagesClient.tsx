@@ -38,11 +38,15 @@ export default function AdvertiserMessagesClient({ advertiserId }: { advertiserI
   const [sending, setSending] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const selectedGigRef = useRef<string | null>(null)
+  const briefIdsRef = useRef<string[]>([])
+  const gigsRef = useRef<Gig[]>([])
 
   useEffect(() => {
     async function load() {
       const { data: briefIds } = await supabase.from('briefs').select('id').eq('advertiser_id', advertiserId)
       const ids = (briefIds || []).map(b => b.id)
+      briefIdsRef.current = ids
       if (!ids.length) { setLoaded(true); return }
 
       const { data: gigsData } = await supabase
@@ -84,8 +88,57 @@ export default function AdvertiserMessagesClient({ advertiserId }: { advertiserI
     load()
   }, [advertiserId])
 
+  useEffect(() => { gigsRef.current = gigs }, [gigs])
+
+  // Realtime — new messages land live, and a creator accepting a gig for
+  // the first time (their auto-sent acceptance message) makes the
+  // conversation appear without a refresh.
+  useEffect(() => {
+    const channel = supabase.channel(`advertiser-messages-${advertiserId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gig_messages' },
+        async (payload: any) => {
+          const msg = payload.new
+          if (msg.channel !== 'brand') return
+
+          setGigs(prev => {
+            if (!prev.some(g => g.id === msg.gig_id)) return prev
+            return prev.map(g => g.id === msg.gig_id
+              ? { ...g, last_message: msg.content, last_message_at: msg.created_at, unread_count: msg.sender_type === 'influencer' && selectedGigRef.current !== msg.gig_id ? (g.unread_count || 0) + 1 : g.unread_count }
+              : g)
+          })
+
+          if (selectedGigRef.current === msg.gig_id) {
+            setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+            if (msg.sender_type === 'influencer') {
+              supabase.from('gig_messages').update({ read_by_advertiser: true }).eq('id', msg.id)
+            }
+            return
+          }
+
+          // First message on a gig we haven't listed yet — fetch it and add
+          // it, but only if it actually belongs to one of our own briefs.
+          if (gigsRef.current.some(g => g.id === msg.gig_id)) return
+
+          const { data: newGig } = await supabase
+            .from('gigs')
+            .select('id, brand_category, status, brief_id, influencer:influencer_id(first_name, last_name)')
+            .eq('id', msg.gig_id)
+            .single()
+          if (!newGig || !briefIdsRef.current.includes(newGig.brief_id)) return
+
+          setGigs(prev => prev.some(g => g.id === newGig.id) ? prev : [
+            { ...newGig, last_message: msg.content, last_message_at: msg.created_at, unread_count: msg.sender_type === 'influencer' ? 1 : 0 } as Gig,
+            ...prev,
+          ])
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [advertiserId])
+
   async function selectGig(gig: Gig) {
     setSelectedGig(gig)
+    selectedGigRef.current = gig.id
     const { data: msgs } = await supabase
       .from('gig_messages')
       .select('id, content, sender_type, created_at, read_by_advertiser')
@@ -117,7 +170,7 @@ export default function AdvertiserMessagesClient({ advertiserId }: { advertiserI
     }).select().single()
 
     if (!error && data) {
-      setMessages(prev => [...prev, data])
+      setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data])
       setDraft('')
       setGigs(prev => prev.map(g => g.id === selectedGig.id ? { ...g, last_message: data.content, last_message_at: data.created_at } : g))
     }
@@ -213,7 +266,7 @@ export default function AdvertiserMessagesClient({ advertiserId }: { advertiserI
                 const isAdvertiser = msg.sender_type === 'advertiser'
                 const showDate = i === 0 || formatDay(messages[i-1].created_at) !== formatDay(msg.created_at)
                 return (
-                  <div key={msg.id}>
+                  <div key={msg.id} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
                     {showDate && (
                       <div className="text-center my-2">
                         <span className="text-[11px] text-muted-foreground/60 bg-muted px-2.5 py-[3px] rounded-[20px] border border-border">{formatDay(msg.created_at)}</span>

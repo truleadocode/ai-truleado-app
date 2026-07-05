@@ -5,7 +5,19 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { Building2, Lock } from 'lucide-react'
+import { Building2, Sparkles, FileText, Users, ThumbsUp, ThumbsDown, Calendar, Clock } from 'lucide-react'
+
+type BriefDetails = {
+  product_description: string | null
+  content_types: string[]
+  platforms: string[]
+  target_age_range: string | null
+  target_gender: string | null
+  target_countries: string[]
+  tone_notes: string | null
+  dos: string | null
+  donts: string | null
+}
 
 type Gig = {
   id: string
@@ -21,6 +33,9 @@ type Gig = {
   status: string
   offer_notes: string | null
   deliverables_checklist: any[]
+  ai_match_score: number | null
+  ai_match_reasoning: string | null
+  brief_details: BriefDetails | null
 }
 
 type Message = {
@@ -46,6 +61,14 @@ function statusInfo(status: string) {
   }
 }
 
+function scoreColor(s: number) {
+  if (s >= 80) return 'text-green'
+  if (s >= 60) return 'text-gold'
+  return 'text-muted-foreground'
+}
+
+const GIG_SELECT = 'id, brand_category, brand_name:brand_name_visible, brand_revealed, platform, deliverables_summary, budget_eur, respond_by, content_due_at, goes_live_at, status, ai_outreach_draft, ai_match_score, ai_match_reasoning, brief_details'
+
 export default function GigDetailPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -59,7 +82,9 @@ export default function GigDetailPage() {
   const [sending, setSending] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [tab, setTab] = useState<'brief'|'chat'>('brief')
+  const [statusFlash, setStatusFlash] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const statusRef = useRef<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -69,20 +94,16 @@ export default function GigDetailPage() {
       if (!inf) { router.push('/'); return }
       setInfluencerId(inf.id)
 
-      // Explicit column list: direct select of brand_name is revoked for
-      // client roles — brand_name_visible is null until brand_revealed.
       const { data: gigData } = await supabase
         .from('gigs')
-        .select('id, brand_category, brand_name:brand_name_visible, brand_revealed, platform, deliverables_summary, budget_eur, respond_by, content_due_at, goes_live_at, status, ai_outreach_draft')
+        .select(GIG_SELECT)
         .eq('id', gigId)
         .eq('influencer_id', inf.id)
         .single()
 
-      if (!gigData) { router.push('/dashboard'); return }
-      // offer_notes / deliverables_checklist / go_live_at aren't columns on
-      // gigs (never returned, even by the old select('*')) — the UI already
-      // null-guards them, so the cast preserves prior behavior.
+      if (!gigData) { router.push('/dashboard/gigs'); return }
       setGig(gigData as unknown as Gig)
+      statusRef.current = (gigData as any).status
 
       const { data: msgs } = await supabase
         .from('gig_messages')
@@ -93,7 +114,6 @@ export default function GigDetailPage() {
 
       setMessages(msgs || [])
 
-      // Mark the brand's messages read
       await supabase.from('gig_messages')
         .update({ read_by_influencer: true })
         .eq('gig_id', gigId)
@@ -102,6 +122,40 @@ export default function GigDetailPage() {
         .eq('read_by_influencer', false)
     }
     load()
+  }, [gigId])
+
+  // Realtime — status changes (advertiser-side actions) and new messages
+  // land live, no manual refresh needed. A brief highlight flash marks a
+  // status change so it doesn't just silently update.
+  useEffect(() => {
+    const channel = supabase.channel(`gig-detail-${gigId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'gigs', filter: `id=eq.${gigId}` },
+        (payload: any) => {
+          const updated = payload.new
+          // The raw `brand_name` column has no client-role SELECT grant (by
+          // design — see brand_name_visible), so Realtime omits it from
+          // this payload entirely. Only the generated, gated column is
+          // actually visible here.
+          setGig(prev => prev ? { ...prev, ...updated, brand_name: updated.brand_name_visible ?? prev.brand_name } : prev)
+          if (statusRef.current && updated.status !== statusRef.current) {
+            setStatusFlash(true)
+            setTimeout(() => setStatusFlash(false), 1200)
+          }
+          statusRef.current = updated.status
+        }
+      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gig_messages', filter: `gig_id=eq.${gigId}` },
+        (payload: any) => {
+          const msg = payload.new
+          if (msg.channel !== 'brand') return
+          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+          if (msg.sender_type === 'advertiser') {
+            supabase.from('gig_messages').update({ read_by_influencer: true }).eq('id', msg.id)
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
   }, [gigId])
 
   useEffect(() => {
@@ -115,7 +169,7 @@ export default function GigDetailPage() {
       gig_id: gigId, channel: 'brand',
       sender_type: 'influencer', content: draft.trim(), read_by_influencer: true,
     }).select().single()
-    if (!error && data) { setMessages(prev => [...prev, data]); setDraft('') }
+    if (!error && data) { setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data]); setDraft('') }
     setSending(false)
   }
 
@@ -129,7 +183,6 @@ export default function GigDetailPage() {
     if (res.ok) {
       setGig(prev => prev ? { ...prev, status: 'confirmed', brand_revealed: true } : prev)
       setTab('chat')
-      // Reload the chat so the auto-sent acceptance message shows up.
       const { data: msgs } = await supabase
         .from('gig_messages')
         .select('id, content, sender_type, created_at, read_by_influencer')
@@ -167,6 +220,7 @@ export default function GigDetailPage() {
   const st = statusInfo(gig.status)
   const checklist = gig.deliverables_checklist || []
   const doneCount = checklist.filter((d: any) => d.done).length
+  const details = gig.brief_details
 
   const formatTime = (ts: string) => new Date(ts).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })
   const formatDay = (ts: string) => {
@@ -184,23 +238,35 @@ export default function GigDetailPage() {
       </Link>
 
       {/* Header card */}
-      <div className="bg-card border border-border rounded-xl p-5 mb-4">
+      <div className={cn(
+        'bg-card border rounded-xl p-5 mb-4 transition-colors duration-700',
+        statusFlash ? 'border-gold bg-gold-bg' : 'border-border',
+      )}>
         <div className="flex items-start gap-3 mb-4">
           <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center flex-shrink-0">
-            {gig.brand_revealed ? <Building2 size={22} className="text-muted-foreground" /> : <Lock size={22} className="text-muted-foreground" />}
+            <Building2 size={22} className="text-muted-foreground" />
           </div>
           <div className="flex-1">
-            <h2 className="text-[17px] font-semibold mb-[3px]">
-              {gig.brand_revealed ? gig.brand_name : `${gig.brand_category} campaign`}
-            </h2>
-            <p className="text-[13px] text-muted-foreground">{gig.platform} · {gig.deliverables_summary}</p>
-            {!gig.brand_revealed && <p className="text-[11px] text-muted-foreground mt-1">Brand name revealed once you confirm the deal.</p>}
+            <h2 className="text-[17px] font-semibold mb-[3px]">{gig.brand_name || `${gig.brand_category} campaign`}</h2>
+            <p className="text-[13px] text-muted-foreground capitalize">{gig.brand_category} · {gig.platform} · {gig.deliverables_summary}</p>
           </div>
-          <span className={cn('inline-flex items-center gap-[5px] text-[11px] font-semibold px-2.5 py-1 rounded-[20px] border flex-shrink-0', st.className)}>
+          <span className={cn(
+            'inline-flex items-center gap-[5px] text-[11px] font-semibold px-2.5 py-1 rounded-[20px] border flex-shrink-0 transition-transform duration-300',
+            st.className, statusFlash && 'scale-110',
+          )}>
             <span className="w-[5px] h-[5px] rounded-full bg-current inline-block" />
             {st.label}
           </span>
         </div>
+
+        {/* Match score */}
+        {gig.ai_match_score != null && (
+          <div className="flex items-center gap-1.5 mb-3.5 text-[12px]">
+            <Sparkles size={13} className={scoreColor(gig.ai_match_score)} />
+            <span className={cn('font-semibold', scoreColor(gig.ai_match_score))}>{gig.ai_match_score}/100 match</span>
+            <span className="text-muted-foreground">for your profile</span>
+          </div>
+        )}
 
         {/* Key info */}
         <div className="flex gap-2.5 flex-wrap">
@@ -233,11 +299,11 @@ export default function GigDetailPage() {
         {/* Offer actions */}
         {gig.status === 'offered' && (
           <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-            <button onClick={passGig} disabled={updatingStatus} className="flex-1 bg-red-bg text-red border border-red-border rounded-[9px] py-[11px] text-[13px] font-semibold cursor-pointer font-[inherit]">
-              Pass
+            <button onClick={passGig} disabled={updatingStatus} className="flex-1 bg-red-bg text-red border border-red-border rounded-[9px] py-[11px] text-[13px] font-semibold cursor-pointer font-[inherit] inline-flex items-center justify-center gap-1.5 transition-transform active:scale-[0.98]">
+              <ThumbsDown size={14} /> Pass
             </button>
-            <button onClick={acceptGig} disabled={updatingStatus} className="flex-1 bg-gold text-white border-none rounded-[9px] py-[11px] text-[13px] font-semibold cursor-pointer font-[inherit]">
-              Accept
+            <button onClick={acceptGig} disabled={updatingStatus} className="flex-1 bg-gold text-white border-none rounded-[9px] py-[11px] text-[13px] font-semibold cursor-pointer font-[inherit] inline-flex items-center justify-center gap-1.5 transition-transform active:scale-[0.98]">
+              <ThumbsUp size={14} /> {updatingStatus ? 'Accepting…' : 'Accept'}
             </button>
           </div>
         )}
@@ -257,11 +323,94 @@ export default function GigDetailPage() {
 
       {/* Brief tab */}
       {tab === 'brief' && (
-        <div>
-          {gig.offer_notes && (
-            <div className="bg-card border border-border rounded-xl px-[18px] py-4 mb-3">
-              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.08em] uppercase mb-2.5">Brief summary</p>
-              <p className="text-[13px] leading-[1.65] text-muted-foreground">{gig.offer_notes}</p>
+        <div className="space-y-3 animate-in fade-in duration-300">
+          {/* Why matched */}
+          {gig.ai_match_reasoning && (
+            <div className="bg-accent border border-gold-border rounded-xl px-[18px] py-4">
+              <p className="text-[11px] font-semibold text-gold tracking-[0.08em] uppercase mb-2 flex items-center gap-1.5">
+                <Sparkles size={12} /> Why this is a good fit for you
+              </p>
+              <p className="text-[13px] leading-[1.65] text-foreground/85">{gig.ai_match_reasoning}</p>
+            </div>
+          )}
+
+          {/* About the campaign */}
+          {details?.product_description && (
+            <div className="bg-card border border-border rounded-xl px-[18px] py-4">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.08em] uppercase mb-2.5 flex items-center gap-1.5">
+                <FileText size={12} /> About this campaign
+              </p>
+              <p className="text-[13px] leading-[1.65] text-muted-foreground">{details.product_description}</p>
+            </div>
+          )}
+
+          {/* Content requested */}
+          {(details?.content_types?.length || details?.platforms?.length) ? (
+            <div className="bg-card border border-border rounded-xl px-[18px] py-4">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.08em] uppercase mb-2.5">Content requested</p>
+              <div className="flex gap-1.5 flex-wrap">
+                {(details?.platforms || []).map(p => (
+                  <span key={p} className="text-[11px] font-semibold bg-gold-bg text-gold border border-gold-border rounded-full px-2.5 py-1 capitalize">{p}</span>
+                ))}
+                {(details?.content_types || []).map(c => (
+                  <span key={c} className="text-[11px] font-semibold bg-muted text-muted-foreground rounded-full px-2.5 py-1 capitalize">{c}</span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Audience & targeting */}
+          {(details?.target_age_range || details?.target_gender || details?.target_countries?.length) ? (
+            <div className="bg-card border border-border rounded-xl px-[18px] py-4">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.08em] uppercase mb-2.5 flex items-center gap-1.5">
+                <Users size={12} /> Target audience
+              </p>
+              <div className="flex gap-4 flex-wrap text-[13px]">
+                {details?.target_age_range && (
+                  <span><strong className="text-foreground font-semibold">{details.target_age_range}</strong> <span className="text-muted-foreground">age</span></span>
+                )}
+                {details?.target_gender && details.target_gender !== 'all' && (
+                  <span className="text-muted-foreground capitalize">{details.target_gender}</span>
+                )}
+                {details?.target_countries?.length ? (
+                  <span className="text-muted-foreground">{details.target_countries.join(', ')}</span>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          {/* Brand guidelines */}
+          {(details?.tone_notes || details?.dos || details?.donts) ? (
+            <div className="grid sm:grid-cols-2 gap-3">
+              {(details?.tone_notes || details?.dos) && (
+                <div className="bg-green-bg border border-green-border rounded-xl px-[18px] py-4">
+                  <p className="text-[11px] font-semibold text-green tracking-[0.08em] uppercase mb-2 flex items-center gap-1.5">
+                    <ThumbsUp size={12} /> Do
+                  </p>
+                  <p className="text-[13px] leading-[1.6] text-foreground/85">{details?.dos || details?.tone_notes}</p>
+                </div>
+              )}
+              {details?.donts && (
+                <div className="bg-red-bg border border-red-border rounded-xl px-[18px] py-4">
+                  <p className="text-[11px] font-semibold text-red tracking-[0.08em] uppercase mb-2 flex items-center gap-1.5">
+                    <ThumbsDown size={12} /> Don't
+                  </p>
+                  <p className="text-[13px] leading-[1.6] text-foreground/85">{details.donts}</p>
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {/* Timeline recap */}
+          {(gig.content_due_at || gig.go_live_at) && (
+            <div className="bg-card border border-border rounded-xl px-[18px] py-4">
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.08em] uppercase mb-2.5 flex items-center gap-1.5">
+                <Calendar size={12} /> Timeline
+              </p>
+              <div className="flex gap-5 text-[13px] text-muted-foreground">
+                {gig.content_due_at && <span className="inline-flex items-center gap-1.5"><Clock size={12} /> Content due {new Date(gig.content_due_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</span>}
+                {gig.go_live_at && <span className="inline-flex items-center gap-1.5"><Calendar size={12} /> Goes live {new Date(gig.go_live_at).toLocaleDateString('en-GB', { month:'short', day:'numeric' })}</span>}
+              </div>
             </div>
           )}
 
@@ -295,7 +444,7 @@ export default function GigDetailPage() {
             </div>
           )}
 
-          {!gig.offer_notes && checklist.length === 0 && (
+          {!gig.ai_match_reasoning && !details?.product_description && !details?.content_types?.length && checklist.length === 0 && (
             <div className="bg-card border border-border rounded-xl px-6 py-8 text-center">
               <p className="text-sm text-muted-foreground">No brief details yet. More info will show up once the brand adds it.</p>
             </div>
@@ -305,21 +454,21 @@ export default function GigDetailPage() {
 
       {/* Chat tab */}
       {tab === 'chat' && (
-        <div>
+        <div className="animate-in fade-in duration-300">
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="max-h-[420px] overflow-y-auto p-4 flex flex-col gap-2">
               {messages.length === 0 && (
                 <p className="text-center text-[13px] text-muted-foreground py-6">
                   {gig.status === 'confirmed' || gig.status === 'in_progress' || gig.status === 'complete'
                     ? 'No messages yet — say hello to the brand.'
-                    : 'Chat opens once the brand confirms this gig.'}
+                    : 'Chat opens once you accept this gig.'}
                 </p>
               )}
               {messages.map((msg, i) => {
                 const isInfluencer = msg.sender_type === 'influencer'
                 const showDate = i === 0 || formatDay(messages[i-1].created_at) !== formatDay(msg.created_at)
                 return (
-                  <div key={msg.id}>
+                  <div key={msg.id} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
                     {showDate && (
                       <div className="text-center my-2">
                         <span className="text-[11px] text-muted-foreground bg-muted px-2.5 py-[3px] rounded-[20px]">{formatDay(msg.created_at)}</span>
@@ -328,14 +477,14 @@ export default function GigDetailPage() {
                     <div className={cn('flex gap-2 items-end', isInfluencer ? 'flex-row-reverse' : 'flex-row')}>
                       {!isInfluencer && (
                         <div className="w-[26px] h-[26px] rounded-full bg-accent border border-gold-border flex items-center justify-center text-[9px] font-semibold text-gold flex-shrink-0">
-                          {(gig.brand_revealed ? gig.brand_name : gig.brand_category)?.[0]?.toUpperCase() || 'B'}
+                          {gig.brand_name?.[0]?.toUpperCase() || 'B'}
                         </div>
                       )}
                       <div className="max-w-[70%]">
                         <div className={cn(
                           'px-[13px] py-[9px] text-[13px] leading-[1.5]',
                           isInfluencer
-                            ? 'rounded-[12px_12px_4px_12px] bg-gold text-foreground border-none'
+                            ? 'rounded-[12px_12px_4px_12px] bg-gold text-white border-none'
                             : 'rounded-[12px_12px_12px_4px] bg-muted text-foreground border border-border',
                         )}>{msg.content}</div>
                         <p className={cn('text-[11px] text-muted-foreground mt-0.5', isInfluencer ? 'text-right' : 'text-left')}>{formatTime(msg.created_at)}</p>
@@ -354,13 +503,13 @@ export default function GigDetailPage() {
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
                 placeholder="Message the brand..."
-                className="flex-1 bg-muted border border-border rounded-lg px-3 py-[9px] text-[13px] text-foreground font-[inherit] outline-none"
+                className="flex-1 bg-muted border border-border rounded-lg px-3 py-[9px] text-[13px] text-foreground placeholder:text-muted-foreground font-[inherit] outline-none focus:border-gold transition-colors"
               />
               <button onClick={sendMessage} disabled={sending || !draft.trim()} className={cn(
-                'bg-gold border-none rounded-lg w-[38px] h-[38px] flex-shrink-0 flex items-center justify-center transition-opacity',
+                'bg-gold border-none rounded-lg w-[38px] h-[38px] flex-shrink-0 flex items-center justify-center transition-all active:scale-90',
                 draft.trim() ? 'cursor-pointer opacity-100' : 'cursor-not-allowed opacity-40',
               )}>
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-foreground"><path d="M12 7L2 2l1.5 5L2 12l10-5z" fill="currentColor"/></svg>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-white"><path d="M12 7L2 2l1.5 5L2 12l10-5z" fill="currentColor"/></svg>
               </button>
             </div>
           </div>

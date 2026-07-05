@@ -34,6 +34,7 @@ export default function MessagesPage() {
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const selectedGigRef = useRef<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -78,8 +79,36 @@ export default function MessagesPage() {
     load()
   }, [])
 
+  // Realtime — new messages land live across every conversation: the open
+  // thread appends immediately, others just bump their preview/unread badge.
+  useEffect(() => {
+    if (!influencerId) return
+    const channel = supabase.channel(`influencer-messages-${influencerId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gig_messages' },
+        (payload: any) => {
+          const msg = payload.new
+          if (msg.channel !== 'brand') return
+          setGigs(prev => {
+            if (!prev.some(g => g.id === msg.gig_id)) return prev
+            return prev.map(g => g.id === msg.gig_id
+              ? { ...g, last_message: msg.content, last_message_at: msg.created_at, unread_count: msg.sender_type === 'advertiser' && selectedGigRef.current !== msg.gig_id ? (g.unread_count || 0) + 1 : g.unread_count }
+              : g)
+          })
+          if (selectedGigRef.current === msg.gig_id) {
+            setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
+            if (msg.sender_type === 'advertiser') {
+              supabase.from('gig_messages').update({ read_by_influencer: true }).eq('id', msg.id)
+            }
+          }
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [influencerId])
+
   async function selectGig(gig: Gig, infId?: string) {
     setSelectedGig(gig)
+    selectedGigRef.current = gig.id
     const { data: msgs } = await supabase
       .from('gig_messages')
       .select('id, content, sender_type, created_at, read_by_influencer')
@@ -111,7 +140,8 @@ export default function MessagesPage() {
     }).select().single()
 
     if (!error && data) {
-      setMessages(prev => [...prev, data])
+      setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data])
+      setGigs(prev => prev.map(g => g.id === selectedGig.id ? { ...g, last_message: data.content, last_message_at: data.created_at } : g))
       setDraft('')
     }
     setSending(false)
@@ -128,7 +158,7 @@ export default function MessagesPage() {
     return d.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })
   }
 
-  const brandLabel = (gig: Gig) => gig.brand_revealed ? (gig.brand_name || 'Brand') : `${gig.brand_category} brand`
+  const brandLabel = (gig: Gig) => gig.brand_name || `${gig.brand_category} brand`
   const brandInitial = (gig: Gig) => brandLabel(gig)[0]?.toUpperCase() || 'B'
 
   return (
@@ -193,7 +223,7 @@ export default function MessagesPage() {
                 const isInfluencer = msg.sender_type === 'influencer'
                 const showDate = i === 0 || formatDay(messages[i-1].created_at) !== formatDay(msg.created_at)
                 return (
-                  <div key={msg.id}>
+                  <div key={msg.id} className="animate-in fade-in slide-in-from-bottom-1 duration-300">
                     {showDate && (
                       <div className="text-center my-2">
                         <span className="text-[11px] text-muted-foreground/60 bg-muted px-2.5 py-[3px] rounded-[20px] border border-border">{formatDay(msg.created_at)}</span>
