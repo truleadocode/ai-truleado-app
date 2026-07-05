@@ -75,6 +75,12 @@ export default function OnboardingClient({ user, influencer }: Props) {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
+  // Auth phase — email/password account creation (alternative to Google)
+  const [authEmail, setAuthEmail] = useState('')
+  const [authPassword, setAuthPassword] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
+
   // Screenshots phase (unchanged behavior from before)
   const [platforms, setPlatforms] = useState<PlatformRow[]>([])
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, string>>({})
@@ -228,6 +234,14 @@ export default function OnboardingClient({ user, influencer }: Props) {
     }
   }
 
+  function enterScreenshots(data: any) {
+    setPlatforms(data.platforms || [])
+    setInfluencerId(data.influencer_id)
+    if (data.first_name) setFirstNameDone(data.first_name)
+    setPhase('screenshots')
+    setupRealtime(data.influencer_id, data.platforms || [])
+  }
+
   async function finishForm() {
     if (saving) return
     setSaving(true)
@@ -241,11 +255,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
       if (!res.ok) { setSaveError(data.error || 'Something went wrong. Please try again.'); return }
 
       if (data.phase === 'screenshots') {
-        setPlatforms(data.platforms || [])
-        setInfluencerId(data.influencer_id)
-        if (data.first_name) setFirstNameDone(data.first_name)
-        setPhase('screenshots')
-        setupRealtime(data.influencer_id, data.platforms || [])
+        enterScreenshots(data)
       } else {
         setPhase('auth')
       }
@@ -263,6 +273,43 @@ export default function OnboardingClient({ user, influencer }: Props) {
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback?onboarding=true${skParam}`, queryParams: { prompt: 'select_account' } },
     })
+  }
+
+  async function signUpWithEmail() {
+    if (authLoading) return
+    if (!authEmail.trim() || !authPassword) { setAuthError('Enter an email and password.'); return }
+    setAuthLoading(true)
+    setAuthError(null)
+    try {
+      const signupRes = await fetch('/api/influencer/email-signup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authEmail.trim(), password: authPassword }),
+      })
+      const signupData = await signupRes.json().catch(() => ({}))
+      if (!signupRes.ok) { setAuthError(signupData.error || 'Could not create your account.'); return }
+
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword })
+      if (signInErr) { setAuthError(signInErr.message); return }
+
+      const completeRes = await fetch('/api/onboarding', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete_signup', session_key: sessionKey }),
+      })
+      const completeData = await completeRes.json().catch(() => ({}))
+      if (completeRes.status === 403 && completeData.error === 'already_advertiser') {
+        await supabase.auth.signOut()
+        setAuthError('This email is already registered as a brand/agency. Please use a different email for your creator account.')
+        return
+      }
+      if (!completeRes.ok) { setAuthError(completeData.error || 'Something went wrong. Please try again.'); return }
+
+      localStorage.removeItem(SESSION_KEY_LS)
+      enterScreenshots(completeData)
+    } catch {
+      setAuthError('Something went wrong. Please try again.')
+    } finally {
+      setAuthLoading(false)
+    }
   }
 
   async function handleScreenshotUpload(platformId: string, files: FileList) {
@@ -537,13 +584,41 @@ export default function OnboardingClient({ user, influencer }: Props) {
 
         {phase === 'auth' && (
           <div className="flex-1 flex items-center justify-center">
-            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm text-center w-full">
+            <div className="bg-card border border-border rounded-2xl p-6 shadow-sm w-full">
               <div className="flex justify-center mb-4"><PartyPopper size={28} className="text-gold" /></div>
-              <h2 className="text-base font-semibold mb-1.5">You're all set!</h2>
-              <p className="text-xs text-muted-foreground mb-5">Your info is saved — just sign in to continue.</p>
-              <Button variant="outline" onClick={signInWithGoogle} className="gap-2 w-full">
+              <h2 className="text-base font-semibold mb-1.5 text-center">You're all set!</h2>
+              <p className="text-xs text-muted-foreground mb-5 text-center">Your info is saved — just create your account to continue.</p>
+
+              {authError && (
+                <p className="text-xs text-destructive bg-red-bg border border-red-border rounded-lg px-3 py-2 mb-4">{authError}</p>
+              )}
+
+              <Button variant="outline" onClick={signInWithGoogle} disabled={authLoading} className="gap-2 w-full mb-4">
                 <GoogleIcon /> Continue with Google
               </Button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-[11px] text-muted-foreground">or create with email</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="auth-email">Email</Label>
+                  <Input id="auth-email" type="email" autoComplete="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="auth-password">Password</Label>
+                  <Input id="auth-password" type="password" autoComplete="new-password" minLength={6}
+                    value={authPassword} onChange={e => setAuthPassword(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') signUpWithEmail() }} />
+                  <p className="text-[11px] text-muted-foreground">At least 6 characters.</p>
+                </div>
+                <Button onClick={signUpWithEmail} disabled={authLoading} className="w-full bg-gold hover:bg-gold/90 text-white font-semibold gap-1.5">
+                  {authLoading && <Loader2 size={14} className="animate-spin" />} Create account
+                </Button>
+              </div>
             </div>
           </div>
         )}

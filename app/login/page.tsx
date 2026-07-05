@@ -36,6 +36,8 @@ function TruleadoLogo() {
   )
 }
 
+const SESSION_KEY_LS = 'truleado_session_key'
+
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
@@ -44,6 +46,11 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(true)
+
+  const [creatorEmail, setCreatorEmail] = useState('')
+  const [creatorPassword, setCreatorPassword] = useState('')
+  const [creatorError, setCreatorError] = useState('')
+  const [creatorLoading, setCreatorLoading] = useState(false)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -86,6 +93,30 @@ export default function LoginPage() {
       return
     }
     router.push('/advertiser/dashboard')
+  }
+
+  async function emailCreatorLogin() {
+    setCreatorError('')
+    if (!creatorEmail.trim() || !creatorPassword) { setCreatorError('Enter your email and password.'); return }
+    setCreatorLoading(true)
+    const { error: e } = await supabase.auth.signInWithPassword({ email: creatorEmail.trim(), password: creatorPassword })
+    if (e) { setCreatorError('Incorrect email or password.'); setCreatorLoading(false); return }
+
+    const sk = typeof window !== 'undefined' ? localStorage.getItem(SESSION_KEY_LS) : null
+    const fin = await fetch('/api/onboarding', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'complete_signup', session_key: sk }),
+    })
+    const finData = await fin.json()
+    if (finData.error === 'already_advertiser') {
+      await supabase.auth.signOut()
+      setCreatorError('This is a brand account — switch to the Brand / Agency tab to log in.')
+      setCreatorLoading(false)
+      return
+    }
+    // Let /influencer decide: dashboard if onboarding is complete, otherwise resume the form.
+    router.push('/influencer')
   }
 
   if (checking) {
@@ -157,6 +188,12 @@ export default function LoginPage() {
                   {loading ? 'Logging in…' : 'Log in'}
                 </Button>
 
+                <p className="text-center text-xs">
+                  <Link href="/auth/forgot-password" className="text-muted-foreground no-underline hover:underline">
+                    Forgot password?
+                  </Link>
+                </p>
+
                 <p className="text-center text-xs text-muted-foreground pt-1">
                   New here?{' '}
                   <Link href="/advertiser" className="text-gold font-semibold no-underline hover:underline">
@@ -166,12 +203,49 @@ export default function LoginPage() {
               </TabsContent>
 
               {/* Creator */}
-              <TabsContent value="creator" className="mt-0 space-y-4">
+              <TabsContent value="creator" className="mt-0 space-y-3">
                 <Button variant="outline" className="w-full gap-2" onClick={googleCreator}>
                   <GoogleIcon /> Continue with Google
                 </Button>
-                <p className="text-center text-xs text-muted-foreground leading-relaxed">
-                  Creators sign in with Google only.<br />
+
+                <div className="flex items-center gap-3 py-1">
+                  <Separator className="flex-1" />
+                  <span className="text-[11px] text-muted-foreground font-medium">OR</span>
+                  <Separator className="flex-1" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="creator-email" className="text-xs">Email</Label>
+                  <Input id="creator-email" type="email" placeholder="you@example.com"
+                    value={creatorEmail} onChange={e => setCreatorEmail(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && emailCreatorLogin()}
+                    autoComplete="email" className="h-9" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="creator-pw" className="text-xs">Password</Label>
+                  <Input id="creator-pw" type="password" placeholder="Your password"
+                    value={creatorPassword} onChange={e => setCreatorPassword(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && emailCreatorLogin()}
+                    autoComplete="current-password" className="h-9" />
+                </div>
+
+                {creatorError && <p className="text-xs text-destructive leading-relaxed">{creatorError}</p>}
+
+                <Button
+                  className="w-full bg-gold hover:bg-gold/90 text-white font-semibold"
+                  onClick={emailCreatorLogin}
+                  disabled={creatorLoading}
+                >
+                  {creatorLoading ? 'Logging in…' : 'Log in'}
+                </Button>
+
+                <p className="text-center text-xs">
+                  <Link href="/auth/forgot-password" className="text-muted-foreground no-underline hover:underline">
+                    Forgot password?
+                  </Link>
+                </p>
+
+                <p className="text-center text-xs text-muted-foreground pt-1">
                   New here?{' '}
                   <Link href="/influencer" className="text-gold font-semibold no-underline hover:underline">
                     Create a creator account
