@@ -2,10 +2,12 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createServiceClient } from '@/lib/supabase/server'
 
+// Google OAuth callback for advertisers. The onboarding form passes the
+// collected profile as query params (fn/ln/co/ty) so a brand-new Google
+// signup keeps the company details entered before the redirect.
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const sessionKey = searchParams.get('sk')
 
   if (!code) return NextResponse.redirect(`${origin}/advertiser`)
 
@@ -18,8 +20,7 @@ export async function GET(request: Request) {
 
   const service = createServiceClient()
 
-  // ── CROSS-ROLE GUARD ─────────────────────────────────────────────
-  // Block influencers from signing up as advertisers with the same email
+  // ── Cross-role guard: block accounts already registered as creators ──
   const { data: existingInfluencer } = await service
     .from('influencers')
     .select('id')
@@ -27,91 +28,44 @@ export async function GET(request: Request) {
     .single()
 
   if (existingInfluencer) {
-    // Sign them out and redirect with error
     await supabase.auth.signOut()
-    return NextResponse.redirect(
-      `${origin}/advertiser?error=already_influencer`
-    )
+    return NextResponse.redirect(`${origin}/advertiser?error=already_influencer`)
   }
 
-  // ── MERGE SESSION ─────────────────────────────────────────────────
-  if (sessionKey) {
-    const mergeRes = await fetch(`${origin}/api/advertiser/sarah-chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'merge', session_key: sessionKey, user_id: user.id }),
+  // Profile collected by the onboarding form (absent on plain logins)
+  const profile = {
+    first_name: searchParams.get('fn') || '',
+    last_name: searchParams.get('ln') || '',
+    company_name: searchParams.get('co') || null,
+    advertiser_type: searchParams.get('ty') || null,
+  }
+
+  const { data: existing } = await service
+    .from('advertisers').select('id, company_name').eq('user_id', user.id).single()
+
+  if (!existing) {
+    // Fall back to the Google account name if the form fields are absent
+    const fullName = user.user_metadata?.full_name || ''
+    const parts = fullName.trim().split(' ')
+    await service.from('advertisers').insert({
+      user_id: user.id,
+      email: user.email!,
+      first_name: profile.first_name || parts[0] || '',
+      last_name: profile.last_name || parts.slice(1).join(' ') || '',
+      company_name: profile.company_name,
+      advertiser_type: profile.advertiser_type,
+      onboarding_complete: true,
     })
-    const mergeData = await mergeRes.json().catch(() => ({}))
-    const advertiserId = mergeData.advertiser_id
-
-    // ── SAVE BRIEF if session has brief data ──────────────────────
-    if (advertiserId) {
-      // Check brief_sessions for this session key
-      const { data: briefSession } = await service
-        .from('brief_sessions')
-        .select('*')
-        .eq('session_key', sessionKey)
-        .single()
-
-      if (briefSession && briefSession.brand_name && !briefSession.completed) {
-        // Auto-submit the brief
-        const month = new Date().toLocaleString('en-GB', { month: 'long', year: 'numeric' })
-        const title = `${briefSession.brand_name} — ${(briefSession.product_description || 'Campaign').slice(0, 30)} · ${month}`
-
-        const { data: brief } = await service.from('briefs').insert({
-          advertiser_id: advertiserId,
-          title,
-          brand_name: briefSession.brand_name,
-          product_description: briefSession.product_description,
-          target_age_range: briefSession.target_age_range,
-          target_gender: briefSession.target_gender || 'all',
-          target_countries: briefSession.target_countries,
-          platforms: briefSession.platforms,
-          content_types: briefSession.content_types,
-          creators_needed: briefSession.creators_needed || 5,
-          budget_per_creator_eur: briefSession.budget_per_creator_eur,
-          budget_flexible: briefSession.budget_flexible || false,
-          go_live_date: briefSession.go_live_date,
-          niche_fit: briefSession.niche_fit,
-          tone_notes: briefSession.tone_notes,
-          dos: briefSession.dos,
-          donts: briefSession.donts,
-          status: 'submitted',
-          is_free_brief: true,
-          source: 'chat',
-        }).select('id').single()
-
-        // Mark brief session as completed
-        await service
-          .from('brief_sessions')
-          .update({ completed: true, advertiser_id: advertiserId })
-          .eq('session_key', sessionKey)
-
-        // Fire matching (fire and forget)
-        if (brief?.id) {
-          fetch(`${origin}/api/advertiser/match-brief`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY! },
-            body: JSON.stringify({ brief_id: brief.id }),
-          }).catch(console.error)
-        }
-      }
-    }
-  } else {
-    // Direct sign-in — ensure advertiser row exists
-    const { data: existing } = await service
-      .from('advertisers').select('id').eq('user_id', user.id).single()
-    if (!existing) {
-      const fullName = user.user_metadata?.full_name || ''
-      const parts = fullName.trim().split(' ')
-      await service.from('advertisers').insert({
-        user_id: user.id,
-        email: user.email!,
-        first_name: parts[0] || '',
-        last_name: parts.slice(1).join(' ') || '',
-        onboarding_complete: true,
-      })
-    }
+  } else if (profile.company_name && !existing.company_name) {
+    // Existing row created without details (e.g. earlier plain login) —
+    // fill it from the form.
+    await service.from('advertisers').update({
+      first_name: profile.first_name || undefined,
+      last_name: profile.last_name || undefined,
+      company_name: profile.company_name,
+      advertiser_type: profile.advertiser_type,
+      onboarding_complete: true,
+    }).eq('id', existing.id)
   }
 
   return NextResponse.redirect(`${origin}/advertiser/dashboard`)
