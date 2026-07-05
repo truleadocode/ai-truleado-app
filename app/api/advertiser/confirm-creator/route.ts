@@ -99,6 +99,58 @@ export async function POST(request: NextRequest) {
       console.error('Confirm creator email error:', emailErr)
     }
 
+    // ── Create the in-app gig so the creator's Gigs/Messages UI has
+    // something to show — until now, confirmation only sent emails, so
+    // dashboard/gigs and dashboard/messages stayed permanently empty even
+    // after a real match was confirmed on both sides.
+    try {
+      const { data: existingGig } = await service.from('gigs')
+        .select('id').eq('brief_id', brief.id).eq('influencer_id', creator.id).single()
+
+      if (!existingGig) {
+        const { data: creatorPlatforms } = await service
+          .from('influencer_platforms').select('platform')
+          .eq('influencer_id', creator.id).eq('parse_status', 'complete')
+        const matchedPlatform = (creatorPlatforms || []).find((p: any) => brief.platforms?.includes(p.platform))?.platform
+          || creatorPlatforms?.[0]?.platform || brief.platforms?.[0] || null
+
+        const { data: gig } = await service.from('gigs').insert({
+          influencer_id: creator.id,
+          brief_id: brief.id,
+          status: 'confirmed',
+          brand_category: brief.niche_fit || null,
+          brand_name: brief.brand_name || null,
+          brand_revealed: true, // both parties already exchanged contact info by email above
+          platform: matchedPlatform,
+          deliverables_summary: brief.content_types?.length ? brief.content_types.join(', ') : 'Content collaboration',
+          budget_eur: brief.budget_per_creator_eur ?? null,
+          goes_live_at: brief.go_live_date || null,
+          ai_match_score: match.score ?? null,
+          ai_match_reasoning: match.match_reason || null,
+          ai_outreach_draft: match.outreach_message || null,
+        }).select('id').single()
+
+        if (gig) {
+          await service.from('gig_messages').insert({
+            gig_id: gig.id,
+            sender_type: 'sarah',
+            content: `You're confirmed for the ${brief.brand_name} campaign! ${advertiserName} has your contact details and will reach out to coordinate content, timelines, and payment. Use this chat if you need anything in the meantime.`,
+            ai_drafted: true,
+          })
+
+          await service.from('notifications').insert({
+            influencer_id: creator.id,
+            type: 'gig_confirmed',
+            title: 'Gig confirmed',
+            body: `You're confirmed for the ${brief.brand_name} campaign.`,
+            gig_id: gig.id,
+          })
+        }
+      }
+    } catch (gigErr) {
+      console.error('Gig creation error:', gigErr)
+    }
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('Confirm creator error:', err)

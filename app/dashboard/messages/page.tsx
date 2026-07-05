@@ -100,7 +100,6 @@ export default function MessagesPage() {
     setSending(true)
     const { data, error } = await supabase.from('gig_messages').insert({
       gig_id: selectedGig.id,
-      influencer_id: influencerId,
       sender_type: 'influencer',
       content: draft.trim(),
       read_by_influencer: true,

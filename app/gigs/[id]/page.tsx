@@ -110,7 +110,7 @@ export default function GigDetailPage() {
     if (!draft.trim() || !influencerId) return
     setSending(true)
     const { data, error } = await supabase.from('gig_messages').insert({
-      gig_id: gigId, influencer_id: influencerId,
+      gig_id: gigId,
       sender_type: 'influencer', content: draft.trim(), read_by_influencer: true,
     }).select().single()
     if (!error && data) { setMessages(prev => [...prev, data]); setDraft('') }
