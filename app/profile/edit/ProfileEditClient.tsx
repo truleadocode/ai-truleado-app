@@ -8,7 +8,7 @@ import ScreenshotGuide from '@/components/ScreenshotGuide'
 import LanguageSelector from '@/components/LanguageSelector'
 import ParseProgressCard from '@/components/ParseProgressCard'
 import type { ParseStatus } from '@/components/ParseProgressCard'
-import { cn } from '@/lib/utils'
+import { cn, normalizeHandle } from '@/lib/utils'
 import { Heart, Ban, Check } from 'lucide-react'
 
 const UPLOAD_HINTS: Record<string, string[]> = {
@@ -670,7 +670,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                   <label className="text-[11px] font-semibold text-muted-foreground flex-shrink-0">Handle</label>
                   <input
                     value={handleEdits[p.id] ?? ''}
-                    onChange={e => setHandleEdits(prev => ({ ...prev, [p.id]: e.target.value }))}
+                    onChange={e => setHandleEdits(prev => ({ ...prev, [p.id]: normalizeHandle(e.target.value) }))}
                     placeholder="@yourhandle"
                     className="flex-1 bg-muted border border-border rounded-md px-2.5 py-1.5 text-[13px] text-foreground outline-none"
                   />
@@ -773,7 +773,7 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
                 </select>
                 <input
                   value={newHandle}
-                  onChange={e => setNewHandle(e.target.value)}
+                  onChange={e => setNewHandle(normalizeHandle(e.target.value))}
                   placeholder="@yourhandle"
                   className="flex-1 min-w-[140px] bg-muted border border-border rounded-md px-2.5 py-[7px] text-[13px] text-foreground outline-none"
                 />

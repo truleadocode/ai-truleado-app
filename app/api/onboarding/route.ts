@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { normalizeHandle } from '@/lib/utils'
 
 // Influencer onboarding backend. Plain structured form data in, structured
 // writes out — no chat, no AI extraction. Three entry paths:
@@ -39,15 +40,22 @@ async function applySessionToInfluencer(service: ReturnType<typeof createService
   const createdPlatforms: any[] = []
 
   for (const p of platforms) {
+    const handle = p.handle ? normalizeHandle(p.handle) || null : null
     const { data: existing } = await service
       .from('influencer_platforms').select('id, platform, handle')
       .eq('influencer_id', influencer_id).eq('platform', p.platform).single()
 
     if (existing) {
-      createdPlatforms.push(existing)
+      // Onboarding is often revisited (form filled once, finished later, or
+      // redone) — without this update, a handle typed the second time around
+      // was silently discarded in favor of whatever was saved the first time.
+      if (handle && handle !== existing.handle) {
+        await service.from('influencer_platforms').update({ handle }).eq('id', existing.id)
+      }
+      createdPlatforms.push({ ...existing, handle: handle || existing.handle })
     } else {
       const { data: created } = await service.from('influencer_platforms')
-        .insert({ influencer_id, platform: p.platform, handle: p.handle || null, parse_status: 'pending' })
+        .insert({ influencer_id, platform: p.platform, handle, parse_status: 'pending' })
         .select('id, platform, handle').single()
       if (created) createdPlatforms.push(created)
     }
@@ -152,17 +160,18 @@ export async function POST(request: NextRequest) {
 
         const createdPlatforms: any[] = []
         for (const p of (data.platforms || [])) {
+          const handle = p.handle ? normalizeHandle(p.handle) || null : null
           const { data: existing } = await service
             .from('influencer_platforms').select('id, platform, handle')
             .eq('influencer_id', influencer_id).eq('platform', p.platform).single()
           if (existing) {
-            if (p.handle && p.handle !== existing.handle) {
-              await service.from('influencer_platforms').update({ handle: p.handle }).eq('id', existing.id)
+            if (handle && handle !== existing.handle) {
+              await service.from('influencer_platforms').update({ handle }).eq('id', existing.id)
             }
-            createdPlatforms.push({ ...existing, handle: p.handle || existing.handle })
+            createdPlatforms.push({ ...existing, handle: handle || existing.handle })
           } else {
             const { data: created } = await service.from('influencer_platforms')
-              .insert({ influencer_id, platform: p.platform, handle: p.handle || null, parse_status: 'pending' })
+              .insert({ influencer_id, platform: p.platform, handle, parse_status: 'pending' })
               .select('id, platform, handle').single()
             if (created) createdPlatforms.push(created)
           }

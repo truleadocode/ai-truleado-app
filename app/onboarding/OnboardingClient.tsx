@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import LanguageSelector from '@/components/LanguageSelector'
 import ParseProgressCard, { type ParseStatus } from '@/components/ParseProgressCard'
-import { cn } from '@/lib/utils'
+import { cn, normalizeHandle } from '@/lib/utils'
 import {
   Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Facebook, Twitch, Ghost, Share2,
   Sparkles, PartyPopper, Upload, Check, ArrowLeft, ArrowRight, Loader2, type LucideIcon,
@@ -427,7 +427,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
                       {selectedPlatforms.map(p => (
                         <div key={p} className="space-y-1.5">
                           <Label htmlFor={`h-${p}`} className="capitalize">{p} handle</Label>
-                          <Input id={`h-${p}`} value={handles[p] || ''} onChange={e => setHandles(prev => ({ ...prev, [p]: e.target.value }))} placeholder="@username" />
+                          <Input id={`h-${p}`} value={handles[p] || ''} onChange={e => setHandles(prev => ({ ...prev, [p]: normalizeHandle(e.target.value) }))} placeholder="@username" />
                         </div>
                       ))}
                     </div>
