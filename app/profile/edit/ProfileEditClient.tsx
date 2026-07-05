@@ -214,12 +214,19 @@ export default function ProfileEditClient({ influencer, platforms, rates, screen
   async function uploadAvatar(file: File) {
     setAvatarUploading(true)
     const ext = file.name.split('.').pop() || 'jpg'
-    const path = `${influencer.id}/avatar.${ext}`
+    // Storage RLS scopes uploads by auth user id (first path segment), not
+    // the influencers row id.
+    const path = `${influencer.user_id}/avatar.${ext}`
     const { error } = await supabase.storage.from('influencer-avatars').upload(path, file, { upsert: true, contentType: file.type })
-    if (!error) {
+    if (error) {
+      alert(`Couldn't upload your photo: ${error.message}`)
+    } else {
       const { data: { publicUrl } } = supabase.storage.from('influencer-avatars').getPublicUrl(path)
-      await supabase.from('influencers').update({ avatar_url: publicUrl }).eq('id', influencer.id)
-      setAvatarUrl(publicUrl)
+      // Cache-buster: the path is stable across re-uploads, so browsers would
+      // otherwise keep showing the old cached image.
+      const url = `${publicUrl}?v=${Date.now()}`
+      await supabase.from('influencers').update({ avatar_url: url }).eq('id', influencer.id)
+      setAvatarUrl(url)
     }
     setAvatarUploading(false)
   }
