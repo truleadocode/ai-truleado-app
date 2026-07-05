@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, XCircle, Users, TrendingUp, Star, ArrowLeft, Check, Clock } from 'lucide-react'
+import { CheckCircle, XCircle, Users, TrendingUp, Star, ArrowLeft, Check, Clock, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Match {
@@ -178,10 +178,13 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
       )}
 
       {isConfirmed && inf.email && (
-        <CardFooter className="pt-0">
+        <CardFooter className="pt-0 flex-col gap-2 items-stretch">
           <p className="w-full text-center text-[11px] text-green font-semibold inline-flex items-center justify-center gap-1">
             <Check size={12} /> Handoff email sent · {inf.email}
           </p>
+          <Button variant="outline" size="sm" className="gap-1.5" asChild>
+            <Link href="/advertiser/messages"><MessageSquare size={13} /> Message {inf.first_name}</Link>
+          </Button>
         </CardFooter>
       )}
     </Card>

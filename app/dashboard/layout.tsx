@@ -30,6 +30,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from('gig_messages')
     .select('id', { count: 'exact', head: true })
     .eq('read_by_influencer', false)
+    .eq('channel', 'brand')
+    .in('gig_id', gigIds.length ? gigIds : ['00000000-0000-0000-0000-000000000000'])
+
+  const { count: unreadSarah } = await supabase
+    .from('gig_messages')
+    .select('id', { count: 'exact', head: true })
+    .eq('read_by_influencer', false)
+    .eq('channel', 'sarah')
     .in('gig_id', gigIds.length ? gigIds : ['00000000-0000-0000-0000-000000000000'])
 
   const { count: unreadNotifs } = await supabase
@@ -48,6 +56,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <DashboardShell
       influencer={influencer}
       unreadMessages={unreadMessages || 0}
+      unreadSarah={unreadSarah || 0}
       unreadNotifs={unreadNotifs || 0}
       activeGigs={activeGigs || 0}
     >

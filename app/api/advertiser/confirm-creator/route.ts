@@ -134,7 +134,8 @@ export async function POST(request: NextRequest) {
           await service.from('gig_messages').insert({
             gig_id: gig.id,
             sender_type: 'sarah',
-            content: `You're confirmed for the ${brief.brand_name} campaign! ${advertiserName} has your contact details and will reach out to coordinate content, timelines, and payment. Use this chat if you need anything in the meantime.`,
+            channel: 'sarah',
+            content: `You're confirmed for the ${brief.brand_name} campaign! ${advertiserName} has your contact details and will reach out to coordinate content, timelines, and payment. You can now chat directly with them from this gig.`,
             ai_drafted: true,
           })
 

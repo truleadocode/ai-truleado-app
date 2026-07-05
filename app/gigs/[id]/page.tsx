@@ -88,15 +88,17 @@ export default function GigDetailPage() {
         .from('gig_messages')
         .select('id, content, sender_type, created_at, read_by_influencer')
         .eq('gig_id', gigId)
+        .eq('channel', 'brand')
         .order('created_at', { ascending: true })
 
       setMessages(msgs || [])
 
-      // Mark sarah's messages read
+      // Mark the brand's messages read
       await supabase.from('gig_messages')
         .update({ read_by_influencer: true })
         .eq('gig_id', gigId)
-        .eq('sender_type', 'sarah')
+        .eq('channel', 'brand')
+        .eq('sender_type', 'advertiser')
         .eq('read_by_influencer', false)
     }
     load()
@@ -110,7 +112,7 @@ export default function GigDetailPage() {
     if (!draft.trim() || !influencerId) return
     setSending(true)
     const { data, error } = await supabase.from('gig_messages').insert({
-      gig_id: gigId,
+      gig_id: gigId, channel: 'brand',
       sender_type: 'influencer', content: draft.trim(), read_by_influencer: true,
     }).select().single()
     if (!error && data) { setMessages(prev => [...prev, data]); setDraft('') }
@@ -228,15 +230,20 @@ export default function GigDetailPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-px border-b border-border mb-4">
-        {['brief','chat'].map(t => (
-          <button key={t} onClick={() => setTab(t as any)} className={cn(
-            'px-[18px] py-2 bg-transparent border-none border-b-2 text-[13px] font-semibold cursor-pointer font-[inherit] capitalize transition-colors',
-            tab === t ? 'border-gold text-foreground' : 'border-transparent text-muted-foreground',
-          )}>
-            {t === 'chat' ? `Chat (${messages.length})` : 'Brief'}
-          </button>
-        ))}
+      <div className="flex items-center justify-between border-b border-border mb-4">
+        <div className="flex gap-px">
+          {['brief','chat'].map(t => (
+            <button key={t} onClick={() => setTab(t as any)} className={cn(
+              'px-[18px] py-2 bg-transparent border-none border-b-2 text-[13px] font-semibold cursor-pointer font-[inherit] capitalize transition-colors',
+              tab === t ? 'border-gold text-foreground' : 'border-transparent text-muted-foreground',
+            )}>
+              {t === 'chat' ? `Chat with brand (${messages.length})` : 'Brief'}
+            </button>
+          ))}
+        </div>
+        <Link href="/dashboard/sarah" className="text-[12px] text-muted-foreground no-underline hover:underline mb-2 mr-1 shrink-0">
+          Questions? Ask Sarah →
+        </Link>
       </div>
 
       {/* Brief tab */}
@@ -293,7 +300,11 @@ export default function GigDetailPage() {
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="max-h-[420px] overflow-y-auto p-4 flex flex-col gap-2">
               {messages.length === 0 && (
-                <p className="text-center text-[13px] text-muted-foreground py-6">No messages yet</p>
+                <p className="text-center text-[13px] text-muted-foreground py-6">
+                  {gig.status === 'confirmed' || gig.status === 'in_progress' || gig.status === 'complete'
+                    ? 'No messages yet — say hello to the brand.'
+                    : 'Chat opens once the brand confirms this gig.'}
+                </p>
               )}
               {messages.map((msg, i) => {
                 const isInfluencer = msg.sender_type === 'influencer'
@@ -307,7 +318,9 @@ export default function GigDetailPage() {
                     )}
                     <div className={cn('flex gap-2 items-end', isInfluencer ? 'flex-row-reverse' : 'flex-row')}>
                       {!isInfluencer && (
-                        <div className="w-[26px] h-[26px] rounded-full bg-gold flex items-center justify-center text-[9px] font-semibold text-white flex-shrink-0">SC</div>
+                        <div className="w-[26px] h-[26px] rounded-full bg-accent border border-gold-border flex items-center justify-center text-[9px] font-semibold text-gold flex-shrink-0">
+                          {(gig.brand_revealed ? gig.brand_name : gig.brand_category)?.[0]?.toUpperCase() || 'B'}
+                        </div>
                       )}
                       <div className="max-w-[70%]">
                         <div className={cn(
@@ -331,7 +344,7 @@ export default function GigDetailPage() {
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                placeholder="Message Sarah..."
+                placeholder="Message the brand..."
                 className="flex-1 bg-muted border border-border rounded-lg px-3 py-[9px] text-[13px] text-foreground font-[inherit] outline-none"
               />
               <button onClick={sendMessage} disabled={sending || !draft.trim()} className={cn(

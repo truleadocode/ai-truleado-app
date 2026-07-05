@@ -24,10 +24,12 @@ type Message = {
   read_by_influencer: boolean
 }
 
-export default function MessagesPage() {
+// Sarah is Truleado's automated assistant — kept on its own page, separate
+// from real advertiser<->influencer chat (see /dashboard/messages), so the
+// two don't get confused with each other.
+export default function SarahPage() {
   const supabase = createClient()
   const router = useRouter()
-  const [influencerId, setInfluencerId] = useState<string | null>(null)
   const [gigs, setGigs] = useState<Gig[]>([])
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
@@ -41,7 +43,6 @@ export default function MessagesPage() {
       if (!user) { router.push('/'); return }
       const { data: inf } = await supabase.from('influencers').select('id').eq('user_id', user.id).single()
       if (!inf) { router.push('/'); return }
-      setInfluencerId(inf.id)
 
       const { data: gigsData } = await supabase
         .from('gigs')
@@ -56,7 +57,7 @@ export default function MessagesPage() {
           .from('gig_messages')
           .select('content, created_at, read_by_influencer')
           .eq('gig_id', gig.id)
-          .eq('channel', 'brand')
+          .eq('channel', 'sarah')
           .order('created_at', { ascending: false })
           .limit(1)
 
@@ -64,27 +65,27 @@ export default function MessagesPage() {
           .from('gig_messages')
           .select('id', { count: 'exact', head: true })
           .eq('gig_id', gig.id)
-          .eq('channel', 'brand')
+          .eq('channel', 'sarah')
           .eq('read_by_influencer', false)
-          .eq('sender_type', 'advertiser')
+          .eq('sender_type', 'sarah')
 
         return { ...gig, last_message: msgs?.[0]?.content, last_message_at: msgs?.[0]?.created_at, unread_count: unread || 0 }
       }))
 
       const withMessages = enriched.filter(g => g.last_message)
       setGigs(withMessages)
-      if (withMessages.length > 0) selectGig(withMessages[0], inf.id)
+      if (withMessages.length > 0) selectGig(withMessages[0])
     }
     load()
   }, [])
 
-  async function selectGig(gig: Gig, infId?: string) {
+  async function selectGig(gig: Gig) {
     setSelectedGig(gig)
     const { data: msgs } = await supabase
       .from('gig_messages')
       .select('id, content, sender_type, created_at, read_by_influencer')
       .eq('gig_id', gig.id)
-      .eq('channel', 'brand')
+      .eq('channel', 'sarah')
       .order('created_at', { ascending: true })
 
     setMessages(msgs || [])
@@ -92,19 +93,19 @@ export default function MessagesPage() {
     await supabase.from('gig_messages')
       .update({ read_by_influencer: true })
       .eq('gig_id', gig.id)
-      .eq('channel', 'brand')
-      .eq('sender_type', 'advertiser')
+      .eq('channel', 'sarah')
+      .eq('sender_type', 'sarah')
       .eq('read_by_influencer', false)
 
     setGigs(prev => prev.map(g => g.id === gig.id ? { ...g, unread_count: 0 } : g))
   }
 
   async function sendMessage() {
-    if (!draft.trim() || !selectedGig || !influencerId) return
+    if (!draft.trim() || !selectedGig) return
     setSending(true)
     const { data, error } = await supabase.from('gig_messages').insert({
       gig_id: selectedGig.id,
-      channel: 'brand',
+      channel: 'sarah',
       sender_type: 'influencer',
       content: draft.trim(),
       read_by_influencer: true,
@@ -128,17 +129,14 @@ export default function MessagesPage() {
     return d.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })
   }
 
-  const brandLabel = (gig: Gig) => gig.brand_revealed ? (gig.brand_name || 'Brand') : `${gig.brand_category} brand`
-  const brandInitial = (gig: Gig) => brandLabel(gig)[0]?.toUpperCase() || 'B'
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] m-0 h-auto md:h-[calc(100vh-54px)]">
 
       {/* Conversation list */}
       <div className="border-r border-border bg-card overflow-y-auto hidden md:flex flex-col">
-        <div className="px-[18px] pt-4 pb-3 border-b border-border text-[14px] font-semibold text-foreground shrink-0">Messages</div>
+        <div className="px-[18px] pt-4 pb-3 border-b border-border text-[14px] font-semibold text-foreground shrink-0">Sarah</div>
         {gigs.length === 0 && (
-          <p className="px-4 py-6 text-[13px] text-muted-foreground text-center">No messages yet. Chat opens once a brand confirms a gig with you.</p>
+          <p className="px-4 py-6 text-[13px] text-muted-foreground text-center">No messages yet</p>
         )}
         {gigs.map(gig => (
           <div
@@ -149,12 +147,13 @@ export default function MessagesPage() {
               selectedGig?.id === gig.id ? 'bg-gold-bg' : 'bg-transparent'
             )}
           >
-            <div className="w-9 h-9 rounded-full bg-accent border-[1.5px] border-gold-border flex items-center justify-center text-[11px] font-semibold text-gold shrink-0">{brandInitial(gig)}</div>
+            <div className="w-9 h-9 rounded-full bg-gold-bg border-[1.5px] border-gold-border flex items-center justify-center text-[11px] font-semibold text-gold shrink-0">SC</div>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between mb-0.5">
-                <p className="text-[13px] font-semibold text-foreground truncate">{brandLabel(gig)}</p>
-                <span className="text-[11px] text-muted-foreground/60 shrink-0">{gig.last_message_at ? formatDay(gig.last_message_at) : ''}</span>
+                <p className="text-[13px] font-semibold text-foreground">Sarah Chen</p>
+                <span className="text-[11px] text-muted-foreground/60">{gig.last_message_at ? formatDay(gig.last_message_at) : ''}</span>
               </div>
+              <p className="text-[12px] text-muted-foreground mb-px whitespace-nowrap overflow-hidden text-ellipsis">{gig.brand_revealed ? gig.brand_name : gig.brand_category}</p>
               {gig.last_message && (
                 <p className={cn(
                   'text-[12px] whitespace-nowrap overflow-hidden text-ellipsis',
@@ -178,17 +177,18 @@ export default function MessagesPage() {
         ) : (
           <>
             <div className="px-5 py-3.5 border-b border-border flex items-center gap-3 shrink-0">
-              <div className="w-9 h-9 rounded-full bg-accent border-[1.5px] border-gold-border flex items-center justify-center text-[11px] font-semibold text-gold">{brandInitial(selectedGig)}</div>
+              <div className="w-9 h-9 rounded-full bg-gold-bg border-[1.5px] border-gold-border flex items-center justify-center text-[11px] font-semibold text-gold">SC</div>
               <div>
-                <h4 className="text-[14px] font-semibold text-foreground leading-[1.2]">{brandLabel(selectedGig)}</h4>
-                <p className="text-[12px] text-muted-foreground">Direct chat about this gig</p>
+                <h4 className="text-[14px] font-semibold text-foreground leading-[1.2]">Sarah Chen</h4>
+                <p className="text-[12px] text-muted-foreground">Creator Partnerships · Truleado</p>
+              </div>
+              <div className="ml-auto flex items-center gap-[5px] text-[11px] font-semibold text-green">
+                <div className="w-1.5 h-1.5 rounded-full bg-green" />
+                Online
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-3">
-              {messages.length === 0 && (
-                <p className="text-center text-[13px] text-muted-foreground py-6">No messages yet — say hello.</p>
-              )}
               {messages.map((msg, i) => {
                 const isInfluencer = msg.sender_type === 'influencer'
                 const showDate = i === 0 || formatDay(messages[i-1].created_at) !== formatDay(msg.created_at)
@@ -204,7 +204,7 @@ export default function MessagesPage() {
                       isInfluencer ? 'flex-row-reverse' : 'flex-row'
                     )}>
                       {!isInfluencer && (
-                        <div className="w-7 h-7 rounded-full bg-accent border-[1.5px] border-gold-border flex items-center justify-center text-[10px] font-semibold text-gold shrink-0">{brandInitial(selectedGig)}</div>
+                        <div className="w-7 h-7 rounded-full bg-gold-bg border-[1.5px] border-gold-border flex items-center justify-center text-[10px] font-semibold text-gold shrink-0">SC</div>
                       )}
                       <div className="max-w-[75%]">
                         <div className={cn(
@@ -230,7 +230,7 @@ export default function MessagesPage() {
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
-                placeholder={`Message ${brandLabel(selectedGig)}…`}
+                placeholder="Reply to Sarah…"
                 className="flex-1 bg-muted border border-border rounded-[20px] px-4 py-[9px] font-sans text-[13px] text-foreground outline-none"
               />
               <button
