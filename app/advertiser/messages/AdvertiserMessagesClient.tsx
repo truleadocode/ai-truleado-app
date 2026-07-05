@@ -73,8 +73,12 @@ export default function AdvertiserMessagesClient({ advertiserId }: { advertiserI
         return { ...gig, last_message: msgs?.[0]?.content, last_message_at: msgs?.[0]?.created_at, unread_count: unread || 0 } as Gig
       }))
 
-      setGigs(enriched)
-      if (enriched.length > 0) selectGig(enriched[0])
+      // Only creators who've actually accepted (and so have at least the
+      // auto-sent acceptance message) belong in the inbox — otherwise every
+      // gig still awaiting a decision would clutter this list too.
+      const withMessages = enriched.filter(g => g.last_message)
+      setGigs(withMessages)
+      if (withMessages.length > 0) selectGig(withMessages[0])
       setLoaded(true)
     }
     load()

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import SignOutButton from './SignOutButton'
 import SidebarNav, { type NavItem } from './SidebarNav'
-import { FileText, Zap, Briefcase, MessageSquare, Bell, User as UserIcon, LayoutDashboard, Settings, Sparkles } from 'lucide-react'
+import { FileText, Briefcase, MessageSquare, Bell, User as UserIcon, LayoutDashboard, Settings } from 'lucide-react'
 
 function TruleadoLogo() {
   return (
@@ -26,13 +26,12 @@ interface Props {
   /** Used by app/dashboard/layout.tsx, which already has the influencer row and unread counts. */
   influencer?: { id: string; first_name?: string | null; last_name?: string | null; avatar_url?: string | null } | null
   unreadMessages?: number
-  unreadSarah?: number
   unreadNotifs?: number
   activeGigs?: number
 }
 
 export default async function DashboardShell({
-  children, role, influencer, unreadMessages = 0, unreadSarah = 0, unreadNotifs = 0, activeGigs = 0,
+  children, role, influencer, unreadMessages = 0, unreadNotifs = 0, activeGigs = 0,
 }: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -50,10 +49,8 @@ export default async function DashboardShell({
         { href: '/advertiser/settings',  label: 'Settings',  icon: <Settings size={16} />,        iconSm: <Settings size={13} /> },
       ]
     : [
-        { href: '/dashboard',               label: 'Opportunities', icon: <Zap size={16} />,          iconSm: <Zap size={13} /> },
         { href: '/dashboard/gigs',          label: 'Gigs',          icon: <Briefcase size={16} />,    iconSm: <Briefcase size={13} />,    badge: activeGigs },
         { href: '/dashboard/messages',      label: 'Messages',      icon: <MessageSquare size={16} />, iconSm: <MessageSquare size={13} />, badge: unreadMessages },
-        { href: '/dashboard/sarah',         label: 'Sarah',         icon: <Sparkles size={16} />,     iconSm: <Sparkles size={13} />,     badge: unreadSarah },
         { href: '/dashboard/notifications', label: 'Notifications', icon: <Bell size={16} />,         iconSm: <Bell size={13} />,         badge: unreadNotifs },
         { href: '/dashboard/profile',       label: 'Profile',       icon: <UserIcon size={16} />,     iconSm: <UserIcon size={13} /> },
       ]

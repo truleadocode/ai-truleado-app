@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, XCircle, Users, TrendingUp, Star, ArrowLeft, Check, Clock, MessageSquare } from 'lucide-react'
+import { Users, TrendingUp, Star, ArrowLeft, Check, Clock, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface Match {
@@ -62,46 +62,37 @@ function scoreBarColor(s: number) {
   return 'bg-destructive'
 }
 
-function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () => void; onPass: () => void }) {
-  const [localStatus, setLocalStatus] = useState(match.status)
-  const [loading, setLoading] = useState(false)
+function statusBadge(status: string) {
+  switch (status) {
+    case 'offered':                          return { label: 'Offer sent', variant: 'outline' as const }
+    case 'confirmed':
+    case 'in_progress':
+    case 'complete':                         return { label: 'Accepted',   variant: 'success' as const }
+    case 'passed':                           return { label: 'Passed',     variant: 'outline' as const }
+    default:                                  return { label: status,      variant: 'outline' as const }
+  }
+}
+
+// Advertisers no longer confirm/pass creators manually — the AI offers the
+// gig directly and the creator accepts or passes from their own Gigs page.
+// This card is a read-only status view.
+function MatchCard({ match }: { match: Match }) {
   const inf = match.influencers
   const plat = inf.influencer_platforms?.[0]
   const score = match.score || 0
-
-  const isConfirmed = localStatus === 'advertiser_confirmed' || localStatus === 'completed'
-  const isPassed    = localStatus === 'advertiser_passed'
-
-  async function handleConfirm() {
-    setLoading(true)
-    const res = await fetch('/api/advertiser/confirm-creator', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ match_id: match.id }),
-    })
-    if (res.ok) { setLocalStatus('advertiser_confirmed'); onConfirm() }
-    setLoading(false)
-  }
-
-  async function handlePass() {
-    setLoading(true)
-    const res = await fetch('/api/advertiser/pass-creator', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ match_id: match.id }),
-    })
-    if (res.ok) { setLocalStatus('advertiser_passed'); onPass() }
-    setLoading(false)
-  }
+  const isAccepted = ['confirmed', 'in_progress', 'complete'].includes(match.status)
+  const isPassed = match.status === 'passed'
+  const badge = statusBadge(match.status)
 
   return (
     <Card className={cn(
       'transition-all border-2',
-      isConfirmed ? 'border-green-border bg-green-bg/20'
-      : isPassed  ? 'border-border opacity-50'
-      :              'border-border hover:border-gold/50'
+      isAccepted ? 'border-green-border bg-green-bg/20'
+      : isPassed ? 'border-border opacity-50'
+      :             'border-border'
     )}>
       <CardHeader className="pb-3">
         <div className="flex items-start gap-3">
-          {/* Avatar */}
           <div className="w-10 h-10 rounded-full bg-gold/20 border-2 border-gold-border flex items-center justify-center text-gold font-semibold text-sm shrink-0">
             {inf.first_name?.[0]}{inf.last_name?.[0]}
           </div>
@@ -109,8 +100,7 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm font-semibold">{inf.first_name} {inf.last_name}</span>
-              {isConfirmed && <Badge variant="success" className="text-[10px]">Confirmed</Badge>}
-              {isPassed    && <Badge variant="outline" className="text-[10px] text-muted-foreground">Passed</Badge>}
+              <Badge variant={badge.variant} className="text-[10px]">{badge.label}</Badge>
             </div>
             {plat && (
               <p className="text-[11px] text-muted-foreground capitalize">
@@ -119,7 +109,6 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
             )}
           </div>
 
-          {/* Score */}
           <div className="text-right shrink-0">
             <div className={cn('text-2xl font-semibold tabular-nums', scoreColor(score))}>{score}</div>
             <div className="text-[10px] text-muted-foreground">/&nbsp;100</div>
@@ -128,7 +117,6 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
       </CardHeader>
 
       <CardContent className="pt-0 space-y-3">
-        {/* Stats row */}
         <div className="grid grid-cols-3 gap-2">
           {[
             { icon: <Users size={11}/>, label: 'Followers',  val: fmt(plat?.followers || null) },
@@ -143,13 +131,11 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
           ))}
         </div>
 
-        {/* Score bar */}
         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
           <div className={cn('h-full rounded-full transition-all', scoreBarColor(score))}
             style={{ width: `${score}%` }} />
         </div>
 
-        {/* Why matched */}
         {match.match_reason && (
           <div className="bg-accent border border-gold-border rounded-lg p-3">
             <p className="text-[10px] font-semibold text-gold uppercase tracking-wider mb-1">Why we matched them</p>
@@ -158,29 +144,10 @@ function MatchCard({ match, onConfirm, onPass }: { match: Match; onConfirm: () =
         )}
       </CardContent>
 
-      {!isConfirmed && !isPassed && (
-        <CardFooter className="gap-2 pt-0">
-          <Button
-            variant="outline" size="sm"
-            className="flex-1 gap-1.5 hover:border-destructive hover:text-destructive"
-            onClick={handlePass} disabled={loading}
-          >
-            <XCircle size={13} /> Pass
-          </Button>
-          <Button
-            size="sm"
-            className="flex-1 gap-1.5 bg-gold hover:bg-gold/90 text-white font-semibold"
-            onClick={handleConfirm} disabled={loading}
-          >
-            <CheckCircle size={13} /> Confirm
-          </Button>
-        </CardFooter>
-      )}
-
-      {isConfirmed && inf.email && (
+      {isAccepted && inf.email && (
         <CardFooter className="pt-0 flex-col gap-2 items-stretch">
           <p className="w-full text-center text-[11px] text-green font-semibold inline-flex items-center justify-center gap-1">
-            <Check size={12} /> Handoff email sent · {inf.email}
+            <Check size={12} /> Accepted · {inf.email}
           </p>
           <Button variant="outline" size="sm" className="gap-1.5" asChild>
             <Link href="/advertiser/messages"><MessageSquare size={13} /> Message {inf.first_name}</Link>
@@ -195,35 +162,40 @@ export default function BriefDetailClient({ brief, initialMatches }: Props) {
   const [matches, setMatches] = useState<Match[]>(initialMatches)
   const supabase = createClient()
 
-  // Live Realtime updates for new matches
+  // Live Realtime updates when a creator accepts/passes, or a new offer goes out
   useEffect(() => {
-    const channel = supabase.channel(`brief-matches-${brief.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'brief_matches', filter: `brief_id=eq.${brief.id}` },
+    const channel = supabase.channel(`brief-gigs-${brief.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gigs', filter: `brief_id=eq.${brief.id}` },
         async () => {
           const { data } = await supabase
-            .from('brief_matches')
+            .from('gigs')
             .select(`
-              id, status, score, match_reason, influencer_id,
+              id, status, ai_match_score, ai_match_reasoning,
+              influencer_id,
               influencers(first_name, last_name, email,
                 influencer_platforms(platform, handle, followers, engagement_rate)
               )
             `)
             .eq('brief_id', brief.id)
-            .in('status', ['creator_confirmed','advertiser_confirmed','advertiser_passed','completed'])
-            .order('score', { ascending: false })
-          // Same PII rule as the server page: creator email is only shown
-          // once the advertiser has confirmed the match.
-          if (data) setMatches(data.map((m: any) => {
-            const revealed = m.status === 'advertiser_confirmed' || m.status === 'completed'
-            const inf = Array.isArray(m.influencers) ? m.influencers[0] : m.influencers
-            return { ...m, influencers: inf ? { ...inf, email: revealed ? inf.email : undefined } : inf }
+            .order('ai_match_score', { ascending: false })
+          if (data) setMatches(data.map((g: any) => {
+            const revealed = ['confirmed', 'in_progress', 'complete'].includes(g.status)
+            const inf = Array.isArray(g.influencers) ? g.influencers[0] : g.influencers
+            return {
+              id: g.id,
+              status: g.status,
+              score: g.ai_match_score,
+              match_reason: g.ai_match_reasoning,
+              influencer_id: g.influencer_id,
+              influencers: inf ? { ...inf, email: revealed ? inf.email : undefined } : inf,
+            }
           }) as any)
         }
       ).subscribe()
     return () => { supabase.removeChannel(channel) }
   }, [brief.id])
 
-  const confirmed = matches.filter(m => m.status === 'advertiser_confirmed' || m.status === 'completed').length
+  const confirmed = matches.filter(m => ['confirmed', 'in_progress', 'complete'].includes(m.status)).length
   const needed    = brief.creators_needed || 1
 
   return (
@@ -246,13 +218,13 @@ export default function BriefDetailClient({ brief, initialMatches }: Props) {
         </div>
       </div>
 
-      {/* ── Confirmation progress ────────────────────────── */}
+      {/* ── Acceptance progress ──────────────────────────── */}
       <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-sm font-semibold">Creator confirmation</p>
+            <p className="text-sm font-semibold">Creator acceptance</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {confirmed} of {needed} creators confirmed
+              {confirmed} of {needed} creators accepted
             </p>
           </div>
           <span className="text-2xl font-semibold text-gold">{confirmed}<span className="text-muted-foreground text-base font-normal">/{needed}</span></span>
@@ -265,18 +237,11 @@ export default function BriefDetailClient({ brief, initialMatches }: Props) {
         <div className="text-center py-16">
           <div className="flex justify-center mb-3"><Clock size={28} className="text-muted-foreground" /></div>
           <p className="text-sm font-semibold mb-1">Finding your creators…</p>
-          <p className="text-xs text-muted-foreground">We're reaching out to matched creators. Check back soon.</p>
+          <p className="text-xs text-muted-foreground">We're matching this brief against creators now. Check back soon.</p>
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
-          {matches.map(m => (
-            <MatchCard
-              key={m.id}
-              match={m}
-              onConfirm={() => setMatches(prev => prev.map(x => x.id === m.id ? { ...x, status: 'advertiser_confirmed' } : x))}
-              onPass={   () => setMatches(prev => prev.map(x => x.id === m.id ? { ...x, status: 'advertiser_passed' }    : x))}
-            />
-          ))}
+          {matches.map(m => <MatchCard key={m.id} match={m} />)}
         </div>
       )}
     </div>

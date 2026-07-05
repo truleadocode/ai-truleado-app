@@ -33,7 +33,7 @@ export default async function AdvertiserDashboardPage() {
 
   const { data: briefs } = await supabase
     .from('briefs')
-    .select('id, brand_name, product_description, status, creators_needed, created_at, brief_matches(id, status)')
+    .select('id, brand_name, product_description, status, creators_needed, created_at, gigs(id, status)')
     .eq('advertiser_id', advertiser.id)
     .order('created_at', { ascending: false })
 
@@ -42,7 +42,7 @@ export default async function AdvertiserDashboardPage() {
   const matching = briefList.filter(b => ['submitted', 'matching'].includes(b.status)).length
   const shortlistsReady = briefList.filter(b => b.status === 'shortlist_ready').length
   const creatorsConfirmed = briefList.reduce((sum, b) =>
-    sum + ((b.brief_matches as any[]) || []).filter(m => m.status === 'advertiser_confirmed' || m.status === 'completed').length, 0)
+    sum + ((b.gigs as any[]) || []).filter(g => ['confirmed', 'in_progress', 'complete'].includes(g.status)).length, 0)
 
   const stats = [
     { label: 'Active briefs',       value: activeBriefs.length, icon: FileText,    accent: 'text-gold' },
@@ -115,8 +115,8 @@ export default async function AdvertiserDashboardPage() {
       ) : (
         <Card className="overflow-hidden">
           {recent.map((brief, i) => {
-            const matches   = (brief.brief_matches as any[]) || []
-            const confirmed = matches.filter(m => m.status === 'advertiser_confirmed' || m.status === 'completed').length
+            const gigs      = (brief.gigs as any[]) || []
+            const confirmed = gigs.filter(g => ['confirmed', 'in_progress', 'complete'].includes(g.status)).length
             const statusCfg = STATUS_MAP[brief.status] || STATUS_MAP.submitted
             const isDraft   = brief.status === 'draft'
             return (

@@ -37,11 +37,11 @@ function formatEur(cents: number) {
 
 function statusInfo(status: string) {
   switch (status) {
-    case 'offered':     return { label: 'Offer received', className: 'bg-gold-bg text-gold border-gold-border' }
-    case 'interested':  return { label: 'Interest sent',  className: 'bg-blue-bg text-blue border-blue-border' }
-    case 'confirmed':   return { label: 'Confirmed',      className: 'bg-green-bg text-green border-green-border' }
+    case 'offered':     return { label: 'New',            className: 'bg-gold-bg text-gold border-gold-border' }
+    case 'confirmed':   return { label: 'Accepted',        className: 'bg-green-bg text-green border-green-border' }
     case 'in_progress': return { label: 'In progress',    className: 'bg-green-bg text-green border-green-border' }
     case 'complete':    return { label: 'Completed',      className: 'bg-green-bg text-green border-green-border' }
+    case 'passed':      return { label: 'Passed',          className: 'bg-muted text-muted-foreground border-border' }
     default:            return { label: status,           className: 'bg-muted text-muted-foreground border-border' }
   }
 }
@@ -119,11 +119,25 @@ export default function GigDetailPage() {
     setSending(false)
   }
 
-  async function expressInterest() {
+  async function acceptGig() {
     if (!gig || updatingStatus) return
     setUpdatingStatus(true)
-    await supabase.from('gigs').update({ status: 'interested' }).eq('id', gig.id)
-    setGig(prev => prev ? { ...prev, status: 'interested' } : prev)
+    const res = await fetch('/api/influencer/accept-gig', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gig_id: gig.id }),
+    })
+    if (res.ok) {
+      setGig(prev => prev ? { ...prev, status: 'confirmed', brand_revealed: true } : prev)
+      setTab('chat')
+      // Reload the chat so the auto-sent acceptance message shows up.
+      const { data: msgs } = await supabase
+        .from('gig_messages')
+        .select('id, content, sender_type, created_at, read_by_influencer')
+        .eq('gig_id', gig.id)
+        .eq('channel', 'brand')
+        .order('created_at', { ascending: true })
+      setMessages(msgs || [])
+    }
     setUpdatingStatus(false)
   }
 
@@ -219,31 +233,26 @@ export default function GigDetailPage() {
         {/* Offer actions */}
         {gig.status === 'offered' && (
           <div className="flex gap-2 mt-4 pt-4 border-t border-border">
-            <button onClick={expressInterest} disabled={updatingStatus} className="flex-1 bg-gold text-white border-none rounded-[9px] py-[11px] text-[13px] font-semibold cursor-pointer font-[inherit]">
-              I&apos;m interested
-            </button>
             <button onClick={passGig} disabled={updatingStatus} className="flex-1 bg-red-bg text-red border border-red-border rounded-[9px] py-[11px] text-[13px] font-semibold cursor-pointer font-[inherit]">
-              Not interested
+              Pass
+            </button>
+            <button onClick={acceptGig} disabled={updatingStatus} className="flex-1 bg-gold text-white border-none rounded-[9px] py-[11px] text-[13px] font-semibold cursor-pointer font-[inherit]">
+              Accept
             </button>
           </div>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center justify-between border-b border-border mb-4">
-        <div className="flex gap-px">
-          {['brief','chat'].map(t => (
-            <button key={t} onClick={() => setTab(t as any)} className={cn(
-              'px-[18px] py-2 bg-transparent border-none border-b-2 text-[13px] font-semibold cursor-pointer font-[inherit] capitalize transition-colors',
-              tab === t ? 'border-gold text-foreground' : 'border-transparent text-muted-foreground',
-            )}>
-              {t === 'chat' ? `Chat with brand (${messages.length})` : 'Brief'}
-            </button>
-          ))}
-        </div>
-        <Link href="/dashboard/sarah" className="text-[12px] text-muted-foreground no-underline hover:underline mb-2 mr-1 shrink-0">
-          Questions? Ask Sarah →
-        </Link>
+      <div className="flex gap-px border-b border-border mb-4">
+        {['brief','chat'].map(t => (
+          <button key={t} onClick={() => setTab(t as any)} className={cn(
+            'px-[18px] py-2 bg-transparent border-none border-b-2 text-[13px] font-semibold cursor-pointer font-[inherit] capitalize transition-colors',
+            tab === t ? 'border-gold text-foreground' : 'border-transparent text-muted-foreground',
+          )}>
+            {t === 'chat' ? `Chat with brand (${messages.length})` : 'Brief'}
+          </button>
+        ))}
       </div>
 
       {/* Brief tab */}
@@ -251,7 +260,7 @@ export default function GigDetailPage() {
         <div>
           {gig.offer_notes && (
             <div className="bg-card border border-border rounded-xl px-[18px] py-4 mb-3">
-              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.08em] uppercase mb-2.5">Brief from Sarah</p>
+              <p className="text-[11px] font-semibold text-muted-foreground tracking-[0.08em] uppercase mb-2.5">Brief summary</p>
               <p className="text-[13px] leading-[1.65] text-muted-foreground">{gig.offer_notes}</p>
             </div>
           )}
@@ -288,7 +297,7 @@ export default function GigDetailPage() {
 
           {!gig.offer_notes && checklist.length === 0 && (
             <div className="bg-card border border-border rounded-xl px-6 py-8 text-center">
-              <p className="text-sm text-muted-foreground">No brief details yet. Sarah will add more info once confirmed.</p>
+              <p className="text-sm text-muted-foreground">No brief details yet. More info will show up once the brand adds it.</p>
             </div>
           )}
         </div>

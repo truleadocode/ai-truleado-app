@@ -4,30 +4,17 @@ import { runMatchBrief } from '@/lib/matchBrief'
 
 // Scheduled sweep (see vercel.json's `crons` entry) — this is the only true
 // background job in the app. Without it, a brief only ever gets matched
-// once, at submission time: creators who onboard afterward are never
-// considered, and outreach that a creator ignores past its 48h
-// response_timeout_at just sits there forever with no follow-up.
-//
-// Each run:
-//  1. Times out any outreach past its response_timeout_at.
-//  2. Re-runs matching for every brief that's still short on confirmed
-//     creators and hasn't been marked match_exhausted — runMatchBrief only
-//     scores/contacts creators it hasn't already touched, so this is safe
-//     and cheap to run repeatedly.
+// once, at submission time, and creators who onboard afterward are never
+// considered. Re-runs matching for every brief that's still short on
+// confirmed creators and hasn't been marked match_exhausted — runMatchBrief
+// only scores/offers to creators it hasn't already touched, so this is safe
+// and cheap to run repeatedly.
 export async function GET(request: NextRequest) {
   if (request.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const service = createServiceClient()
-  const now = new Date().toISOString()
-
-  const { data: timedOut } = await service
-    .from('brief_matches')
-    .update({ status: 'creator_timeout' })
-    .eq('status', 'outreached')
-    .lt('response_timeout_at', now)
-    .select('id')
 
   const { data: briefs } = await service
     .from('briefs')
@@ -35,7 +22,7 @@ export async function GET(request: NextRequest) {
     .in('status', ['submitted', 'matching'])
     .eq('match_exhausted', false)
 
-  const results: { brief_id: string; ok: boolean; contacted?: number; newlyScored?: number; error?: string }[] = []
+  const results: { brief_id: string; ok: boolean; offered?: number; newlyScored?: number; error?: string }[] = []
 
   for (const brief of briefs || []) {
     if ((brief.creators_confirmed || 0) >= (brief.creators_needed || 5)) continue
@@ -50,7 +37,6 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    timedOutMatches: timedOut?.length || 0,
     briefsChecked: briefs?.length || 0,
     briefsProcessed: results.length,
     results,

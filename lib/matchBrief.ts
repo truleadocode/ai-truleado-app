@@ -45,13 +45,10 @@ Return JSON:
 }`
 }
 
-// Statuses that mean a match is already in-flight or resolved — outreach
-// must never touch these on a re-run (previously, re-invoking this on an
-// already-processed brief would blindly overwrite outreach_message /
-// response_timeout_at / status='outreached' on EVERY top-15 match, even
-// ones a creator had already confirmed, declined, or timed out on).
-const OUTREACH_LOCKED_STATUSES = ['outreached', 'creator_confirmed', 'creator_declined', 'advertiser_confirmed', 'advertiser_passed', 'completed']
-
+// brief_matches is now just a scoring/audit record — the actual offer,
+// accept, and pass lifecycle lives entirely on `gigs`. A creator is
+// eligible for a new gig offer as long as they don't already have one for
+// this brief (in any status).
 export async function runMatchBrief(service: ReturnType<typeof createServiceClient>, brief_id: string) {
   const { data: brief } = await service.from('briefs').select('*').eq('id', brief_id).single()
   if (!brief) return { ok: false, error: 'Brief not found' }
@@ -74,17 +71,12 @@ export async function runMatchBrief(service: ReturnType<typeof createServiceClie
     // ever score/consider someone once (this is what makes re-running this
     // periodically for the same brief cheap and correct: it only looks at
     // NEW creators who onboarded since the last run).
-    const { data: existingMatches } = await service.from('brief_matches').select('influencer_id, status').eq('brief_id', brief_id)
+    const { data: existingMatches } = await service.from('brief_matches').select('influencer_id').eq('brief_id', brief_id)
     const alreadyScored = new Set((existingMatches || []).map(m => m.influencer_id))
     const newInfluencers = influencers.filter(inf => !alreadyScored.has(inf.id))
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', systemInstruction: MATCH_SYSTEM })
-    // Separate instance with no system instruction — reusing `model` here
-    // previously leaked its "return ONLY valid JSON" instruction into
-    // outreach messages, occasionally sending a creator the raw score/
-    // reasoning JSON blob instead of Sarah's friendly message.
-    const outreachModel = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
     const newScores: { influencer_id: string; score: number; breakdown: any; match_reason: string }[] = []
 
@@ -128,87 +120,93 @@ export async function runMatchBrief(service: ReturnType<typeof createServiceClie
       )
     }
 
-    // Re-fetch the full, current picture of every match on this brief —
-    // newScores only covers this run's fresh candidates, and we need real
-    // statuses (not stale ones) to decide who's actually eligible below.
-    const { data: allMatches } = await service.from('brief_matches').select('influencer_id, status, score').eq('brief_id', brief_id)
+    // Re-fetch the full, current picture of every scored match on this
+    // brief, and every gig already created for it, to decide who's actually
+    // still eligible for a fresh offer below.
+    const [{ data: allMatches }, { data: existingGigs }] = await Promise.all([
+      service.from('brief_matches').select('influencer_id, status, score, match_reason').eq('brief_id', brief_id),
+      service.from('gigs').select('influencer_id, status').eq('brief_id', brief_id),
+    ])
     const matches = allMatches || []
+    const gigs = existingGigs || []
 
     if (matches.length === 0) {
       await service.from('briefs').update({ status: 'needs_review', match_exhausted: true }).eq('id', brief_id)
       return { ok: true, message: 'No creators could be scored' }
     }
 
-    const confirmedCount = matches.filter(m => ['creator_confirmed', 'advertiser_confirmed', 'completed'].includes(m.status)).length
+    const confirmedCount = gigs.filter(g => ['confirmed', 'in_progress', 'complete'].includes(g.status)).length
     const stillNeeded = Math.max(0, (brief.creators_needed || 5) - confirmedCount)
 
-    // Only ever contact matches that are brand-new ('scored') or previously
-    // timed out with no response ('creator_timeout') — never re-touch
-    // anything already outreached/responded/resolved.
+    const hasGig = new Set(gigs.map(g => g.influencer_id))
     const eligible = matches
-      .filter(m => !OUTREACH_LOCKED_STATUSES.includes(m.status))
+      .filter(m => !hasGig.has(m.influencer_id))
       .sort((a, b) => (b.score || 0) - (a.score || 0))
 
-    const toContact = stillNeeded > 0 ? eligible.slice(0, Math.min(15, stillNeeded * 3)) : []
+    const toOffer = stillNeeded > 0 ? eligible.slice(0, Math.min(15, stillNeeded * 3)) : []
 
-    let contacted = 0
-    for (const match of toContact) {
+    let offered = 0
+    for (const match of toOffer) {
       try {
         const { data: influencer } = await service.from('influencers').select('open_to_exclusivity').eq('id', match.influencer_id).single()
         if (influencer?.open_to_exclusivity) {
-          const { count: activeConfirmed } = await service.from('brief_matches')
+          const { count: activeElsewhere } = await service.from('gigs')
             .select('id', { count: 'exact', head: true })
             .eq('influencer_id', match.influencer_id)
-            .in('status', ['advertiser_confirmed', 'completed'])
-          if ((activeConfirmed || 0) > 0) continue
+            .in('status', ['confirmed', 'in_progress', 'complete'])
+          if ((activeElsewhere || 0) > 0) continue
         }
 
-        const outreachPrompt = `Write a short, friendly message from Sarah at Truleado to a creator about a brand opportunity.
-Keep it to 3-4 sentences. Don't reveal the brand name. Sound human.
-Opportunity: ${brief.niche_fit || 'content'} campaign, budget around €${brief.budget_per_creator_eur ? Math.round(brief.budget_per_creator_eur/100) : 'flexible'}, content: ${brief.content_types?.join(', ')}.
-Return ONLY the message text.`
+        const { data: platforms } = await service
+          .from('influencer_platforms').select('platform')
+          .eq('influencer_id', match.influencer_id).eq('parse_status', 'complete')
+        const matchedPlatform = (platforms || []).find((p: any) => brief.platforms?.includes(p.platform))?.platform
+          || platforms?.[0]?.platform || brief.platforms?.[0] || null
 
-        const outreachResult = await outreachModel.generateContent(outreachPrompt)
-        const outreachMessage = outreachResult.response.text().trim()
-        const timeoutAt = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
-
-        await service.from('brief_matches').update({
-          status: 'outreached',
-          contacted_at: new Date().toISOString(),
-          outreach_message: outreachMessage,
-          response_timeout_at: timeoutAt,
-        }).eq('brief_id', brief_id).eq('influencer_id', match.influencer_id)
-
-        await service.from('notifications').insert({
+        const { data: gig } = await service.from('gigs').insert({
           influencer_id: match.influencer_id,
-          type: 'brief_opportunity',
-          title: 'New opportunity from Sarah',
-          body: outreachMessage,
-          gig_id: null,
-        })
+          brief_id,
+          status: 'offered',
+          brand_category: brief.niche_fit || null,
+          brand_name: brief.brand_name || null,
+          brand_revealed: false,
+          platform: matchedPlatform,
+          deliverables_summary: brief.content_types?.length ? brief.content_types.join(', ') : 'Content collaboration',
+          budget_eur: brief.budget_per_creator_eur ?? null,
+          goes_live_at: brief.go_live_date || null,
+          ai_match_score: match.score ?? null,
+          ai_match_reasoning: match.match_reason || null,
+        }).select('id').single()
 
-        contacted++
+        if (gig) {
+          await service.from('notifications').insert({
+            influencer_id: match.influencer_id,
+            type: 'new_offer',
+            title: 'New gig offer',
+            body: `You have a new ${brief.niche_fit || 'brand'} campaign offer waiting in your Gigs.`,
+            gig_id: gig.id,
+          })
+        }
+
+        offered++
       } catch (err) {
-        console.error('Outreach error:', err)
+        console.error('Gig offer error:', err)
       }
     }
 
-    if (contacted > 0) {
-      const { count: totalContacted } = await service.from('brief_matches')
-        .select('id', { count: 'exact', head: true })
-        .eq('brief_id', brief_id)
-        .in('status', ['outreached', 'creator_confirmed', 'creator_declined', 'creator_timeout', 'advertiser_confirmed', 'advertiser_passed', 'completed'])
-      await service.from('briefs').update({ creators_contacted: totalContacted || contacted }).eq('id', brief_id)
+    if (offered > 0) {
+      const { count: totalOffered } = await service.from('gigs').select('id', { count: 'exact', head: true }).eq('brief_id', brief_id)
+      await service.from('briefs').update({ creators_contacted: totalOffered || offered }).eq('id', brief_id)
     }
 
-    // Nothing left to try and nobody new to score next time — stop
+    // Nothing left to offer and nobody new to score next time — stop
     // re-processing this brief on future cron sweeps.
-    const remainingEligible = eligible.length - toContact.length
+    const remainingEligible = eligible.length - toOffer.length
     if (stillNeeded > 0 && remainingEligible <= 0 && newInfluencers.length === 0) {
       await service.from('briefs').update({ match_exhausted: true }).eq('id', brief_id)
     }
 
-    return { ok: true, newlyScored: newScores.length, contacted }
+    return { ok: true, newlyScored: newScores.length, offered }
   } catch (err) {
     console.error('Match brief error:', err)
     await service.from('briefs').update({ status: 'needs_review' }).eq('id', brief_id)

@@ -36,7 +36,7 @@ export default async function AdvertiserBriefsPage() {
     .select(`
       id, brand_name, product_description, status,
       platforms, creators_needed, go_live_date,
-      brief_matches(id, status)
+      gigs(id, status)
     `)
     .eq('advertiser_id', advertiser.id)
     .order('created_at', { ascending: false })
@@ -66,7 +66,7 @@ export default async function AdvertiserBriefsPage() {
           <FileText size={40} className="mx-auto text-muted-foreground/30 mb-4" />
           <h3 className="font-semibold text-lg mb-2">No briefs yet</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-            Create your first campaign brief and Sarah will find the right creators for you.
+            Create your first campaign brief and we'll find the right creators for you.
           </p>
           <Button className="bg-gold hover:bg-gold/90 text-white font-semibold" asChild>
             <Link href="/advertiser/briefs/new">Create first brief</Link>
@@ -76,8 +76,8 @@ export default async function AdvertiserBriefsPage() {
         /* ── Brief grid ───────────────────────────── */
         <div className="grid sm:grid-cols-2 gap-4">
           {briefList.map(brief => {
-            const matches   = (brief.brief_matches as any[]) || []
-            const confirmed = matches.filter(m => m.status === 'advertiser_confirmed' || m.status === 'completed').length
+            const gigs      = (brief.gigs as any[]) || []
+            const confirmed = gigs.filter(g => ['confirmed', 'in_progress', 'complete'].includes(g.status)).length
             const needed    = brief.creators_needed || 1
             const pct       = Math.min(100, Math.round((confirmed / needed) * 100))
             const statusCfg = STATUS_MAP[brief.status] || STATUS_MAP.submitted

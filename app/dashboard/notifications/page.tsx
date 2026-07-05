@@ -59,7 +59,7 @@ export default async function NotificationsPage() {
         <div className="bg-card border border-border rounded-xl px-6 py-12 text-center">
           <Bell size={30} className="mx-auto mb-2.5 text-muted-foreground" />
           <p className="text-sm font-semibold mb-1.5">No notifications yet</p>
-          <p className="text-[13px] text-muted-foreground">You'll be notified when Sarah sends you an offer or update.</p>
+          <p className="text-[13px] text-muted-foreground">You'll be notified when a new gig offer or update comes in.</p>
         </div>
       )}
 
