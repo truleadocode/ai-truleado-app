@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import { Loader2, MessageCircle, FileText, Send, Lock, Pencil, AlertCircle, Check, X, Save, Sparkles, ChevronRight } from 'lucide-react'
@@ -50,9 +52,6 @@ export default function BriefCreationClient({ advertiser, needsSubscription, dra
   const [savingDraft, setSavingDraft] = useState(false)
 
   const [editing, setEditing] = useState(false)
-  const [editText, setEditText] = useState('')
-  const [editLoading, setEditLoading] = useState(false)
-  const [editNote, setEditNote] = useState<string | null>(null)
 
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -183,28 +182,13 @@ export default function BriefCreationClient({ advertiser, needsSubscription, dra
     }
   }
 
-  // ── Inline correction on the review screen ────────────────────────
-  // Replaces the old "Edit with Sarah" button, which reset all the way back
-  // to the brand-name question and lost everything already extracted.
-  async function applyEdit() {
-    if (!editText.trim() || !reviewData) return
-    setEditLoading(true)
-    setEditNote(null)
-    try {
-      const key = ensureSessionKey()
-      const res = await fetch('/api/advertiser/brief-chat', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'edit', session_key: key, user_message: editText, data: reviewData }),
-      })
-      const data = await res.json()
-      if (data.error) { setEditNote("Couldn't apply that change — try rephrasing."); return }
-      const updated = data.extracted || reviewData
-      setReviewData(updated)
-      setSessionData(updated)
-      setEditNote(data.sarah_reply || 'Updated.')
-      setEditText(''); setEditing(false)
-    } catch { setEditNote("Couldn't apply that change — try again.") }
-    finally { setEditLoading(false) }
+  // ── Inline edit on the review screen ──────────────────────────────
+  // Direct field editing (replaces the old AI-mediated "Edit with Sarah").
+  function applyFieldEdits(updated: Record<string, any>) {
+    const merged = { ...reviewData, ...updated }
+    setReviewData(merged)
+    setSessionData(merged)
+    setEditing(false)
   }
 
   // ── Save as draft ───────────────────────────────────
@@ -322,47 +306,35 @@ export default function BriefCreationClient({ advertiser, needsSubscription, dra
             </Alert>
           )}
 
-          <Card className="mb-4">
-            <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {REVIEW_FIELDS.map(({ label, format }) => {
-                  const value = format(reviewData)
-                  if (!value) return null
-                  return (
-                    <div key={label} className="flex justify-between gap-4 px-5 py-3">
-                      <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
-                      <span className="text-sm font-medium text-right">{value}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {editNote && <p className="text-xs text-muted-foreground mb-3 px-1 inline-flex items-center gap-1"><Sparkles size={12} className="text-gold" /> {editNote}</p>}
+          {!editing && (
+            <Card className="mb-4">
+              <CardContent className="p-0">
+                <div className="divide-y divide-border">
+                  {REVIEW_FIELDS.map(({ label, format }) => {
+                    const value = format(reviewData)
+                    if (!value) return null
+                    return (
+                      <div key={label} className="flex justify-between gap-4 px-5 py-3">
+                        <span className="text-xs font-medium text-muted-foreground shrink-0">{label}</span>
+                        <span className="text-sm font-medium text-right">{value}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {editing ? (
-            <div className="flex gap-2 mb-4">
-              <input
-                autoFocus
-                value={editText}
-                onChange={e => setEditText(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') applyEdit() }}
-                placeholder='e.g. "the budget should be flexible"'
-                disabled={editLoading}
-                className="flex-1 h-10 px-4 rounded-full border border-border bg-muted text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-60"
-              />
-              <Button size="sm" className="bg-gold hover:bg-gold/90 text-white" onClick={applyEdit} disabled={editLoading || !editText.trim()}>
-                {editLoading ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => { setEditing(false); setEditText('') }} disabled={editLoading}>
-                <X size={14} />
-              </Button>
-            </div>
+            <ReviewEditForm
+              initial={reviewData}
+              onCancel={() => setEditing(false)}
+              onSave={applyFieldEdits}
+            />
           ) : (
             <div className="flex flex-wrap gap-2.5">
               <Button variant="outline" className="gap-1.5" onClick={() => setEditing(true)}>
-                <Pencil size={13} /> Edit with Sarah
+                <Pencil size={13} /> Edit
               </Button>
               <Button variant="outline" className="gap-1.5" onClick={saveDraft} disabled={savingDraft}>
                 {savingDraft ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
@@ -444,5 +416,170 @@ export default function BriefCreationClient({ advertiser, needsSubscription, dra
         </div>
       )}
     </>
+  )
+}
+
+// ── Inline review editor ─────────────────────────────────────────────
+// Local draft state; nothing touches reviewData until "Save changes".
+const PLATFORM_OPTIONS = ['instagram', 'tiktok', 'youtube', 'pinterest']
+const CONTENT_OPTIONS = ['reel', 'story', 'video', 'post', 'carousel', 'ugc']
+
+function ReviewEditForm({ initial, onCancel, onSave }: {
+  initial: Record<string, any>
+  onCancel: () => void
+  onSave: (updated: Record<string, any>) => void
+}) {
+  const [brand, setBrand] = useState(initial.brand_name || '')
+  const [product, setProduct] = useState(initial.product_description || '')
+  const [platforms, setPlatforms] = useState<string[]>(initial.platforms || [])
+  const [contentTypes, setContentTypes] = useState<string[]>(initial.content_types || [])
+  const [creators, setCreators] = useState(initial.creators_needed ? String(initial.creators_needed) : '5')
+  const [budgetFlexible, setBudgetFlexible] = useState(Boolean(initial.budget_flexible))
+  // Stored in cents; edited in whole EUR.
+  const [budgetEur, setBudgetEur] = useState(
+    initial.budget_per_creator_eur ? String(Math.round(initial.budget_per_creator_eur / 100)) : ''
+  )
+  const [ageRange, setAgeRange] = useState(initial.target_age_range || '')
+  const [gender, setGender] = useState(initial.target_gender || 'all')
+  const [countries, setCountries] = useState((initial.target_countries || []).join(', '))
+  const [goLive, setGoLive] = useState(initial.go_live_date || '')
+  const [niche, setNiche] = useState(initial.niche_fit || '')
+  const [tone, setTone] = useState(initial.tone_notes || '')
+
+  function toggle(list: string[], set: (v: string[]) => void, v: string) {
+    set(list.includes(v) ? list.filter(x => x !== v) : [...list, v])
+  }
+
+  const valid = brand.trim().length > 0 && product.trim().length > 0 && platforms.length > 0
+
+  function save() {
+    if (!valid) return
+    onSave({
+      brand_name: brand.trim(),
+      product_description: product.trim(),
+      platforms,
+      content_types: contentTypes,
+      creators_needed: Math.max(1, parseInt(creators, 10) || 5),
+      budget_flexible: budgetFlexible,
+      budget_per_creator_eur: budgetFlexible
+        ? null
+        : budgetEur.trim() ? Math.round(parseFloat(budgetEur) * 100) : null,
+      target_age_range: ageRange.trim() || null,
+      target_gender: gender || 'all',
+      target_countries: countries.split(',').map((c: string) => c.trim()).filter(Boolean),
+      go_live_date: goLive || null,
+      niche_fit: niche.trim() || null,
+      tone_notes: tone.trim() || null,
+    })
+  }
+
+  const chip = (selected: boolean) => cn(
+    'px-3 py-1.5 rounded-full border text-xs font-semibold capitalize transition-colors',
+    selected ? 'border-gold bg-gold-bg text-gold' : 'border-border bg-card text-muted-foreground hover:border-gold/50'
+  )
+
+  const textareaClass = 'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px] resize-y'
+
+  return (
+    <Card className="mb-4">
+      <CardContent className="pt-6 pb-6 space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="e-brand">Brand</Label>
+          <Input id="e-brand" value={brand} onChange={e => setBrand(e.target.value)} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="e-product">Product</Label>
+          <textarea id="e-product" value={product} onChange={e => setProduct(e.target.value)} className={textareaClass} />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Platforms</Label>
+          <div className="flex flex-wrap gap-2">
+            {PLATFORM_OPTIONS.map(p => (
+              <button key={p} type="button" onClick={() => toggle(platforms, setPlatforms, p)} className={chip(platforms.includes(p))}>{p}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Content types</Label>
+          <div className="flex flex-wrap gap-2">
+            {Array.from(new Set([...CONTENT_OPTIONS, ...contentTypes])).map(c => (
+              <button key={c} type="button" onClick={() => toggle(contentTypes, setContentTypes, c)} className={chip(contentTypes.includes(c))}>{c.replace(/_/g, ' ')}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="e-creators">Creators needed</Label>
+            <Input id="e-creators" type="number" min={1} value={creators} onChange={e => setCreators(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="e-budget">Budget per creator (€)</Label>
+            <Input id="e-budget" type="number" min={0} value={budgetEur} onChange={e => setBudgetEur(e.target.value)} disabled={budgetFlexible} placeholder={budgetFlexible ? 'Flexible' : 'e.g. 500'} />
+          </div>
+        </div>
+        <label className="inline-flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
+          <input type="checkbox" checked={budgetFlexible} onChange={e => setBudgetFlexible(e.target.checked)} className="accent-[#2A2760] w-4 h-4" />
+          Budget is flexible
+        </label>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="e-age">Target age range</Label>
+            <Input id="e-age" value={ageRange} onChange={e => setAgeRange(e.target.value)} placeholder="e.g. 22-38" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="e-gender">Target gender</Label>
+            <select
+              id="e-gender"
+              value={gender}
+              onChange={e => setGender(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <option value="all">All</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="e-countries">Target countries</Label>
+          <Input id="e-countries" value={countries} onChange={e => setCountries(e.target.value)} placeholder="e.g. US, UK, Canada" />
+          <p className="text-[11px] text-muted-foreground">Separate with commas.</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="e-golive">Go-live date</Label>
+            <Input id="e-golive" type="date" value={goLive} onChange={e => setGoLive(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="e-niche">Niche</Label>
+            <Input id="e-niche" value={niche} onChange={e => setNiche(e.target.value)} placeholder="e.g. skincare, beauty" />
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="e-tone">Tone notes</Label>
+          <textarea id="e-tone" value={tone} onChange={e => setTone(e.target.value)} className={textareaClass} />
+        </div>
+
+        <div className="flex gap-2.5 pt-1">
+          <Button variant="ghost" onClick={onCancel} className="gap-1.5">
+            <X size={13} /> Cancel
+          </Button>
+          <Button onClick={save} disabled={!valid} className="flex-1 bg-gold hover:bg-gold/90 text-white font-semibold gap-1.5">
+            <Check size={14} /> Save changes
+          </Button>
+        </div>
+        {!valid && (
+          <p className="text-[11px] text-muted-foreground">Brand, product, and at least one platform are required.</p>
+        )}
+      </CardContent>
+    </Card>
   )
 }
