@@ -227,7 +227,7 @@ export default function BriefDetailClient({ brief, initialMatches }: Props) {
     <div className="space-y-6">
       {/* ── Back + title ────────────────────────────────── */}
       <div>
-        <Link href="/advertiser/dashboard" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors no-underline mb-4">
+        <Link href="/advertiser/briefs" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors no-underline mb-4">
           <ArrowLeft size={13} /> Back to briefs
         </Link>
         <div className="flex items-start justify-between gap-4 flex-wrap">

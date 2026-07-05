@@ -4,9 +4,8 @@ import Link from 'next/link'
 import DashboardShell from '@/components/DashboardShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
-import { ChevronRight, Zap, FileText } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Card, CardContent } from '@/components/ui/card'
+import { ChevronRight, Zap, FileText, Users, Radar, CheckCircle } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +25,7 @@ export default async function AdvertiserDashboardPage() {
 
   const { data: advertiser } = await supabase
     .from('advertisers')
-    .select('id, company_name')
+    .select('id, first_name, company_name')
     .eq('user_id', user.id)
     .single()
 
@@ -34,26 +33,36 @@ export default async function AdvertiserDashboardPage() {
 
   const { data: briefs } = await supabase
     .from('briefs')
-    .select(`
-      id, brand_name, product_description, status,
-      platforms, creators_needed, go_live_date,
-      brief_matches(id, status)
-    `)
+    .select('id, brand_name, product_description, status, creators_needed, created_at, brief_matches(id, status)')
     .eq('advertiser_id', advertiser.id)
     .order('created_at', { ascending: false })
 
   const briefList = briefs || []
+  const activeBriefs = briefList.filter(b => !['draft', 'completed'].includes(b.status))
+  const matching = briefList.filter(b => ['submitted', 'matching'].includes(b.status)).length
+  const shortlistsReady = briefList.filter(b => b.status === 'shortlist_ready').length
+  const creatorsConfirmed = briefList.reduce((sum, b) =>
+    sum + ((b.brief_matches as any[]) || []).filter(m => m.status === 'advertiser_confirmed' || m.status === 'completed').length, 0)
+
+  const stats = [
+    { label: 'Active briefs',       value: activeBriefs.length, icon: FileText,    accent: 'text-gold' },
+    { label: 'In matching',         value: matching,            icon: Radar,       accent: 'text-blue' },
+    { label: 'Shortlists ready',    value: shortlistsReady,     icon: Users,       accent: 'text-amber' },
+    { label: 'Creators confirmed',  value: creatorsConfirmed,   icon: CheckCircle, accent: 'text-green' },
+  ]
+
+  const recent = briefList.slice(0, 4)
 
   return (
     <DashboardShell role="advertiser">
-      {/* ── Page header ─────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            {advertiser.company_name ? `${advertiser.company_name}'s briefs` : 'Your briefs'}
+            {advertiser.first_name ? `Welcome back, ${advertiser.first_name}` : 'Dashboard'}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {briefList.length === 0 ? 'No briefs yet — create your first one below.' : `${briefList.length} campaign${briefList.length > 1 ? 's' : ''}`}
+            {advertiser.company_name ? `Here's what's happening with ${advertiser.company_name}'s campaigns.` : "Here's what's happening with your campaigns."}
           </p>
         </div>
         <Button className="bg-gold hover:bg-gold/90 text-white font-semibold gap-1.5" asChild>
@@ -63,82 +72,77 @@ export default async function AdvertiserDashboardPage() {
         </Button>
       </div>
 
+      {/* ── Stat cards ──────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+        {stats.map(({ label, value, icon: Icon, accent }) => (
+          <Card key={label}>
+            <CardContent className="pt-5 pb-5 flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shrink-0">
+                <Icon size={18} className={accent} />
+              </div>
+              <div>
+                <p className="text-2xl font-semibold tracking-tight leading-none font-mono tabular-nums">{value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* ── Recent briefs ───────────────────────────────── */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Recent briefs</h2>
+        {briefList.length > 0 && (
+          <Link href="/advertiser/briefs" className="text-xs font-semibold text-gold no-underline inline-flex items-center gap-0.5 hover:gap-1 transition-all">
+            View all <ChevronRight size={12} />
+          </Link>
+        )}
+      </div>
+
       {briefList.length === 0 ? (
-        /* ── Empty state ─────────────────────────── */
-        <div className="text-center py-24">
-          <FileText size={40} className="mx-auto text-muted-foreground/30 mb-4" />
-          <h3 className="font-semibold text-lg mb-2">No briefs yet</h3>
-          <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
-            Create your first campaign brief and Sarah will find the right creators for you.
-          </p>
-          <Button className="bg-gold hover:bg-gold/90 text-white font-semibold" asChild>
-            <Link href="/advertiser/briefs/new">Create first brief</Link>
-          </Button>
-        </div>
+        <Card>
+          <CardContent className="py-16 text-center">
+            <FileText size={36} className="mx-auto text-muted-foreground/30 mb-4" />
+            <h3 className="font-semibold mb-1.5">No briefs yet</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-xs mx-auto">
+              Create your first campaign brief and Sarah will find the right creators for you.
+            </p>
+            <Button className="bg-gold hover:bg-gold/90 text-white font-semibold" asChild>
+              <Link href="/advertiser/briefs/new">Create first brief</Link>
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        /* ── Brief grid ───────────────────────────── */
-        <div className="grid sm:grid-cols-2 gap-4">
-          {briefList.map(brief => {
+        <Card className="overflow-hidden">
+          {recent.map((brief, i) => {
             const matches   = (brief.brief_matches as any[]) || []
             const confirmed = matches.filter(m => m.status === 'advertiser_confirmed' || m.status === 'completed').length
-            const needed    = brief.creators_needed || 1
-            const pct       = Math.min(100, Math.round((confirmed / needed) * 100))
             const statusCfg = STATUS_MAP[brief.status] || STATUS_MAP.submitted
             const isDraft   = brief.status === 'draft'
-
             return (
               <Link
                 key={brief.id}
                 href={isDraft ? `/advertiser/briefs/new?draft=${brief.id}` : `/advertiser/briefs/${brief.id}`}
-                className="no-underline group"
+                className={`no-underline flex items-center gap-4 px-5 py-4 hover:bg-muted/50 transition-colors ${i > 0 ? 'border-t border-border' : ''}`}
               >
-                <Card className="h-full transition-shadow hover:shadow-md border-border group-hover:border-gold/40">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-sm font-semibold truncate">{brief.brand_name || 'Untitled brief'}</CardTitle>
-                        <CardDescription className="text-xs mt-1 line-clamp-2">{brief.product_description}</CardDescription>
-                      </div>
-                      <Badge variant={statusCfg.variant} className="shrink-0 text-[10px]">
-                        {statusCfg.label}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="pt-0 pb-3">
-                    {/* Platform chips */}
-                    <div className="flex gap-1.5 flex-wrap mb-3">
-                      {(brief.platforms || []).map((p: string) => (
-                        <span key={p} className="text-[10px] font-semibold bg-muted text-muted-foreground rounded-full px-2 py-0.5 capitalize">{p}</span>
-                      ))}
-                    </div>
-
-                    {isDraft ? (
-                      <p className="text-[11px] text-muted-foreground">Not submitted yet — click to pick up where you left off.</p>
-                    ) : (
-                      /* Confirmation bar */
-                      <div className="space-y-1.5">
-                        <div className="flex justify-between text-[11px] text-muted-foreground">
-                          <span>Creators confirmed</span>
-                          <span className="font-semibold text-foreground">{confirmed}/{needed}</span>
-                        </div>
-                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-gold rounded-full transition-all" style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-
-                  <CardFooter className="pt-0 pb-3">
-                    <span className="ml-auto text-xs font-semibold text-gold flex items-center gap-1 group-hover:gap-1.5 transition-all">
-                      {isDraft ? 'Continue' : 'View'} <ChevronRight size={13} />
-                    </span>
-                  </CardFooter>
-                </Card>
+                <div className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
+                  <FileText size={15} className="text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{brief.brand_name || 'Untitled brief'}</p>
+                  <p className="text-xs text-muted-foreground truncate">{brief.product_description || '—'}</p>
+                </div>
+                {!isDraft && (
+                  <span className="text-xs text-muted-foreground font-mono tabular-nums shrink-0 hidden sm:block">
+                    {confirmed}/{brief.creators_needed || 5} confirmed
+                  </span>
+                )}
+                <Badge variant={statusCfg.variant} className="shrink-0 text-[10px]">{statusCfg.label}</Badge>
+                <ChevronRight size={14} className="text-muted-foreground shrink-0" />
               </Link>
             )
           })}
-        </div>
+        </Card>
       )}
     </DashboardShell>
   )

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import SignOutButton from './SignOutButton'
 import SidebarNav, { type NavItem } from './SidebarNav'
-import { FileText, Zap, Briefcase, MessageSquare, Bell, User as UserIcon } from 'lucide-react'
+import { FileText, Zap, Briefcase, MessageSquare, Bell, User as UserIcon, LayoutDashboard, Settings } from 'lucide-react'
 
 function TruleadoLogo() {
   return (
@@ -43,8 +43,10 @@ export default async function DashboardShell({
 
   const navItems: NavItem[] = effectiveRole === 'advertiser'
     ? [
-        { href: '/advertiser/dashboard',  label: 'Briefs',    icon: <FileText size={16} />, iconSm: <FileText size={13} /> },
-        { href: '/advertiser/briefs/new', label: 'New brief', icon: <Zap size={16} />,      iconSm: <Zap size={13} /> },
+        { href: '/advertiser/dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} />, iconSm: <LayoutDashboard size={13} /> },
+        { href: '/advertiser/briefs',    label: 'Briefs',    icon: <FileText size={16} />,        iconSm: <FileText size={13} /> },
+        { href: '/advertiser/messages',  label: 'Messages',  icon: <MessageSquare size={16} />,   iconSm: <MessageSquare size={13} /> },
+        { href: '/advertiser/settings',  label: 'Settings',  icon: <Settings size={16} />,        iconSm: <Settings size={13} /> },
       ]
     : [
         { href: '/dashboard',               label: 'Opportunities', icon: <Zap size={16} />,          iconSm: <Zap size={13} /> },

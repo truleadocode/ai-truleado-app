@@ -226,10 +226,10 @@ export default function BriefCreationClient({ advertiser, needsSubscription, dra
       // brief doesn't reuse (and merge into) the old brief_sessions row.
       localStorage.removeItem(SESSION_KEY_LS)
       // Invalidate Next's client router cache before navigating, so the
-      // dashboard list re-fetches instead of serving a stale cached payload
+      // briefs list re-fetches instead of serving a stale cached payload
       // from before this draft existed.
       router.refresh()
-      router.push('/advertiser/dashboard')
+      router.push('/advertiser/briefs')
     } catch {
       setSubmitError('Could not save your draft. Please try again.')
     } finally {
