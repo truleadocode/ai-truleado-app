@@ -132,7 +132,7 @@ export default function ResetPasswordPage() {
                 <div className="flex justify-center mb-3"><CheckCircle size={28} className="text-green" /></div>
                 <p className="text-sm text-foreground font-medium mb-1">Password updated</p>
                 <p className="text-xs text-muted-foreground leading-relaxed mb-4">You can now log in with your new password.</p>
-                <Button className="w-full bg-gold hover:bg-gold/90 text-white font-semibold" onClick={() => { supabase.auth.signOut(); router.push('/login') }}>
+                <Button className="w-full bg-gold hover:bg-gold/90 text-white font-semibold" onClick={() => { supabase.auth.signOut(); router.push('/') }}>
                   Go to login
                 </Button>
               </div>

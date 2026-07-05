@@ -35,7 +35,7 @@ export default async function DashboardShell({
 }: Props) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/')
 
   // influencer being passed at all (even without an explicit role) means
   // this call came from the influencer-side layout, not an advertiser page.

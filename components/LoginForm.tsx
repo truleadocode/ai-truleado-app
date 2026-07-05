@@ -61,7 +61,12 @@ function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => voi
 
 const BRAND_POINTS = ['AI reads and scores every brief', 'Matched creators land in their Gigs feed', 'Accept, chat, and go — no back-and-forth']
 
-export default function LoginPage() {
+// This IS the app's home page (see app/page.tsx) — there's no separate
+// /login route. Middleware already redirects a fully-onboarded, logged-in
+// user away from "/" before this ever renders, but an authenticated user
+// with incomplete onboarding still lands here, so this component sends
+// them onward to continue rather than looping back to "/".
+export default function LoginForm() {
   const router = useRouter()
   const supabase = createClient()
   const [checking, setChecking] = useState(true)
@@ -79,9 +84,18 @@ export default function LoginPage() {
   const [creatorLoading, setCreatorLoading] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) router.push('/')
-      else setChecking(false)
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { setChecking(false); return }
+
+      const { data: advertiser } = await supabase.from('advertisers').select('id').eq('user_id', data.user.id).single()
+      if (advertiser) { router.push('/advertiser'); return }
+
+      const { data: influencer } = await supabase.from('influencers').select('id').eq('user_id', data.user.id).single()
+      if (influencer) { router.push('/influencer'); return }
+
+      // Authenticated but no role row at all (e.g. a failed signup) —
+      // nothing productive to redirect to, so just show the form.
+      setChecking(false)
     })
   }, [])
 

@@ -21,7 +21,7 @@ const STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning'
 export default async function AdvertiserBriefsPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/')
 
   const { data: advertiser } = await supabase
     .from('advertisers')
