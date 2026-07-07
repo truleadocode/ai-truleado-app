@@ -36,6 +36,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/influencer') ||
+    pathname.startsWith('/influencers/') ||
     pathname.startsWith('/advertiser')
 
   // Logged-in user hits root ON THE APP SURFACE — send to correct dashboard.

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Instagram, Music2, Youtube, Pin, Twitter, Linkedin, Facebook, Twitch, Ghost, Share2, Check, ChevronRight, type LucideIcon } from 'lucide-react'
+import PublicProfileCard from '@/components/PublicProfileCard'
 
 function formatEur(cents: number) {
   return `€${(cents / 100).toLocaleString('en-EU')}`
@@ -78,10 +79,16 @@ export default async function ProfilePage() {
       <div className="flex items-center justify-between mb-5">
         <p className="text-[15px] font-semibold text-foreground">My profile</p>
         <div className="flex gap-2">
-          <Link href="/profile/view" className="text-xs font-semibold text-foreground bg-card border border-border px-3.5 py-[7px] rounded-md no-underline shadow-sm">View public profile</Link>
+          {inf.username ? (
+            <a href={`/influencers/${inf.username}`} target="_blank" rel="noreferrer" className="text-xs font-semibold text-foreground bg-card border border-border px-3.5 py-[7px] rounded-md no-underline shadow-sm">View public profile</a>
+          ) : (
+            <Link href="/profile/view" className="text-xs font-semibold text-foreground bg-card border border-border px-3.5 py-[7px] rounded-md no-underline shadow-sm">View public profile</Link>
+          )}
           <Link href="/profile/edit" className="text-xs font-semibold text-white bg-gold px-3.5 py-[7px] rounded-md no-underline">Edit profile</Link>
         </div>
       </div>
+
+      <PublicProfileCard influencerId={inf.id} initialUsername={inf.username} />
 
       <div className="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-5">
 

@@ -346,4 +346,17 @@ Return ONLY valid JSON, no markdown, no explanation:
 
 Only use null if the data is genuinely not visible. Extract everything you can see.`
 
-export { PLATFORM_PROMPTS, FALLBACK_PARSE_PROMPT }
+// Gemini sometimes returns decimals for these (e.g. an "average" like 1100.75),
+// but the matching DB columns are integer — an unrounded value fails the update
+// with a Postgres type error at write time.
+const INTEGER_PARSE_FIELDS = ['followers', 'following', 'total_posts', 'avg_likes', 'avg_comments', 'avg_views'] as const
+
+function sanitizeParsedPlatformData(parsed: Record<string, any>) {
+  const sanitized = { ...parsed }
+  for (const field of INTEGER_PARSE_FIELDS) {
+    if (typeof sanitized[field] === 'number') sanitized[field] = Math.round(sanitized[field])
+  }
+  return sanitized
+}
+
+export { PLATFORM_PROMPTS, FALLBACK_PARSE_PROMPT, sanitizeParsedPlatformData }

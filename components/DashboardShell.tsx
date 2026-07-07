@@ -8,12 +8,7 @@ import { FileText, Briefcase, MessageSquare, Bell, User as UserIcon, LayoutDashb
 function TruleadoLogo() {
   return (
     <Link href="/" className="flex items-center gap-2 no-underline">
-      <div className="w-7 h-7 rounded-[6px] bg-gold flex items-center justify-center shrink-0">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-          <path d="M3 13L8 3L13 13" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-          <path d="M5 10h6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
-        </svg>
-      </div>
+      <img src="/logo-mark-t-tile.png" alt="" width={28} height={28} className="w-7 h-7 rounded-[6px] shrink-0" />
       <span className="text-base font-semibold tracking-tight text-foreground">Truleado</span>
     </Link>
   )

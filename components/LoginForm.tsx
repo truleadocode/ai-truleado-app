@@ -23,14 +23,8 @@ function GoogleIcon() {
 }
 
 function TruleadoMark({ light = false }: { light?: boolean }) {
-  return (
-    <div className={cn('w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0', light ? 'bg-white/12' : 'bg-brand')}>
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-        <path d="M3 13L8 3L13 13" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-        <path d="M5 10h6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round"/>
-      </svg>
-    </div>
-  )
+  void light
+  return <img src="/logo-mark-t-tile.png" alt="" width={32} height={32} className="w-8 h-8 rounded-[8px] shrink-0" />
 }
 
 const SESSION_KEY_LS = 'truleado_session_key'

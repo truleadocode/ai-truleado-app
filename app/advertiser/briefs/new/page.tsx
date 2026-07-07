@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import BriefCreationClient from './BriefCreationClient'
 import DashboardShell from '@/components/DashboardShell'
+import { getPaddlePlans } from '@/lib/paddlePlans'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +33,16 @@ export default async function NewBriefPage({ searchParams }: { searchParams: { d
 
   return (
     <DashboardShell role="advertiser">
-      <BriefCreationClient advertiser={advertiser} needsSubscription={needsSubscription} draftBrief={draftBrief} />
+      <BriefCreationClient
+        advertiser={advertiser}
+        needsSubscription={needsSubscription}
+        draftBrief={draftBrief}
+        paddle={{
+          plans: needsSubscription ? await getPaddlePlans() : [],
+          env: (process.env.NEXT_PUBLIC_PADDLE_ENV as 'sandbox' | 'production') || 'sandbox',
+          clientToken: process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN!,
+        }}
+      />
     </DashboardShell>
   )
 }

@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import { Loader2, MessageCircle, FileText, Send, Lock, Pencil, AlertCircle, Check, X, Save, Sparkles, ChevronRight } from 'lucide-react'
+import SubscriptionPlanPicker, { type Plan } from '@/components/SubscriptionPlanPicker'
 
 const SESSION_KEY_LS = 'truleado_brief_session_key'
 
@@ -36,7 +37,9 @@ function hasBriefContent(d: Record<string, any> | null) {
   return Boolean(d?.brand_name || d?.product_description || d?.platforms?.length)
 }
 
-export default function BriefCreationClient({ advertiser, needsSubscription, draftBrief }: { advertiser: any; needsSubscription: boolean; draftBrief?: any }) {
+interface PaddleConfig { plans: Plan[]; env: 'sandbox' | 'production'; clientToken: string }
+
+export default function BriefCreationClient({ advertiser, needsSubscription, draftBrief, paddle }: { advertiser: any; needsSubscription: boolean; draftBrief?: any; paddle: PaddleConfig }) {
   const router = useRouter()
   // A resumed draft skips straight to the review screen with its saved fields.
   const [phase, setPhase] = useState<Phase>(draftBrief ? 'review' : 'choose')
@@ -91,17 +94,18 @@ export default function BriefCreationClient({ advertiser, needsSubscription, dra
             You've used your free brief. Subscribe to submit unlimited briefs and keep finding the right creators.
           </p>
           <Card className="mb-6">
-            <CardContent className="pt-6 pb-6">
-              <p className="text-3xl font-semibold tracking-tight">$99 <span className="text-sm font-medium text-muted-foreground">/month</span></p>
-              <p className="text-xs text-muted-foreground mt-1">Unlimited briefs · Unlimited creator matches</p>
+            <CardContent className="pt-6 pb-6 text-left">
+              <SubscriptionPlanPicker
+                advertiserId={advertiser.id}
+                email={advertiser.email}
+                paddleEnv={paddle.env}
+                clientToken={paddle.clientToken}
+                plans={paddle.plans}
+                buttonClassName="w-full bg-gold hover:bg-gold/90 text-white font-semibold"
+              />
+              <p className="text-xs text-muted-foreground mt-3 text-center">Unlimited briefs · Unlimited creator matches</p>
             </CardContent>
           </Card>
-          <Button
-            className="w-full bg-gold hover:bg-gold/90 text-white font-semibold mb-3"
-            onClick={() => alert('Paddle checkout coming soon. For now, contact hello@truleado.com to subscribe.')}
-          >
-            Subscribe — $99/month
-          </Button>
           <Button variant="ghost" className="text-muted-foreground" onClick={() => router.push('/advertiser/dashboard')}>
             Go back to dashboard
           </Button>

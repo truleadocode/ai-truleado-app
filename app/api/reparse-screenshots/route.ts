@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createServiceClient } from '@/lib/supabase/server'
-import { PLATFORM_PROMPTS, FALLBACK_PARSE_PROMPT } from '@/lib/platformPrompts'
+import { PLATFORM_PROMPTS, FALLBACK_PARSE_PROMPT, sanitizeParsedPlatformData } from '@/lib/platformPrompts'
 
 const SUMMARY_PROMPT = `You are writing a brief internal profile summary for an influencer marketing platform.
 Based on the structured data provided, write a 2-3 sentence summary in plain English.
@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
 
     const raw = parseResult.response.text().trim()
     const clean = raw.replace(/^```json?\n?/, '').replace(/\n?```$/, '').trim()
-    const parsed = JSON.parse(clean)
+    const parsed = sanitizeParsedPlatformData(JSON.parse(clean))
 
-    await service.from('influencer_platforms').update({
+    const { error: updateErr } = await service.from('influencer_platforms').update({
       followers: parsed.followers,
       following: parsed.following,
       total_posts: parsed.total_posts,
@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
       parse_error: null,
       last_parsed_at: new Date().toISOString(),
     }).eq('id', platformId)
+    if (updateErr) throw updateErr
 
     const { data: influencer } = await service
       .from('influencers')

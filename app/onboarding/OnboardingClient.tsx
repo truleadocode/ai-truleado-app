@@ -89,6 +89,8 @@ export default function OnboardingClient({ user, influencer }: Props) {
   const [platforms, setPlatforms] = useState<PlatformRow[]>([])
   const [platformStatuses, setPlatformStatuses] = useState<Record<string, string>>({})
   const [allUploaded, setAllUploaded] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const processingTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
   // ── Form state ──────────────────────────────────────────────────
   const [firstName, setFirstName] = useState('')
@@ -180,9 +182,24 @@ export default function OnboardingClient({ user, influencer }: Props) {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'influencer_platforms', filter: `influencer_id=eq.${infId}` },
         (payload: any) => {
           const u = payload.new
+          if (processingTimeouts.current[u.id]) {
+            clearTimeout(processingTimeouts.current[u.id])
+            delete processingTimeouts.current[u.id]
+          }
           setPlatformStatuses(prev => ({ ...prev, [u.id]: u.parse_status || 'pending' }))
         }
       ).subscribe()
+  }
+
+  // A stuck "processing" row means the realtime update never arrived (e.g.
+  // the request never reached the server) — without this, the spinner would
+  // just spin forever with no indication anything went wrong.
+  function startProcessingTimeout(platformId: string) {
+    if (processingTimeouts.current[platformId]) clearTimeout(processingTimeouts.current[platformId])
+    processingTimeouts.current[platformId] = setTimeout(() => {
+      setPlatformStatuses(prev => prev[platformId] === 'processing' ? { ...prev, [platformId]: 'failed' } : prev)
+      delete processingTimeouts.current[platformId]
+    }, 30000)
   }
 
   useEffect(() => {
@@ -321,12 +338,32 @@ export default function OnboardingClient({ user, influencer }: Props) {
 
   async function handleScreenshotUpload(platformId: string, files: FileList) {
     if (!files.length || !influencerId) return
+    setUploadError(null)
     setPlatformStatuses(prev => ({ ...prev, [platformId]: 'processing' }))
+    startProcessingTimeout(platformId)
     const formData = new FormData()
     formData.append('influencer_id', influencerId)
     formData.append('platform_id', platformId)
     for (const f of Array.from(files)) formData.append('screenshots', f)
-    fetch('/api/parse-screenshots', { method: 'POST', body: formData }).catch(console.error)
+    try {
+      const res = await fetch('/api/parse-screenshots', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        if (processingTimeouts.current[platformId]) {
+          clearTimeout(processingTimeouts.current[platformId])
+          delete processingTimeouts.current[platformId]
+        }
+        setPlatformStatuses(prev => ({ ...prev, [platformId]: 'failed' }))
+        setUploadError(data.error || "Couldn't read those screenshots. Please try again.")
+      }
+    } catch {
+      if (processingTimeouts.current[platformId]) {
+        clearTimeout(processingTimeouts.current[platformId])
+        delete processingTimeouts.current[platformId]
+      }
+      setPlatformStatuses(prev => ({ ...prev, [platformId]: 'failed' }))
+      setUploadError("Couldn't upload — check your connection and try again.")
+    }
   }
 
   async function completeOnboarding() {
@@ -651,6 +688,10 @@ export default function OnboardingClient({ user, influencer }: Props) {
             <div className="bg-accent border-l-4 border-gold rounded-lg px-4 py-3 text-xs text-muted-foreground leading-relaxed">
               <strong className="text-gold">What to upload:</strong> your profile page + post/reel insights. Instagram: profile + tap any post → View Insights.
             </div>
+
+            {uploadError && (
+              <p className="text-xs text-destructive bg-red-bg border border-red-border rounded-lg px-3 py-2">{uploadError}</p>
+            )}
 
             {platforms.map(p => {
               const raw = platformStatuses[p.id] || 'pending'
