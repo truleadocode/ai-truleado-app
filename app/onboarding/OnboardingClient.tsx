@@ -391,7 +391,7 @@ export default function OnboardingClient({ user, influencer }: Props) {
     <div className="min-h-screen bg-muted flex flex-col font-sans">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3.5 bg-card border-b border-border shrink-0">
-        <div className="w-8 h-8 rounded-full bg-accent border-2 border-gold-border flex items-center justify-center text-gold"><Sparkles size={16} /></div>
+        <img src="/logo-mark-t-tile.png" alt="" width={32} height={32} className="w-8 h-8 rounded-[8px] shrink-0" />
         <div className="flex-1">
           <p className="text-sm font-semibold">Truleado</p>
           <p className="text-[11px] text-muted-foreground">Creator onboarding</p>
